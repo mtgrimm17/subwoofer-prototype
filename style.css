@@ -513,42 +513,70 @@ body {
   margin-bottom: 4px;
 }
 
-.platform-toggle-card {
+.platform-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.platform-toggle-btn {
   display: flex;
   align-items: center;
-  gap: 9px;
-  border: 2px solid #e4e7ec;
+  gap: 10px;
+  border: 1.5px solid #e4e7ec;
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 11px 14px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   background: #fff;
   user-select: none;
-  min-width: 160px;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
 }
-.platform-toggle-card:hover { border-color: #b8c4d8; }
-.platform-toggle-card.is-selected { border-color: #4a9eff; background: #f6faff; }
-
-.ptc-check {
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  border: 1.5px solid #dde1e8;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px; color: #fff;
-  flex-shrink: 0;
-  transition: all 0.15s;
-}
-.platform-toggle-card.is-selected .ptc-check {
-  background: #4a9eff;
+.platform-toggle-btn:hover:not(:disabled) { border-color: #b8c4d8; background: #fafbfc; }
+.platform-toggle-btn.is-selected {
   border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.07);
+  box-shadow: inset 0 0 0 1px #4a9eff;
 }
 
-.ptc-badge {
-  font-size: 9px; font-weight: 700; color: #fff;
-  padding: 2px 6px; border-radius: 3px;
+.ptc-icon {
+  flex-shrink: 0;
+  color: #444;
+  transition: color 0.15s;
+}
+.platform-toggle-btn.is-selected .ptc-icon { color: #1a6fcc; }
+.platform-toggle-btn.is-coming-soon .ptc-icon { color: #bbb; }
+
+.ptc-name {
+  font-size: 13px; font-weight: 500; color: #222;
+  flex: 1;
+}
+.platform-toggle-btn.is-coming-soon .ptc-name { color: #aaa; }
+
+.ptc-tick {
+  font-size: 12px; font-weight: 700;
+  color: #4a9eff;
   flex-shrink: 0;
 }
-.ptc-name { font-size: 13px; font-weight: 500; color: #333; }
+
+.platform-toggle-btn.is-coming-soon {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.ptc-coming-soon {
+  font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: #aaa;
+  background: #f0f2f5;
+  border: 1px solid #dde1e8;
+  border-radius: 3px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
 
 
 /* ============================================================

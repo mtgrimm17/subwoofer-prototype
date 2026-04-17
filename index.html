@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subwoofer — Go Ape Ship!</title>
+  <title>Subwoofer</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -53,7 +53,7 @@
   <div class="screen" id="screen-provide-info">
     <div class="topbar">
       <div>
-        <div class="topbar-title">Provide Information</div>
+        <div class="topbar-title">Game Details</div>
         <div class="topbar-subtitle">Core details shared across all platforms</div>
       </div>
       <div class="topbar-actions">
@@ -108,28 +108,6 @@
           </div>
         </div>
 
-        <!-- ── Links ───────────────────────── -->
-        <div class="form-section-label">Links <span class="form-section-note">Required by all platforms</span></div>
-
-        <div class="form-group">
-          <label class="form-label" for="f-support">Support URL</label>
-          <input class="form-input" id="f-support" type="url" placeholder="https://yourgame.com/support"
-                 oninput="syncField('supportUrl', this.value)">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="f-privacy">Privacy Policy URL</label>
-          <label class="checkbox-row">
-            <input type="checkbox" id="privacy-gen-check" onchange="togglePrivacyGen(this)">
-            <span class="checkbox-label">Create a Privacy Policy for me</span>
-          </label>
-          <input class="form-input" id="f-privacy" type="url" placeholder="https://yourgame.com/privacy"
-                 oninput="syncField('privacyUrl', this.value)">
-          <div class="privacy-gen-note" id="privacy-gen-note" style="display:none;">
-            We'll ask a few quick questions and generate a policy for you to review. Paste the URL above once it's hosted.
-          </div>
-        </div>
-
         <!-- ── Localization ─────────────────── -->
         <div class="form-section-label">Localization</div>
 
@@ -154,6 +132,28 @@
             <button class="lang-chip" onclick="toggleLang(this,'ko')">Korean</button>
             <button class="lang-chip" onclick="toggleLang(this,'ru')">Russian</button>
             <button class="lang-chip" onclick="toggleLang(this,'ar')">Arabic</button>
+          </div>
+        </div>
+
+        <!-- ── Links ───────────────────────── -->
+        <div class="form-section-label">Links <span class="form-section-note">Required by all platforms</span></div>
+
+        <div class="form-group">
+          <label class="form-label" for="f-support">Support URL</label>
+          <input class="form-input" id="f-support" type="url" placeholder="https://yourgame.com/support"
+                 oninput="syncField('supportUrl', this.value)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="f-privacy">Privacy Policy URL</label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="privacy-gen-check" onchange="togglePrivacyGen(this)">
+            <span class="checkbox-label">Create a Privacy Policy for me</span>
+          </label>
+          <input class="form-input" id="f-privacy" type="url" placeholder="https://yourgame.com/privacy"
+                 oninput="syncField('privacyUrl', this.value)">
+          <div class="privacy-gen-note" id="privacy-gen-note" style="display:none;">
+            We'll ask a few quick questions and generate a policy for you to review. Paste the URL above once it's hosted.
           </div>
         </div>
 

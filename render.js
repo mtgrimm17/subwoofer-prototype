@@ -154,7 +154,7 @@ function renderPlatformGrid() {
       <div class="no-platforms">
         <div class="no-platforms-text">No platforms selected yet.</div>
         <button class="btn btn-ghost btn-sm" onclick="navigate('provide-info')">
-          Add platforms in Provide Information →
+          Add platforms in Game Details →
         </button>
       </div>`;
     return;
@@ -435,16 +435,35 @@ function renderPlatformToggles() {
   const container = document.getElementById('platform-toggles');
   if (!container) return;
 
+  const icon = (id) => `
+    <svg class="ptc-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="${PLATFORM_ICONS[id]}"/>
+    </svg>`;
+
   let h = '';
+
+  // Active platforms
   for (const [pid, p] of Object.entries(PLATFORMS)) {
     const selected = state.selectedPlatforms.has(pid);
     h += `
-      <div class="platform-toggle-card ${selected ? 'is-selected' : ''}" onclick="togglePlatform('${pid}')">
-        <div class="ptc-check">${selected ? '✓' : ''}</div>
-        <div class="ptc-badge" style="background:${p.color};">${p.abbr}</div>
-        <div class="ptc-name">${p.label}</div>
-      </div>`;
+      <button class="platform-toggle-btn ${selected ? 'is-selected' : ''}"
+              onclick="togglePlatform('${pid}')">
+        ${icon(pid)}
+        <span class="ptc-name">${p.label}</span>
+        ${selected ? `<span class="ptc-tick">✓</span>` : ''}
+      </button>`;
   }
+
+  // Coming Soon platforms
+  for (const p of COMING_SOON_PLATFORMS) {
+    h += `
+      <button class="platform-toggle-btn is-coming-soon" disabled>
+        ${icon(p.id)}
+        <span class="ptc-name">${p.label}</span>
+        <span class="ptc-coming-soon">Soon</span>
+      </button>`;
+  }
+
   container.innerHTML = h;
 }
 
