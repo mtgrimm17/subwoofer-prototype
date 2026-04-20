@@ -8,366 +8,78 @@
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside id="sidebar">
-  <div class="sidebar-header sidebar-home-link" onclick="navigate('home')" title="Go to Dashboard">
-    <img src="logo.png" alt="Subwoofer" class="sidebar-logo-img"
-         onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex'">
-    <div class="sidebar-logo" id="logo-fallback" style="display:none">SW</div>
-    <div class="sidebar-project" id="sidebar-project-name">Go Ape Ship!</div>
-  </div>
+  <!-- ═══════════════════════════════════════════════════
+       ONBOARDING MODAL
+  ═══════════════════════════════════════════════════ -->
+  <div id="onboarding-overlay" class="overlay-bg">
+    <div class="ob-modal" id="ob-modal">
 
-  <nav class="checklist" id="checklist"></nav>
-</aside>
-
-<!-- MAIN -->
-<main id="main">
-
-  <!-- ═══════════════════════════════════════════
-       SCREEN: DASHBOARD (HOME)
-  ═══════════════════════════════════════════ -->
-  <div class="screen" id="screen-home">
-    <div class="topbar">
-      <div>
-        <div class="topbar-title" id="topbar-project-name">Go Ape Ship!</div>
-        <div class="topbar-subtitle">Dashboard</div>
+      <div class="ob-header">
+        <img src="logo.png" alt="Subwoofer" class="ob-logo"
+             onerror="this.style.display='none'">
+        <div class="ob-headline">Let's get your game ready</div>
+        <div class="ob-subline">We'll collect the essentials once — then you focus on each platform.</div>
       </div>
-    </div>
-    <div class="content">
 
-      <!-- Next-up banner -->
-      <div id="next-up-banner"></div>
+      <div class="ob-tabs" id="ob-tabs">
+        <button class="ob-tab" onclick="setOnboardingTab(0)">Game Details</button>
+        <button class="ob-tab" onclick="setOnboardingTab(1)">Upload Assets</button>
+        <button class="ob-tab" onclick="setOnboardingTab(2)">Compliance</button>
+      </div>
 
-      <!-- Platform cards (self-contained with task lists) -->
-      <div id="platform-grid"></div>
+      <div class="ob-body" id="ob-body">
+        <!-- Rendered by renderOnboardingBody() -->
+      </div>
 
-      <!-- Task detail drawer (opens when a task is selected) -->
-      <div id="task-drawer"></div>
+      <div class="ob-footer" id="ob-footer">
+        <!-- Rendered by renderOnboardingFooter() -->
+      </div>
 
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       SCREEN: PROVIDE INFORMATION
-  ═══════════════════════════════════════════ -->
-  <div class="screen" id="screen-provide-info">
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">Game Details</div>
-        <div class="topbar-subtitle">Core details shared across all platforms</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost btn-sm" onclick="navigate('home')">← Back</button>
-      </div>
-    </div>
-    <div class="content">
-      <div class="form-wrap">
-
-        <!-- ── Target Platforms ────────────────── -->
-        <div class="form-section-label">Target Platforms</div>
-        <div class="form-hint" style="margin-bottom: 12px;">Select every platform you're shipping to. You can add or remove platforms at any time.</div>
-        <div class="platform-toggle-grid" id="platform-toggles"></div>
-
-        <!-- ── Game Details ─────────────────── -->
-        <div class="form-section-label">Game Details</div>
-
-        <div class="form-group">
-          <label class="form-label" for="f-title">Game Title</label>
-          <input class="form-input" id="f-title" type="text" maxlength="50"
-                 placeholder="e.g. Go Ape Ship!"
-                 oninput="syncField('title', this.value); charCount('f-title-count', this.value, 30)">
-          <div class="char-count" id="f-title-count">0 / 30 <span class="char-note">(Apple limit)</span></div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="f-desc">Description</label>
-          <textarea class="form-input" id="f-desc" rows="6"
-                    placeholder="Tell players what makes your game worth their time..."
-                    oninput="syncField('description', this.value); charCount('f-desc-count', this.value, 4000)"></textarea>
-          <div class="char-count" id="f-desc-count">0 / 4000</div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="f-price">Price (USD)</label>
-            <input class="form-input" id="f-price" type="text" placeholder="4.99 (free = 0)"
-                   oninput="syncField('price', this.value)">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="f-lang">Primary Language</label>
-            <select class="form-input" id="f-lang" onchange="syncField('primaryLanguage', this.value)">
-              <option value="en">English</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="es">Spanish</option>
-              <option value="pt">Portuguese</option>
-              <option value="ja">Japanese</option>
-              <option value="zh">Chinese (Simplified)</option>
-              <option value="ko">Korean</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- ── Localization ─────────────────── -->
-        <div class="form-section-label">Localization</div>
-
-        <div class="toggle-row">
-          <button class="toggle" id="locale-toggle" onclick="toggleLocalization()" aria-pressed="false"></button>
-          <div>
-            <div class="toggle-label">This game is available in multiple languages</div>
-            <div class="toggle-sublabel">You'll be able to add localized metadata for each language below</div>
-          </div>
-        </div>
-
-        <div class="lang-picker" id="lang-picker">
-          <div class="form-label" style="margin-top: 12px; margin-bottom: 8px;">Additional languages</div>
-          <div class="lang-chips" id="lang-chips">
-            <button class="lang-chip" onclick="toggleLang(this,'fr')">French</button>
-            <button class="lang-chip" onclick="toggleLang(this,'de')">German</button>
-            <button class="lang-chip" onclick="toggleLang(this,'es')">Spanish</button>
-            <button class="lang-chip" onclick="toggleLang(this,'pt')">Portuguese</button>
-            <button class="lang-chip" onclick="toggleLang(this,'it')">Italian</button>
-            <button class="lang-chip" onclick="toggleLang(this,'ja')">Japanese</button>
-            <button class="lang-chip" onclick="toggleLang(this,'zh')">Chinese (Simplified)</button>
-            <button class="lang-chip" onclick="toggleLang(this,'ko')">Korean</button>
-            <button class="lang-chip" onclick="toggleLang(this,'ru')">Russian</button>
-            <button class="lang-chip" onclick="toggleLang(this,'ar')">Arabic</button>
-          </div>
-        </div>
-
-        <!-- ── Links ───────────────────────── -->
-        <div class="form-section-label">Links <span class="form-section-note">Required by all platforms</span></div>
-
-        <div class="form-group">
-          <label class="form-label" for="f-support">Support URL</label>
-          <input class="form-input" id="f-support" type="url" placeholder="https://yourgame.com/support"
-                 oninput="syncField('supportUrl', this.value)">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="f-privacy">Privacy Policy URL</label>
-          <label class="checkbox-row">
-            <input type="checkbox" id="privacy-gen-check" onchange="togglePrivacyGen(this)">
-            <span class="checkbox-label">Create a Privacy Policy for me</span>
-          </label>
-          <input class="form-input" id="f-privacy" type="url" placeholder="https://yourgame.com/privacy"
-                 oninput="syncField('privacyUrl', this.value)">
-          <div class="privacy-gen-note" id="privacy-gen-note" style="display:none;">
-            We'll ask a few quick questions and generate a policy for you to review. Paste the URL above once it's hosted.
-          </div>
-        </div>
-
-        <!-- ── Release Timing ──────────────── -->
-        <div class="form-section-label">Release Timing</div>
-
-        <div class="option-cards" id="release-timing">
-          <label class="option-card">
-            <input type="radio" name="release" value="as_approved" onchange="pickTiming(this)">
-            <div>
-              <div class="option-card-title">As soon as approved</div>
-              <div class="option-card-desc">Each platform goes live automatically once it passes review. Fastest path to market.</div>
-            </div>
-          </label>
-          <label class="option-card">
-            <input type="radio" name="release" value="specific_date" onchange="pickTiming(this)">
-            <div>
-              <div class="option-card-title">On a specific date</div>
-              <div class="option-card-desc">All platforms launch on the same day. Leave buffer before platform review deadlines.</div>
-            </div>
-          </label>
-          <label class="option-card">
-            <input type="radio" name="release" value="manual" onchange="pickTiming(this)">
-            <div>
-              <div class="option-card-title">I'll release manually</div>
-              <div class="option-card-desc">You control when each platform goes live after approval. Maximum flexibility.</div>
-            </div>
-          </label>
-        </div>
-
-        <div id="release-date-row" class="form-group" style="display:none; margin-top: 12px;">
-          <label class="form-label" for="f-date">Target Release Date</label>
-          <input class="form-input" id="f-date" type="date" oninput="syncField('releaseDate', this.value)">
-        </div>
-
-        <div class="btn-group">
-          <button class="btn btn-primary" onclick="saveAndContinue('provideInfo', 'upload-assets')">Save & Continue →</button>
-          <button class="btn btn-ghost" onclick="saveDraft('provideInfo')">Save Draft</button>
-        </div>
-
-      </div>
+  <!-- ═══════════════════════════════════════════════════
+       TASK MODAL
+  ═══════════════════════════════════════════════════ -->
+  <div id="task-overlay" class="overlay-bg hidden" onclick="taskOverlayClick(event)">
+    <div class="task-modal" id="task-modal">
+      <!-- Rendered by renderTaskModal() -->
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       SCREEN STUBS
-  ═══════════════════════════════════════════ -->
-  <!-- ═══════════════════════════════════════════
-       SCREEN: UPLOAD ASSETS
-  ═══════════════════════════════════════════ -->
-  <div class="screen" id="screen-upload-assets">
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">Upload Assets</div>
-        <div class="topbar-subtitle">Screenshots and media for your store listings</div>
+  <!-- ═══════════════════════════════════════════════════
+       SUBMIT / CONTENT REVIEW MODAL
+  ═══════════════════════════════════════════════════ -->
+  <div id="submit-overlay" class="overlay-bg hidden" onclick="submitOverlayClick(event)">
+    <div class="submit-modal" id="submit-modal">
+      <!-- Rendered by renderSubmitModal() -->
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       MAIN APP
+  ═══════════════════════════════════════════════════ -->
+  <div id="main-app" class="hidden">
+
+    <header class="app-header">
+      <div class="app-header-left">
+        <img src="logo.png" alt="Subwoofer" class="app-logo"
+             onerror="this.style.display='none'">
+        <div class="app-game-name" id="app-game-name">—</div>
       </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost btn-sm" onclick="navigate('provide-info')">← Back</button>
+      <div class="app-header-right">
+        <button class="btn btn-ghost btn-sm" onclick="openOnboarding(0)">Game Details</button>
       </div>
+    </header>
+
+    <div class="dashboard" id="dashboard">
+      <!-- Rendered by renderDashboard() -->
     </div>
-    <div class="content">
-      <div class="form-wrap">
 
-        <!-- Platform requirements summary (rendered by JS) -->
-        <div id="upload-requirements"></div>
-
-        <!-- ── Screenshots ─────────────────────── -->
-        <div class="form-section-label">Screenshots</div>
-        <div class="form-hint" style="margin-bottom:12px;">Upload at least enough screenshots to meet your most demanding platform's requirements. PNG or JPG, 1280×720 minimum.</div>
-
-        <div class="dropzone" id="screenshot-dropzone"
-             onclick="document.getElementById('screenshot-input').click()"
-             ondragover="event.preventDefault(); this.classList.add('is-over')"
-             ondragleave="this.classList.remove('is-over')"
-             ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
-          <div class="dropzone-icon">🖼</div>
-          <div class="dropzone-label">Drop screenshots here, or click to browse</div>
-          <div class="dropzone-hint">PNG or JPG · Multiple files accepted</div>
-          <input type="file" id="screenshot-input" multiple accept="image/*" style="display:none"
-                 onchange="handleScreenshotFiles(this.files); this.value=''">
-        </div>
-
-        <div class="asset-grid" id="screenshot-grid"></div>
-
-        <!-- ── Feature Graphic (Android only) ─── -->
-        <div id="feature-graphic-section" style="display:none;">
-          <div class="form-section-label">
-            Feature Graphic
-            <span class="platform-req-badge" style="background:#34A853;">Google Play</span>
-          </div>
-          <div class="form-hint" style="margin-bottom:12px;">Required for Google Play. Exactly 1024×500 JPG or PNG — shown at the top of your store listing.</div>
-
-          <div class="dropzone dropzone-sm" id="feature-dropzone"
-               onclick="document.getElementById('feature-input').click()"
-               ondragover="event.preventDefault(); this.classList.add('is-over')"
-               ondragleave="this.classList.remove('is-over')"
-               ondrop="handleFeatureDrop(event); this.classList.remove('is-over')">
-            <div class="dropzone-label">Drop feature graphic here, or click to browse</div>
-            <div class="dropzone-hint">1024×500 · PNG or JPG</div>
-            <input type="file" id="feature-input" accept="image/*" style="display:none"
-                   onchange="handleFeatureFiles(this.files); this.value=''">
-          </div>
-
-          <div id="feature-preview"></div>
-        </div>
-
-        <!-- ── Trailer ─────────────────────────── -->
-        <div class="form-section-label">Trailer <span class="form-section-note">Optional</span></div>
-        <div class="form-hint" style="margin-bottom:12px;">A gameplay trailer can be added to most store listings. Paste a YouTube URL or upload an MP4.</div>
-
-        <div class="trailer-options">
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">YouTube URL</label>
-            <input class="form-input" id="trailer-url" type="url" placeholder="https://youtube.com/watch?v=..."
-                   oninput="syncField('trailerUrl', this.value)">
-          </div>
-          <div class="trailer-divider">or upload a file</div>
-          <div class="dropzone dropzone-sm" id="trailer-dropzone"
-               onclick="document.getElementById('trailer-input').click()"
-               ondragover="event.preventDefault(); this.classList.add('is-over')"
-               ondragleave="this.classList.remove('is-over')"
-               ondrop="handleTrailerDrop(event); this.classList.remove('is-over')">
-            <div class="dropzone-label">Upload video file</div>
-            <div class="dropzone-hint">MP4 · Max 500 MB</div>
-            <input type="file" id="trailer-input" accept="video/*" style="display:none"
-                   onchange="handleTrailerFiles(this.files); this.value=''">
-          </div>
-          <div id="trailer-file-info" style="display:none;"></div>
-        </div>
-
-        <div class="btn-group">
-          <button class="btn btn-primary" onclick="saveAndContinue('uploadAssets', 'key-questions')">Save & Continue →</button>
-          <button class="btn btn-ghost" onclick="saveDraft('uploadAssets')">Save Draft</button>
-        </div>
-
-      </div>
-    </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       SCREEN: KEY QUESTIONS
-  ═══════════════════════════════════════════ -->
-  <div class="screen" id="screen-key-questions">
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">Answer Key Questions</div>
-        <div class="topbar-subtitle">Your answers pre-fill platform disclosures automatically</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost btn-sm" onclick="navigate('upload-assets')">← Back</button>
-      </div>
-    </div>
-    <div class="content">
-      <div class="form-wrap">
-
-        <div class="questions-intro">
-          These answers are used to populate iOS Privacy Nutrition Labels, Google Play Data Safety, and IARC ratings — so you don't have to fill them out separately per platform.
-        </div>
-
-        <div id="questions-list"></div>
-
-        <div class="btn-group">
-          <button class="btn btn-primary" onclick="saveAndContinue('keyQuestions', 'home')">Save & Continue →</button>
-          <button class="btn btn-ghost" onclick="saveDraft('keyQuestions')">Save Draft</button>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <div class="screen" id="screen-pc-details">
-    <div class="topbar">
-      <div><div class="topbar-title">PC Details</div><div class="topbar-subtitle">System requirements for Steam & EGS</div></div>
-      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="navigate('key-questions')">← Back</button></div>
-    </div>
-    <div class="content"><div class="stub">🚧 PC Details — coming next</div></div>
-  </div>
-
-  <div class="screen" id="screen-ios">
-    <div class="topbar">
-      <div><div class="topbar-title">iOS App Store</div><div class="topbar-subtitle">Platform submission</div></div>
-      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="navigate('home')">← Dashboard</button></div>
-    </div>
-    <div class="content"><div class="stub">🚧 iOS Submission Flow — coming next</div></div>
-  </div>
-
-  <div class="screen" id="screen-android">
-    <div class="topbar">
-      <div><div class="topbar-title">Google Play</div><div class="topbar-subtitle">Platform submission</div></div>
-      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="navigate('home')">← Dashboard</button></div>
-    </div>
-    <div class="content"><div class="stub">🚧 Android Submission Flow — coming next</div></div>
-  </div>
-
-  <div class="screen" id="screen-steam">
-    <div class="topbar">
-      <div><div class="topbar-title">Steam</div><div class="topbar-subtitle">Platform submission</div></div>
-      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="navigate('home')">← Dashboard</button></div>
-    </div>
-    <div class="content"><div class="stub">🚧 Steam Submission Flow — coming next</div></div>
-  </div>
-
-  <div class="screen" id="screen-egs">
-    <div class="topbar">
-      <div><div class="topbar-title">Epic Games Store</div><div class="topbar-subtitle">Platform submission</div></div>
-      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="navigate('home')">← Dashboard</button></div>
-    </div>
-    <div class="content"><div class="stub">🚧 EGS Submission Flow — coming next</div></div>
-  </div>
-
-</main>
-
-<script src="state.js"></script>
-<script src="render.js"></script>
-<script src="app.js"></script>
+  <script src="state.js"></script>
+  <script src="render.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
