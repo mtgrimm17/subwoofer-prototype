@@ -254,15 +254,8 @@ function buildComplianceTab() {
 
       <div class="form-group">
         <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="ob-privacy-gen-check" onchange="togglePrivacyGen(this)">
-          <span class="checkbox-label">Create a Privacy Policy for me</span>
-        </label>
         <input class="form-input" id="ob-privacy" type="url" placeholder="https://yourgame.com/privacy"
                oninput="syncField('privacyUrl', this.value)">
-        <div class="privacy-gen-note" id="ob-privacy-gen-note" style="display:none;">
-          We'll ask a few quick questions and generate a policy for you to review. Paste the URL above once it's hosted.
-        </div>
       </div>
 
       <div class="ob-section-label" style="margin-top:20px;">Compliance Questions</div>
