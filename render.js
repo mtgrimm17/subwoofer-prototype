@@ -404,9 +404,12 @@ function renderDashboard() {
   const el = document.getElementById('dashboard');
   if (!el) return;
 
-  // Update header game name
-  const nameEl = document.getElementById('app-game-name');
-  if (nameEl) nameEl.textContent = state.formData.title || 'Untitled Game';
+  // Update project selector title + profile name
+  const gameTitle = state.formData.title || 'Untitled Game';
+  const selectorEl = document.getElementById('projectSelectorTitle');
+  if (selectorEl) selectorEl.textContent = gameTitle;
+  const currentItemEl = document.getElementById('projectItemCurrent');
+  if (currentItemEl) currentItemEl.textContent = gameTitle;
 
   const active   = [...state.activePlatforms];
   const inactive = Object.keys(PLATFORMS).filter(pid => !state.activePlatforms.has(pid));

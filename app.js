@@ -369,6 +369,41 @@ function answerQuestion(key, value) {
   }
 }
 
+/* ── Project bar dropdowns ───────────────────────────── */
+
+function closeAllDropdowns() {
+  document.getElementById('projectSelectorWrap')?.classList.remove('open');
+  document.getElementById('submissionSelectorWrap')?.classList.remove('open');
+  document.getElementById('submissionMenu')?.classList.remove('open');
+}
+
+function toggleProjectDropdown(e) {
+  e.stopPropagation();
+  const wrap = document.getElementById('projectSelectorWrap');
+  const isOpen = wrap.classList.contains('open');
+  closeAllDropdowns();
+  if (!isOpen) wrap.classList.add('open');
+}
+
+function toggleSubmissionDropdown(e) {
+  e.stopPropagation();
+  const wrap = document.getElementById('submissionSelectorWrap');
+  const isOpen = wrap.classList.contains('open');
+  closeAllDropdowns();
+  if (!isOpen) wrap.classList.add('open');
+}
+
+function toggleSubmissionMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('submissionMenu');
+  const isOpen = menu.classList.contains('open');
+  closeAllDropdowns();
+  if (!isOpen) menu.classList.add('open');
+}
+
+// Close dropdowns when clicking anywhere outside
+document.addEventListener('click', closeAllDropdowns);
+
 function changeInferredAnswer(key) {
   state.questionInferred[key] = false;
   state.questionAnswers[key]  = null;
