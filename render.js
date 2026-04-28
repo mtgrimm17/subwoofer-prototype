@@ -30,7 +30,7 @@ function renderOnboardingTabs() {
 function renderOnboardingBody() {
   const el = document.getElementById('ob-body');
   if (!el) return;
-  if (state.onboardingTab === 0) el.innerHTML = buildGameDetailsTab();
+  if (state.onboardingTab === 0) { el.innerHTML = buildGameDetailsTab(); requestAnimationFrame(() => initWorldMap()); }
   if (state.onboardingTab === 1) el.innerHTML = buildUploadAssetsTab();
   if (state.onboardingTab === 2) el.innerHTML = buildComplianceTab();
   // After rendering, hydrate form fields from state
@@ -80,56 +80,49 @@ function buildGameDetailsTab() {
         <div class="char-count" id="ob-desc-count">0 / 4000</div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label" for="ob-price">
-            Price (USD)
-            <span class="tooltip-anchor">
-              <span class="tooltip-icon">?</span>
-              <span class="tooltip-body">Set your base price once. Subwoofer will automatically convert and localize it across every platform and region where you launch — no per-store pricing setup required.</span>
-            </span>
-          </label>
-          <input class="form-input" id="ob-price" type="text" placeholder="4.99 (or 0 for free)"
-                 oninput="syncField('price', this.value)">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="ob-lang">Primary Language</label>
-          <select class="form-input" id="ob-lang" onchange="syncField('primaryLanguage', this.value)">
-            <option value="en">English</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="es">Spanish</option>
-            <option value="pt">Portuguese</option>
-            <option value="ja">Japanese</option>
-            <option value="zh">Chinese (Simplified)</option>
-            <option value="ko">Korean</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label class="form-label" for="ob-price">
+          Price (USD)
+          <span class="tooltip-anchor">
+            <span class="tooltip-icon">?</span>
+            <span class="tooltip-body">Set your base price once. Subwoofer will automatically convert and localize it across every platform and region where you launch — no per-store pricing setup required.</span>
+          </span>
+        </label>
+        <input class="form-input" id="ob-price" type="text" placeholder="4.99 (or 0 for free)"
+               oninput="syncField('price', this.value)">
       </div>
 
       <div class="ob-section-label" style="margin-top:20px;">Localization</div>
-      <div class="toggle-row">
-        <button class="toggle" id="ob-locale-toggle" onclick="toggleLocalization()" aria-pressed="false"></button>
-        <div>
-          <div class="toggle-label">Available in multiple languages</div>
-          <div class="toggle-sublabel">Add localized metadata per platform later</div>
-        </div>
+      <div class="world-map-desc">You can refine your target regions per platform later. This map reflects your game's coverage based on your supported languages.</div>
+      <div id="world-map-container" class="world-map-container"></div>
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label" for="ob-lang">Primary Language</label>
+        <select class="form-input" id="ob-lang" onchange="syncField('primaryLanguage', this.value); updateWorldMap()">
+          <option value="en">English</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="es">Spanish</option>
+          <option value="pt">Portuguese</option>
+          <option value="it">Italian</option>
+          <option value="ja">Japanese</option>
+          <option value="zh">Chinese (Simplified)</option>
+          <option value="ko">Korean</option>
+          <option value="ru">Russian</option>
+          <option value="ar">Arabic</option>
+        </select>
       </div>
-      <div class="lang-picker" id="ob-lang-picker">
-        <div id="world-map-container" class="world-map-container"></div>
-        <div class="form-label" style="margin-top:10px;margin-bottom:8px;">Additional languages</div>
-        <div class="lang-chips" id="ob-lang-chips">
-          <button class="lang-chip" onclick="toggleLang(this,'fr')">French</button>
-          <button class="lang-chip" onclick="toggleLang(this,'de')">German</button>
-          <button class="lang-chip" onclick="toggleLang(this,'es')">Spanish</button>
-          <button class="lang-chip" onclick="toggleLang(this,'pt')">Portuguese</button>
-          <button class="lang-chip" onclick="toggleLang(this,'it')">Italian</button>
-          <button class="lang-chip" onclick="toggleLang(this,'ja')">Japanese</button>
-          <button class="lang-chip" onclick="toggleLang(this,'zh')">Chinese (Simplified)</button>
-          <button class="lang-chip" onclick="toggleLang(this,'ko')">Korean</button>
-          <button class="lang-chip" onclick="toggleLang(this,'ru')">Russian</button>
-          <button class="lang-chip" onclick="toggleLang(this,'ar')">Arabic</button>
-        </div>
+      <div class="form-label" style="margin-bottom:8px;">Additional languages</div>
+      <div class="lang-chips" id="ob-lang-chips">
+        <button class="lang-chip" onclick="toggleLang(this,'fr')">French</button>
+        <button class="lang-chip" onclick="toggleLang(this,'de')">German</button>
+        <button class="lang-chip" onclick="toggleLang(this,'es')">Spanish</button>
+        <button class="lang-chip" onclick="toggleLang(this,'pt')">Portuguese</button>
+        <button class="lang-chip" onclick="toggleLang(this,'it')">Italian</button>
+        <button class="lang-chip" onclick="toggleLang(this,'ja')">Japanese</button>
+        <button class="lang-chip" onclick="toggleLang(this,'zh')">Chinese (Simplified)</button>
+        <button class="lang-chip" onclick="toggleLang(this,'ko')">Korean</button>
+        <button class="lang-chip" onclick="toggleLang(this,'ru')">Russian</button>
+        <button class="lang-chip" onclick="toggleLang(this,'ar')">Arabic</button>
       </div>
 
       <div class="ob-section-label" style="margin-top:20px;">Release Timing</div>
@@ -279,19 +272,12 @@ function hydrateGameDetailsTab() {
   if (fd.title)       charCount('ob-title-count', fd.title,       30);
   if (fd.description) charCount('ob-desc-count',  fd.description, 4000);
 
-  // Localization toggle
-  const toggle = document.getElementById('ob-locale-toggle');
-  if (toggle) {
-    toggle.classList.toggle('is-on', fd.localized);
-    const picker = document.getElementById('ob-lang-picker');
-    if (picker) picker.classList.toggle('is-open', fd.localized);
-    // Restore chips
-    if (fd.localizations.length) {
-      document.querySelectorAll('#ob-lang-chips .lang-chip').forEach(btn => {
-        const code = btn.getAttribute('onclick')?.match(/'([^']+)'\)$/)?.[1];
-        if (code && fd.localizations.includes(code)) btn.classList.add('is-on');
-      });
-    }
+  // Restore language chips from state
+  if (fd.localizations.length) {
+    document.querySelectorAll('#ob-lang-chips .lang-chip').forEach(btn => {
+      const code = btn.getAttribute('onclick')?.match(/'([^']+)'\)$/)?.[1];
+      if (code && fd.localizations.includes(code)) btn.classList.add('is-on');
+    });
   }
 
   // Release timing

@@ -1277,9 +1277,7 @@ select.form-input {
 .toggle-sublabel { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
 /* Language picker */
-.lang-picker { display: none; }
-.lang-picker.is-open { display: block; }
-.lang-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lang-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
 
 /* ── World map ───────────────────────────────────────── */
 .world-map-container {
@@ -1300,6 +1298,12 @@ select.form-input {
   font-size: 12px;
   color: var(--text-faint);
   letter-spacing: 0.05em;
+}
+.world-map-desc {
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  margin-bottom: 8px;
 }
 .lang-chip {
   padding: 5px 12px;

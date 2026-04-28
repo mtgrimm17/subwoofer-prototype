@@ -420,23 +420,6 @@ function charCount(countId, value, max) {
   if (len > max)       el.classList.add('is-over');
 }
 
-function toggleLocalization() {
-  state.formData.localized = !state.formData.localized;
-  const toggle = document.getElementById('ob-locale-toggle');
-  const picker = document.getElementById('ob-lang-picker');
-  if (toggle) toggle.classList.toggle('is-on', state.formData.localized);
-  if (picker) picker.classList.toggle('is-open', state.formData.localized);
-  if (!state.formData.localized) {
-    state.formData.localizations = [];
-    document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('is-on'));
-  }
-  if (state.formData.localized) {
-    // Lazy-load map data then render
-    initWorldMap();
-  } else {
-    updateWorldMap();
-  }
-}
 
 function toggleLang(el, code) {
   const idx = state.formData.localizations.indexOf(code);
@@ -475,7 +458,10 @@ function renderWorldMap() {
   if (!container || !_worldTopology || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
 
   const W = container.offsetWidth || 480;
-  const H = Math.round(W * 0.48);
+  // Render into a taller internal canvas, then crop via viewBox
+  // This removes Antarctica (south) and excess ocean (sides)
+  const IH = Math.round(W * 0.56);   // internal canvas height (taller than display)
+  const H  = Math.round(W * 0.40);   // display height (cropped)
 
   // Build set of active numeric ISO codes
   const activeCodes = new Set();
@@ -495,17 +481,22 @@ function renderWorldMap() {
   // Build primary-language-only set for a slightly different shade
   const primaryCodes = new Set((LANG_COUNTRY_CODES[primary] || []).map(Number));
 
+  // Projection: slightly larger scale, center shifted down so Antarctica falls below crop
   const projection = d3.geoNaturalEarth1()
-    .scale(W / 6.2)
-    .translate([W / 2, H / 2]);
+    .scale(W / 5.4)
+    .translate([W / 2, IH / 2 + IH * 0.06]);
 
-  const path     = d3.geoPath().projection(projection);
+  const path      = d3.geoPath().projection(projection);
   const countries = topojson.feature(_worldTopology, _worldTopology.objects.countries);
   const borders   = topojson.mesh(_worldTopology, _worldTopology.objects.countries, (a, b) => a !== b);
 
+  // viewBox crops: trim ~7% from each side, show top H px of internal canvas
+  const cropX = Math.round(W * 0.07);
+  const cropW = W - cropX * 2;
+
   const svg = d3.create('svg')
-    .attr('viewBox', `0 0 ${W} ${H}`)
-    .attr('width', W)
+    .attr('viewBox', `${cropX} 0 ${cropW} ${H}`)
+    .attr('width',  W)
     .attr('height', H)
     .style('display', 'block');
 
