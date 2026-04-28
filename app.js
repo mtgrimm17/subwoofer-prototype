@@ -219,6 +219,13 @@ function openSubmitModal(platformId) {
     if (state.iosSubmitAnswers.hasIAP === null && state.questionAnswers.inAppPurchases !== null) {
       state.iosSubmitAnswers.hasIAP = state.questionAnswers.inAppPurchases;
     }
+    // Pre-select countries matching onboarding languages (only on first open)
+    if (state.iosSubmitAnswers.selectedCountries.length === 0) {
+      const langs = new Set([state.formData.primaryLanguage, ...state.formData.localizations]);
+      state.iosSubmitAnswers.selectedCountries = IOS_COUNTRIES
+        .filter(c => langs.has(c.lang))
+        .map(c => c.code);
+    }
   } else {
     state.submitModal.expanded = [];
   }
@@ -251,8 +258,12 @@ function toggleIOSSection(sectionId) {
   const idx = state.submitModal.expanded.indexOf(sectionId);
   if (idx === -1) state.submitModal.expanded.push(sectionId);
   else            state.submitModal.expanded.splice(idx, 1);
+  const isOpen = state.submitModal.expanded.includes(sectionId);
   const el = document.getElementById('ios-sec-' + sectionId);
-  if (el) el.classList.toggle('is-expanded', state.submitModal.expanded.includes(sectionId));
+  if (el) el.classList.toggle('is-expanded', isOpen);
+  if (sectionId === 'ios-distribution' && isOpen) {
+    requestAnimationFrame(() => initDistributionMap());
+  }
 }
 
 /* ── iOS Submit Modal — answer handlers ──────────────── */
@@ -282,55 +293,60 @@ function reRenderIOSSubmitModal() {
   const newScrollEl = document.getElementById('ios-submit-scroll');
   if (newScrollEl) newScrollEl.scrollTop = scrollTop;
 
-  positionTooltips();
 }
 
-/* ── Tooltip edge-detection positioning ──────────────── */
-function positionTooltips() {
-  const container = document.getElementById('ios-submit-scroll') || document.getElementById('submit-overlay');
-  if (!container) return;
+/* ── Global fixed-position tooltip ───────────────────── */
+// Single delegated handler on document — avoids overflow/z-index clipping
+// from scrolling containers. Tooltip text lives in data-tip on the anchor.
+(function initGlobalTooltip() {
+  const TIP_W = 230;
+  const MARGIN = 10;
 
-  container.querySelectorAll('.tooltip-anchor').forEach(anchor => {
-    const body = anchor.querySelector('.tooltip-body');
-    if (!body) return;
+  function showTip(anchor) {
+    const tip = document.getElementById('g-tip');
+    if (!tip) return;
+    // Prefer data-tip attribute; fall back to hidden .tooltip-body text
+    let text = anchor.dataset.tip || '';
+    if (!text) {
+      const body = anchor.querySelector('.tooltip-body');
+      if (body) text = body.textContent.trim();
+    }
+    if (!text) return;
+    tip.textContent = text;
+    tip.classList.add('is-visible');
 
-    // Reset inline overrides
-    body.style.cssText = '';
+    const r = anchor.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const th = tip.offsetHeight;
 
-    anchor.addEventListener('mouseenter', () => {
-      // Reset
-      body.style.left = '';
-      body.style.right = '';
-      body.style.top = '';
-      body.style.bottom = '';
-      body.style.transform = '';
+    // Horizontal: center on anchor, clamp to viewport
+    let left = r.left + r.width / 2 - TIP_W / 2;
+    left = Math.max(MARGIN, Math.min(left, vw - TIP_W - MARGIN));
 
-      const aRect  = anchor.getBoundingClientRect();
-      const cRect  = container.getBoundingClientRect();
-      const tipW   = 230;
-      const tipH   = body.offsetHeight || 90;
+    // Vertical: prefer above; fall back to below
+    let top = r.top - th - 8;
+    if (top < MARGIN) top = r.bottom + 8;
 
-      // Horizontal: default is centered on icon
-      const centeredLeft = aRect.left + aRect.width / 2 - tipW / 2;
-      if (centeredLeft < cRect.left + 8) {
-        // Would overflow left — align left edge with anchor
-        body.style.left = '0';
-        body.style.transform = 'none';
-      } else if (centeredLeft + tipW > cRect.right - 8) {
-        // Would overflow right — align right edge with anchor
-        body.style.left  = 'auto';
-        body.style.right = '0';
-        body.style.transform = 'none';
-      }
+    tip.style.left = left + 'px';
+    tip.style.top  = top  + 'px';
+  }
 
-      // Vertical: default is above; if near top of container, show below
-      if (aRect.top - tipH - 10 < cRect.top + 8) {
-        body.style.bottom = 'auto';
-        body.style.top    = 'calc(100% + 10px)';
-      }
-    }, { capture: false });
+  function hideTip() {
+    const tip = document.getElementById('g-tip');
+    if (tip) tip.classList.remove('is-visible');
+  }
+
+  document.addEventListener('mouseover', e => {
+    const anchor = e.target.closest('.tooltip-anchor');
+    if (anchor) showTip(anchor);
   });
-}
+  document.addEventListener('mouseout', e => {
+    const anchor = e.target.closest('.tooltip-anchor');
+    if (anchor && !anchor.contains(e.relatedTarget)) hideTip();
+  });
+  document.addEventListener('scroll', hideTip, true);
+})();
 
 // Called by YES/NO and intensity/chip clicks — re-renders immediately
 function answerIOSField(field, value) {
@@ -357,17 +373,57 @@ function toggleIOSIAPType(typeId) {
   reRenderIOSSubmitModal();
 }
 
-function setIOSAllRegions(bool) {
-  state.iosSubmitAnswers.allRegions = bool;
-  if (bool) state.iosSubmitAnswers.selectedRegions = [];
-  reRenderIOSSubmitModal();
+/* ── Distribution map ────────────────────────────────── */
+
+async function initDistributionMap() {
+  const container = document.getElementById('distribution-map-container');
+  if (!container) return;
+
+  if (!_worldTopology) {
+    container.innerHTML = '<div class="world-map-loading">Loading map…</div>';
+    try {
+      const res = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+      _worldTopology = await res.json();
+    } catch (e) {
+      container.innerHTML = '<div class="world-map-loading">Map unavailable offline</div>';
+      return;
+    }
+  }
+  renderDistributionMap();
 }
 
-function toggleIOSRegion(code) {
-  const regions = state.iosSubmitAnswers.selectedRegions;
-  const idx = regions.indexOf(code);
-  if (idx === -1) regions.push(code); else regions.splice(idx, 1);
-  reRenderIOSSubmitModal();
+function renderDistributionMap() {
+  const container = document.getElementById('distribution-map-container');
+  if (!container || !_worldTopology) return;
+
+  const W  = container.offsetWidth || 480;
+  const IH = Math.round(W * 0.60);
+  const H  = Math.round(W * 0.47);
+
+  const selected = new Set(
+    (state.iosSubmitAnswers.selectedCountries || [])
+      .map(code => (IOS_COUNTRIES.find(c => c.code === code) || {}).num)
+      .filter(Boolean)
+  );
+
+  _drawMap(container, W, IH, H, selected, new Set());
+}
+
+function toggleIOSCountry(code) {
+  const arr = state.iosSubmitAnswers.selectedCountries;
+  const idx = arr.indexOf(code);
+  if (idx === -1) arr.push(code); else arr.splice(idx, 1);
+
+  // Update chip visual directly (avoid full re-render)
+  const chip = document.getElementById('dist-chip-' + code);
+  if (chip) chip.classList.toggle('is-on', idx === -1);
+
+  // Update bar color directly
+  const row = chip && chip.closest('.dist-country-row');
+  const fill = row && row.querySelector('.dist-bar-fill');
+  if (fill) fill.style.background = (idx === -1) ? 'rgba(59,130,246,0.5)' : 'var(--border-hover)';
+
+  renderDistributionMap();
 }
 
 function confirmAndSubmit(platformId) {
@@ -459,9 +515,9 @@ function renderWorldMap() {
 
   const W = container.offsetWidth || 480;
   // Render into a taller internal canvas, then crop via viewBox
-  // This removes Antarctica (south) and excess ocean (sides)
-  const IH = Math.round(W * 0.56);   // internal canvas height (taller than display)
-  const H  = Math.round(W * 0.40);   // display height (cropped)
+  // IH is the full internal canvas; H is what's displayed (crops Antarctica + polar ocean)
+  const IH = Math.round(W * 0.60);
+  const H  = Math.round(W * 0.47);
 
   // Build set of active numeric ISO codes
   const activeCodes = new Set();
@@ -471,6 +527,18 @@ function renderWorldMap() {
     (LANG_COUNTRY_CODES[lang] || []).forEach(c => activeCodes.add(c));
   });
 
+  // Build primary-language-only set for a slightly different shade
+  const primaryCodes = new Set((LANG_COUNTRY_CODES[primary] || []).map(Number));
+
+  _drawMap(container, W, IH, H, activeCodes, primaryCodes);
+}
+
+/* ── Shared map renderer ─────────────────────────────── */
+// activeCodes  : Set of numeric ISO codes to highlight (active blue)
+// primaryCodes : Set of numeric ISO codes for primary shade (brighter blue)
+function _drawMap(container, W, IH, H, activeCodes, primaryCodes) {
+  if (!_worldTopology || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
+
   // Colors (dark-theme palette)
   const C_OCEAN    = '#0d1117';
   const C_INACTIVE = '#1e2230';
@@ -478,13 +546,10 @@ function renderWorldMap() {
   const C_BORDER   = '#0d1117';
   const C_PRIMARY  = '#3b82f6';
 
-  // Build primary-language-only set for a slightly different shade
-  const primaryCodes = new Set((LANG_COUNTRY_CODES[primary] || []).map(Number));
-
-  // Projection: slightly larger scale, center shifted down so Antarctica falls below crop
+  // Projection centered slightly above mid so Antarctica falls below the crop line
   const projection = d3.geoNaturalEarth1()
     .scale(W / 5.4)
-    .translate([W / 2, IH / 2 + IH * 0.06]);
+    .translate([W / 2, IH / 2 + IH * 0.03]);
 
   const path      = d3.geoPath().projection(projection);
   const countries = topojson.feature(_worldTopology, _worldTopology.objects.countries);

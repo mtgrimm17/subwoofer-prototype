@@ -93,7 +93,7 @@ function buildGameDetailsTab() {
       </div>
 
       <div class="ob-section-label" style="margin-top:20px;">Localization</div>
-      <div class="world-map-desc">You can refine your target regions per platform later. This map reflects your game's coverage based on your supported languages.</div>
+      <div class="world-map-desc">This map shows the global coverage of your supported languages.</div>
       <div id="world-map-container" class="world-map-container"></div>
       <div class="form-group" style="margin-top:12px;">
         <label class="form-label" for="ob-lang">Primary Language</label>
@@ -1071,77 +1071,29 @@ function buildBusinessSection() {
     </div>`;
 }
 
-/* ── Regional Distribution ───────────────────────────── */
+/* ── Distribution ────────────────────────────────────── */
 function buildDistributionSection() {
   const a = state.iosSubmitAnswers;
-  const activeRegions = a.allRegions === true  ? IOS_REGIONS.map(r => r.code)
-                      : a.allRegions === false ? a.selectedRegions
-                      : [];
-
-  const regionPicker = a.allRegions === false ? `
-    <div style="margin-top:12px;">
-      <div class="ios-q-label" style="margin-bottom:8px;">Target regions</div>
-      <div class="data-type-chips">
-        ${IOS_REGIONS.map(r => `
-          <button class="data-type-chip ${a.selectedRegions.includes(r.code) ? 'is-on' : ''}"
-                  onclick="toggleIOSRegion('${r.code}')">${r.label}</button>`).join('')}
-      </div>
-    </div>` : '';
-
-  // Build region-specific requirement rows
-  const specialRows = [];
-  if (activeRegions.includes('kr')) {
-    specialRows.push(iosYNRow('Korea: Does the app include paid content or loot boxes?',
-      'koreaHasPaidContent',
-      'If yes, a GRAC certificate is required before Korean launch.'));
-    if (a.koreaHasPaidContent === 'yes') {
-      specialRows.push('<div class="ios-risk-note risk-HIGH">Korea requires a GRAC (Game Rating and Administration Committee) certificate for apps with paid content. Upload it in App Store Connect under Korean-specific settings.</div>');
-    }
-  }
-  if (activeRegions.includes('vn')) {
-    specialRows.push(`
-      <label class="checkbox-row">
-        <input type="checkbox" ${a.vietnamAcknowledge ? 'checked' : ''}
-               onchange="answerIOSField('vietnamAcknowledge', this.checked)">
-        <span class="checkbox-label">Vietnam: I confirm this app complies with Decree 71 on online games and contains no content prohibited under Vietnamese law.</span>
-      </label>`);
-  }
-  if (activeRegions.includes('cn')) {
-    specialRows.push(iosYNRow('China: Are you distributing to mainland China?',
-      'chinaDistribute',
-      'China requires a separate submission through the China App Store and may require an ICP license number.'));
-    if (a.chinaDistribute === 'yes') {
-      specialRows.push(`
-        <div class="form-group">
-          <label class="form-label">ICP License Number <span class="form-section-note">if applicable</span></label>
-          <input class="form-input" type="text" value="${a.chinaICP}" placeholder="ICP 12345678"
-                 oninput="updateIOSTextField('chinaICP', this.value)"
-                 onblur="reRenderIOSSubmitModal()">
-        </div>`);
-    }
-  }
-  if (activeRegions.includes('de')) {
-    specialRows.push(iosYNRow('Germany: Does the app contain content that may require a USK rating?',
-      'germanyUSKContent',
-      'Without a USK rating for qualifying content, Apple restricts visibility to users under 18 in Germany.'));
-  }
+  const MAX_USERS = 250; // China, for bar scaling
 
   return `
-    <div class="ios-q-row">
-      <div class="ios-q-left">
-        <div class="ios-q-label">Distribution territory</div>
-        <div class="ios-q-desc">Which countries and regions should your app be available in?</div>
-      </div>
-      <div class="ios-distribution-toggle">
-        <button class="ios-dist-btn ${a.allRegions === true  ? 'is-active' : ''}" onclick="setIOSAllRegions(true)">All regions</button>
-        <button class="ios-dist-btn ${a.allRegions === false ? 'is-active' : ''}" onclick="setIOSAllRegions(false)">Select regions</button>
-      </div>
-    </div>
-    ${regionPicker}
-    ${specialRows.length > 0 ? `
-      <div class="ios-q-divider"></div>
-      <div class="ios-subsection-label">Region-specific requirements</div>
-      ${specialRows.join('')}` : ''}`;
+    <div id="distribution-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
+    <div class="ios-q-label" style="margin-bottom:12px;">Where do you intend to make the game available?</div>
+    <div class="dist-country-list">
+      ${IOS_COUNTRIES.map(c => {
+        const isOn = a.selectedCountries.includes(c.code);
+        const pct  = Math.round((c.iosUsers / MAX_USERS) * 100);
+        return `
+          <div class="dist-country-row">
+            <button class="dist-country-chip ${isOn ? 'is-on' : ''}"
+                    id="dist-chip-${c.code}"
+                    onclick="toggleIOSCountry('${c.code}')">${c.name}</button>
+            <div class="dist-bar-wrap">
+              <div class="dist-bar-fill" style="width:${pct}%; background:${isOn ? 'rgba(59,130,246,0.5)' : 'var(--border-hover)'}"></div>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function buildRiskCategoryRow(cat, data) {

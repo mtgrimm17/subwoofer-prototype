@@ -1150,31 +1150,10 @@ body {
 
 .tooltip-anchor:hover .tooltip-icon { border-color: var(--text-faint); color: var(--text-dim); }
 
+/* tooltip-body is now a hidden data container only — #g-tip renders the actual tooltip */
 .tooltip-body {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text-dim);
-  width: 230px;
-  line-height: 1.55;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 200;
-  white-space: normal;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: none;
 }
-
-.tooltip-anchor:hover .tooltip-body { opacity: 1; }
 
 /* ── Asset upload sections (uniform) ─────────────────── */
 .asset-guidance {
@@ -1996,18 +1975,81 @@ select.form-input {
 
 .ios-q-divider { height: 1px; background: var(--border); margin: 14px 0; }
 
-/* ── Distribution territory toggle ──────────────────── */
+/* ── Distribution country list ───────────────────────── */
 
-.ios-distribution-toggle { display: flex; gap: 2px; flex-shrink: 0; }
-
-.ios-dist-btn {
-  padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.3px; cursor: pointer;
-  font-family: inherit; color: var(--text-faint); background: var(--panel-3);
-  transition: all 0.12s;
+.dist-country-list {
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
-.ios-dist-btn:hover { border-color: var(--border-hover); color: var(--text-dim); }
-.ios-dist-btn.is-active { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+
+.dist-country-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dist-country-row:last-child { border-bottom: none; }
+
+.dist-country-chip {
+  flex-shrink: 0;
+  min-width: 140px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-3);
+  color: var(--text-faint);
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dist-country-chip:hover { border-color: var(--border-hover); color: var(--text-dim); }
+.dist-country-chip.is-on {
+  background: var(--blue-soft);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.dist-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: var(--panel-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.2s ease, background 0.15s ease;
+}
+
+/* ── Global fixed-position tooltip ──────────────────── */
+
+.g-tip {
+  position: fixed;
+  z-index: 9999;
+  width: 230px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--panel-2, #1c1f2b);
+  border: 1px solid var(--border-hover);
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.g-tip.is-visible { opacity: 1; }
 
 /* ── Submit button — incomplete state ────────────────── */
 

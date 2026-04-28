@@ -262,20 +262,63 @@ const IOS_CONTENT_YN_QUESTIONS = [
     tooltip: 'Randomized virtual item containers available for purchase. Includes randomized functional cards or cosmetic items.' },
 ];
 
-const IOS_REGIONS = [
-  { code: 'us', label: 'United States',   special: null },
-  { code: 'eu', label: 'European Union',  special: null },
-  { code: 'gb', label: 'United Kingdom',  special: null },
-  { code: 'ca', label: 'Canada',          special: null },
-  { code: 'au', label: 'Australia',       special: null },
-  { code: 'jp', label: 'Japan',           special: null },
-  { code: 'kr', label: 'Korea',           special: 'korea' },
-  { code: 'vn', label: 'Vietnam',         special: 'vietnam' },
-  { code: 'cn', label: 'China',           special: 'china' },
-  { code: 'de', label: 'Germany',         special: 'germany' },
-  { code: 'br', label: 'Brazil',          special: null },
-  { code: 'mx', label: 'Mexico',          special: null },
-  { code: 'in', label: 'India',           special: null },
+// Apple-distributable countries, sorted by approximate iOS user count (millions)
+const IOS_COUNTRIES = [
+  { code: 'CN', name: 'China',            lang: 'zh', num: 156, iosUsers: 250 },
+  { code: 'US', name: 'United States',    lang: 'en', num: 840, iosUsers: 120 },
+  { code: 'IN', name: 'India',            lang: 'en', num: 356, iosUsers: 65  },
+  { code: 'JP', name: 'Japan',            lang: 'ja', num: 392, iosUsers: 55  },
+  { code: 'BR', name: 'Brazil',           lang: 'pt', num: 76,  iosUsers: 45  },
+  { code: 'DE', name: 'Germany',          lang: 'de', num: 276, iosUsers: 35  },
+  { code: 'GB', name: 'United Kingdom',   lang: 'en', num: 826, iosUsers: 35  },
+  { code: 'ID', name: 'Indonesia',        lang: 'id', num: 360, iosUsers: 28  },
+  { code: 'MX', name: 'Mexico',           lang: 'es', num: 484, iosUsers: 28  },
+  { code: 'FR', name: 'France',           lang: 'fr', num: 250, iosUsers: 27  },
+  { code: 'TR', name: 'Turkey',           lang: 'tr', num: 792, iosUsers: 26  },
+  { code: 'KR', name: 'South Korea',      lang: 'ko', num: 410, iosUsers: 25  },
+  { code: 'RU', name: 'Russia',           lang: 'ru', num: 643, iosUsers: 22  },
+  { code: 'SA', name: 'Saudi Arabia',     lang: 'ar', num: 682, iosUsers: 22  },
+  { code: 'CA', name: 'Canada',           lang: 'en', num: 124, iosUsers: 20  },
+  { code: 'IT', name: 'Italy',            lang: 'it', num: 380, iosUsers: 20  },
+  { code: 'TW', name: 'Taiwan',           lang: 'zh', num: 158, iosUsers: 18  },
+  { code: 'ES', name: 'Spain',            lang: 'es', num: 724, iosUsers: 17  },
+  { code: 'VN', name: 'Vietnam',          lang: 'vi', num: 704, iosUsers: 16  },
+  { code: 'AU', name: 'Australia',        lang: 'en', num: 36,  iosUsers: 15  },
+  { code: 'EG', name: 'Egypt',            lang: 'ar', num: 818, iosUsers: 14  },
+  { code: 'TH', name: 'Thailand',         lang: 'th', num: 764, iosUsers: 13  },
+  { code: 'PL', name: 'Poland',           lang: 'pl', num: 616, iosUsers: 12  },
+  { code: 'MY', name: 'Malaysia',         lang: 'ms', num: 458, iosUsers: 12  },
+  { code: 'AR', name: 'Argentina',        lang: 'es', num: 32,  iosUsers: 11  },
+  { code: 'NL', name: 'Netherlands',      lang: 'nl', num: 528, iosUsers: 11  },
+  { code: 'PH', name: 'Philippines',      lang: 'en', num: 608, iosUsers: 10  },
+  { code: 'UA', name: 'Ukraine',          lang: 'uk', num: 804, iosUsers: 9   },
+  { code: 'SE', name: 'Sweden',           lang: 'sv', num: 752, iosUsers: 8   },
+  { code: 'HK', name: 'Hong Kong',        lang: 'zh', num: 344, iosUsers: 8   },
+  { code: 'ZA', name: 'South Africa',     lang: 'en', num: 710, iosUsers: 8   },
+  { code: 'AE', name: 'UAE',              lang: 'ar', num: 784, iosUsers: 7   },
+  { code: 'CH', name: 'Switzerland',      lang: 'de', num: 756, iosUsers: 7   },
+  { code: 'BE', name: 'Belgium',          lang: 'fr', num: 56,  iosUsers: 7   },
+  { code: 'AT', name: 'Austria',          lang: 'de', num: 40,  iosUsers: 6   },
+  { code: 'CO', name: 'Colombia',         lang: 'es', num: 170, iosUsers: 6   },
+  { code: 'NG', name: 'Nigeria',          lang: 'en', num: 566, iosUsers: 5   },
+  { code: 'SG', name: 'Singapore',        lang: 'en', num: 702, iosUsers: 5   },
+  { code: 'CL', name: 'Chile',            lang: 'es', num: 152, iosUsers: 5   },
+  { code: 'HU', name: 'Hungary',          lang: 'hu', num: 348, iosUsers: 4   },
+  { code: 'NO', name: 'Norway',           lang: 'no', num: 578, iosUsers: 4   },
+  { code: 'DK', name: 'Denmark',          lang: 'da', num: 208, iosUsers: 4   },
+  { code: 'FI', name: 'Finland',          lang: 'fi', num: 246, iosUsers: 4   },
+  { code: 'IL', name: 'Israel',           lang: 'he', num: 376, iosUsers: 4   },
+  { code: 'GR', name: 'Greece',           lang: 'el', num: 300, iosUsers: 4   },
+  { code: 'RO', name: 'Romania',          lang: 'ro', num: 642, iosUsers: 4   },
+  { code: 'CZ', name: 'Czech Republic',   lang: 'cs', num: 203, iosUsers: 4   },
+  { code: 'PT', name: 'Portugal',         lang: 'pt', num: 620, iosUsers: 4   },
+  { code: 'PE', name: 'Peru',             lang: 'es', num: 604, iosUsers: 4   },
+  { code: 'PK', name: 'Pakistan',         lang: 'ur', num: 586, iosUsers: 4   },
+  { code: 'KZ', name: 'Kazakhstan',       lang: 'ru', num: 398, iosUsers: 4   },
+  { code: 'KW', name: 'Kuwait',           lang: 'ar', num: 414, iosUsers: 3   },
+  { code: 'QA', name: 'Qatar',            lang: 'ar', num: 634, iosUsers: 3   },
+  { code: 'NZ', name: 'New Zealand',      lang: 'en', num: 554, iosUsers: 3   },
+  { code: 'IQ', name: 'Iraq',             lang: 'ar', num: 368, iosUsers: 3   },
 ];
 
 const IOS_SECTIONS = [
@@ -283,7 +326,7 @@ const IOS_SECTIONS = [
   { id: 'ios-content',      num: 2, label: 'Content Rating' },
   { id: 'ios-compliance',   num: 3, label: 'Export Compliance' },
   { id: 'ios-business',     num: 4, label: 'Business' },
-  { id: 'ios-distribution', num: 5, label: 'Regional Distribution' },
+  { id: 'ios-distribution', num: 5, label: 'Distribution' },
 ];
 
 function makeBlankIOSAnswers() {
@@ -337,14 +380,8 @@ function makeBlankIOSAnswers() {
     iapTypes:               [],
     hasFreeTrial:           null,
     taxCategory:            'games',
-    // Regional Distribution
-    allRegions:             null,   // true = all, false = specific
-    selectedRegions:        [],
-    koreaHasPaidContent:    null,
-    vietnamAcknowledge:     false,
-    chinaDistribute:        null,
-    chinaICP:               '',
-    germanyUSKContent:      null,
+    // Distribution
+    selectedCountries:      [],
   };
 }
 
@@ -388,10 +425,8 @@ function computeIOSSectionRisk(sectionId) {
   }
 
   if (sectionId === 'ios-distribution') {
-    if (a.allRegions === null) return 'NONE';
-    const active = a.allRegions ? IOS_REGIONS.map(r => r.code) : a.selectedRegions;
-    if (active.includes('kr') && a.koreaHasPaidContent === 'yes') return 'HIGH';
-    if (active.includes('cn') && a.chinaDistribute === 'yes') return 'MEDIUM';
+    if (a.selectedCountries.length === 0) return 'NONE';
+    if (a.selectedCountries.includes('CN')) return 'MEDIUM';
     return 'LOW';
   }
 
@@ -439,12 +474,7 @@ function isIOSSectionComplete(sectionId) {
   }
 
   if (sectionId === 'ios-distribution') {
-    if (a.allRegions === null) return false;
-    if (a.allRegions === false && a.selectedRegions.length === 0) return false;
-    const active = a.allRegions ? IOS_REGIONS.map(r => r.code) : a.selectedRegions;
-    if (active.includes('kr') && a.koreaHasPaidContent === null) return false;
-    if (active.includes('cn') && a.chinaDistribute === null) return false;
-    return true;
+    return a.selectedCountries.length > 0;
   }
 
   return false;
