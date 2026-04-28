@@ -113,9 +113,9 @@ function completeOnboarding() {
 /* ── Task modal ──────────────────────────────────────── */
 
 function openTaskModal(platformId, stepId) {
-  // Intercept submit steps → open content review modal instead
+  // Intercept submit/review steps → open content review modal instead
   const step = PLATFORMS[platformId].steps.find(s => s.id === stepId);
-  if (step && step.isSubmit) {
+  if (step && (step.isSubmit || step.isReview)) {
     openSubmitModal(platformId);
     return;
   }
@@ -165,7 +165,7 @@ function markTaskDone(platformId, stepId) {
       submitBtn.classList.remove('is-locked');
       submitBtn.removeAttribute('disabled');
       submitBtn.setAttribute('title', 'Submit for review');
-      submitBtn.setAttribute('onclick', `openSubmitModal('${platformId}')`);
+      submitBtn.setAttribute('onclick', `finalSubmit('${platformId}')`);
     }
   }
 
@@ -210,11 +210,14 @@ function markTaskUndone(platformId, stepId) {
 
 function openSubmitModal(platformId) {
   state.submitModal.platformId = platformId;
-  // For iOS, auto-expand section 1 and seed privacy URL from onboarding
+  // For iOS, seed answers from onboarding where available (only if not yet set)
   if (platformId === 'ios') {
-    state.submitModal.expanded = ['ios-privacy'];
+    state.submitModal.expanded = [];
     if (!state.iosSubmitAnswers.privacyPolicyUrl && state.formData.privacyUrl) {
       state.iosSubmitAnswers.privacyPolicyUrl = state.formData.privacyUrl;
+    }
+    if (state.iosSubmitAnswers.hasIAP === null && state.questionAnswers.inAppPurchases !== null) {
+      state.iosSubmitAnswers.hasIAP = state.questionAnswers.inAppPurchases;
     }
   } else {
     state.submitModal.expanded = [];
@@ -278,6 +281,55 @@ function reRenderIOSSubmitModal() {
   // Restore scroll position
   const newScrollEl = document.getElementById('ios-submit-scroll');
   if (newScrollEl) newScrollEl.scrollTop = scrollTop;
+
+  positionTooltips();
+}
+
+/* ── Tooltip edge-detection positioning ──────────────── */
+function positionTooltips() {
+  const container = document.getElementById('ios-submit-scroll') || document.getElementById('submit-overlay');
+  if (!container) return;
+
+  container.querySelectorAll('.tooltip-anchor').forEach(anchor => {
+    const body = anchor.querySelector('.tooltip-body');
+    if (!body) return;
+
+    // Reset inline overrides
+    body.style.cssText = '';
+
+    anchor.addEventListener('mouseenter', () => {
+      // Reset
+      body.style.left = '';
+      body.style.right = '';
+      body.style.top = '';
+      body.style.bottom = '';
+      body.style.transform = '';
+
+      const aRect  = anchor.getBoundingClientRect();
+      const cRect  = container.getBoundingClientRect();
+      const tipW   = 230;
+      const tipH   = body.offsetHeight || 90;
+
+      // Horizontal: default is centered on icon
+      const centeredLeft = aRect.left + aRect.width / 2 - tipW / 2;
+      if (centeredLeft < cRect.left + 8) {
+        // Would overflow left — align left edge with anchor
+        body.style.left = '0';
+        body.style.transform = 'none';
+      } else if (centeredLeft + tipW > cRect.right - 8) {
+        // Would overflow right — align right edge with anchor
+        body.style.left  = 'auto';
+        body.style.right = '0';
+        body.style.transform = 'none';
+      }
+
+      // Vertical: default is above; if near top of container, show below
+      if (aRect.top - tipH - 10 < cRect.top + 8) {
+        body.style.bottom = 'auto';
+        body.style.top    = 'calc(100% + 10px)';
+      }
+    }, { capture: false });
+  });
 }
 
 // Called by YES/NO and intensity/chip clicks — re-renders immediately
@@ -319,8 +371,13 @@ function toggleIOSRegion(code) {
 }
 
 function confirmAndSubmit(platformId) {
-  state.platformStepStatus[platformId]['submit'] = 'complete';
+  state.platformStepStatus[platformId]['reviewSubmission'] = 'complete';
   closeSubmitModal();
+  renderDashboard();
+}
+
+function finalSubmit(platformId) {
+  state.platformStepStatus[platformId]['submit'] = 'complete';
   renderDashboard();
 }
 

@@ -537,7 +537,7 @@ function buildActiveCard(pid) {
         </div>
         <button class="card-submit-btn ${submitDone ? 'is-done' : locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
-                onclick="${submitDone || locked ? '' : `openSubmitModal('${pid}')`}"
+                onclick="${submitDone || locked ? '' : `finalSubmit('${pid}')`}"
                 title="${locked ? 'Complete all steps first' : submitDone ? 'Submitted' : 'Submit for review'}"
                 ${locked && !submitDone ? 'disabled' : ''}>
           ${submitDone ? '✓' : 'Submit'}
@@ -657,6 +657,8 @@ function renderSubmitModal() {
   } else {
     renderGenericSubmitModal(modal);
   }
+  // Re-run after DOM settles so tooltip bounds can be measured
+  requestAnimationFrame(() => positionTooltips());
 }
 
 /* Generic (non-iOS) content-review modal — existing risk-summary approach */
@@ -700,7 +702,7 @@ function renderGenericSubmitModal(modal) {
     </div>
 
     <div class="submit-modal-footer">
-      <button class="btn btn-ghost" onclick="closeSubmitModal()">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeSubmitModal()">Save Draft</button>
       <button class="btn btn-primary submit-confirm-btn" onclick="confirmAndSubmit('${platformId}')">
         Confirm & Submit →
       </button>
@@ -730,7 +732,7 @@ function renderIOSSubmitModal(modal) {
     </div>
 
     <div class="submit-modal-footer">
-      <button class="btn btn-ghost" onclick="closeSubmitModal()">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeSubmitModal()">Save Draft</button>
       <button class="btn submit-confirm-btn ${allComplete ? '' : 'is-ios-incomplete'}"
               onclick="${allComplete ? "confirmAndSubmit('ios')" : ''}"
               title="${allComplete ? 'Submit to App Store' : 'Complete all sections first'}">
@@ -792,12 +794,13 @@ function buildIOSSectionBody(sectionId) {
 /* ── iOS section helper: YES/NO question row ─────────── */
 function iosYNRow(label, fieldId, desc, tooltip) {
   const val = state.iosSubmitAnswers[fieldId];
-  const ttHTML = tooltip ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>` : '';
+  // desc and tooltip both render as a ? icon tooltip; desc takes priority if tooltip not provided
+  const ttText = tooltip || desc || '';
+  const ttHTML = ttText ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${ttText}</span></span>` : '';
   return `
     <div class="ios-q-row">
       <div class="ios-q-left">
         <div class="ios-q-label">${label}${ttHTML}</div>
-        ${desc ? `<div class="ios-q-desc">${desc}</div>` : ''}
       </div>
       <div class="question-yn">
         <button class="yn-btn yn-yes ${val === 'yes' ? 'is-selected' : ''}"
@@ -1061,7 +1064,6 @@ function buildBusinessSection() {
       <div style="margin-top:12px;">
         ${iosYNRow('Does any subscription include a free trial?', 'hasFreeTrial', '')}
       </div>
-      <div class="ios-note" style="margin-top:4px;">Subwoofer will configure IAP pricing across all active platforms automatically.</div>
     </div>` : '';
 
   return `

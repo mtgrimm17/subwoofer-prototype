@@ -1899,7 +1899,7 @@ select.form-input {
 .ios-q-left { flex: 1; min-width: 0; }
 
 .ios-q-label { font-size: 13px; font-weight: 500; color: var(--text-dim); line-height: 1.4; }
-.ios-q-label-sm { font-size: 12px; }
+.ios-q-label-sm { font-size: 13px; }
 .ios-q-desc { font-size: 12px; color: var(--text-dim); line-height: 1.45; margin-top: 2px; }
 
 /* ── Intensity buttons (None / Infrequent / Frequent) ── */
