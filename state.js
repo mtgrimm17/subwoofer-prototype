@@ -159,6 +159,269 @@ function platformStepCount(platformId) {
   };
 }
 
+/* ── iOS Submit Questionnaire ────────────────────────── */
+
+const IOS_DATA_TYPES = [
+  { id: 'contactInfo',     label: 'Contact Info',      desc: 'Name, email, phone, address' },
+  { id: 'healthFitness',   label: 'Health & Fitness',  desc: 'Health, fitness, medical data' },
+  { id: 'financial',       label: 'Financial Info',    desc: 'Payment info, credit score' },
+  { id: 'location',        label: 'Location',          desc: 'Precise or coarse location data' },
+  { id: 'sensitiveInfo',   label: 'Sensitive Info',    desc: 'Racial, biometric, religious data' },
+  { id: 'contacts',        label: 'Contacts',          desc: 'Contacts or address book' },
+  { id: 'userContent',     label: 'User Content',      desc: 'Messages, gameplay content' },
+  { id: 'browsingHistory', label: 'Browsing History',  desc: 'Web browsing history' },
+  { id: 'searchHistory',   label: 'Search History',    desc: 'In-app search history' },
+  { id: 'identifiers',     label: 'Identifiers',       desc: 'User ID, device ID, IDFA' },
+  { id: 'usageData',       label: 'Usage Data',        desc: 'Product interaction, diagnostics' },
+];
+
+const IOS_INTENSITY_QUESTIONS = [
+  // Step 2: Mature Themes
+  { id: 'profanity',         label: 'Profanity or Crude Humor',
+    tooltip: 'Offensive or vulgar language considered rude, obscene, or inappropriate. Includes swearing, slurs, insult-based humor, or jokes about bodily functions.' },
+  { id: 'horrorFear',        label: 'Horror/Fear Themes',
+    tooltip: 'Content evoking anxiety, dread, or terror. Includes supernatural elements, body horror, or fear of isolation and death.' },
+  { id: 'substancesAlcohol', label: 'Alcohol, Tobacco, or Drug Use',
+    tooltip: 'Depictions of alcohol, tobacco, or drug use. Includes drunken behavior, smoking, or illegal drug consumption.' },
+  // Step 3: Medical or Wellness
+  { id: 'medicalTreatment',  label: 'Medical or Treatment Information',
+    tooltip: 'Diagnoses or guidance on medical conditions or health. Includes medication guidance, emergency care, or treatment information.' },
+  // Step 4: Sexuality or Nudity
+  { id: 'matureSuggestive',  label: 'Mature or Suggestive Themes',
+    tooltip: 'Implicit sexual references or mature topics for older audiences. Includes innuendo, suggestive imagery, implied nudity, trauma, or political strife.' },
+  { id: 'sexualContent',     label: 'Sexual Content or Nudity',
+    tooltip: 'Non-explicit depictions of sexual behavior or partial nudity. Includes mild romantic intimacy, implied sexual activity, or sensual dialog.' },
+  { id: 'graphicSexual',     label: 'Graphic Sexual Content and Nudity',
+    tooltip: 'Explicit depictions of sexual activity or nudity. Includes full-frontal nudity or pornographic portrayals of sex.' },
+  // Step 5: Violence
+  { id: 'cartoonViolence',   label: 'Cartoon or Fantasy Violence',
+    tooltip: 'Exaggerated or fantastical conflict easily distinguished from real life. Includes animated combat, magic used to cause harm, or cartoon violence.' },
+  { id: 'realisticViolence', label: 'Realistic Violence',
+    tooltip: 'Physical conflict or harm involving humans in lifelike situations. Includes injuries from punches, shoot-outs, or combat between characters.' },
+  { id: 'extendedViolence',  label: 'Extended Graphic or Sadistic Violence',
+    tooltip: 'Prolonged realistic depictions of physical conflict. Includes extreme gore, human injury, or death.' },
+  { id: 'gunsWeapons',       label: 'Guns or Other Weapons',
+    tooltip: 'References to or depictions of guns, weapons, or objects that may cause bodily harm. Includes guns, swords, or knives.' },
+  // Step 6: Chance-Based Activities
+  { id: 'simulatedGambling', label: 'Simulated Gambling',
+    tooltip: 'Wagering without real money. Includes simulated casino games, sports betting, or other wagering with no monetary value.' },
+  { id: 'contests',          label: 'Contests',
+    tooltip: 'Users compete for rankings or rewards. Includes skill-based competitions, trivia quizzes, or sport and fitness challenges.' },
+];
+
+const IOS_CONTENT_YN_QUESTIONS = [
+  // Step 1: In-App Controls
+  { id: 'parentalControls',    label: 'Parental Controls',
+    tooltip: 'Tools allowing parents to monitor or restrict a child\'s in-app access. Includes content filtering, usage limits, or purchase restrictions.' },
+  { id: 'ageAssurance',        label: 'Age Assurance',
+    tooltip: 'Confirms a user\'s age meets requirements for specific content. Includes API checks, age estimation, or government ID verification.' },
+  // Step 1: Capabilities
+  { id: 'unrestrictedInternet', label: 'Unrestricted Web Access',
+    tooltip: 'Users can navigate to any webpage or freely browse the web. Includes embedded browser functionality or browser app.' },
+  { id: 'userGenContent',      label: 'User-Generated Content',
+    tooltip: 'User-created content broadly distributed as part of the app experience. Includes videos, photos, text, or audio shared by users.' },
+  { id: 'messagingChat',       label: 'Messaging and Chat',
+    tooltip: 'Direct user-to-user communication within the app. Includes text, voice, or video chat, group messaging, or public posting.' },
+  { id: 'advertising',         label: 'Advertising',
+    tooltip: 'Paid promotion of products or services within the app. Includes banner ads, video ads, rich media, or native ad formats.' },
+  // Step 3: Medical or Wellness
+  { id: 'healthWellness',      label: 'Health or Wellness Topics',
+    tooltip: 'Self-care or lifestyle recommendations. Includes calorie tracking, dieting advice, or exercise recommendations.' },
+  // Step 6: Chance-Based Activities (Yes/No)
+  { id: 'realMoneyGambling',   label: 'Gambling',
+    tooltip: 'Wagering using real money or currency exchangeable for real money. Includes casino games, sports betting, lotteries, and raffles.' },
+  { id: 'lootBoxes',           label: 'Loot Boxes',
+    tooltip: 'Randomized virtual item containers available for purchase. Includes randomized functional cards or cosmetic items.' },
+];
+
+const IOS_REGIONS = [
+  { code: 'us', label: 'United States',   special: null },
+  { code: 'eu', label: 'European Union',  special: null },
+  { code: 'gb', label: 'United Kingdom',  special: null },
+  { code: 'ca', label: 'Canada',          special: null },
+  { code: 'au', label: 'Australia',       special: null },
+  { code: 'jp', label: 'Japan',           special: null },
+  { code: 'kr', label: 'Korea',           special: 'korea' },
+  { code: 'vn', label: 'Vietnam',         special: 'vietnam' },
+  { code: 'cn', label: 'China',           special: 'china' },
+  { code: 'de', label: 'Germany',         special: 'germany' },
+  { code: 'br', label: 'Brazil',          special: null },
+  { code: 'mx', label: 'Mexico',          special: null },
+  { code: 'in', label: 'India',           special: null },
+];
+
+const IOS_SECTIONS = [
+  { id: 'ios-privacy',      num: 1, label: 'Privacy' },
+  { id: 'ios-content',      num: 2, label: 'Content Rating' },
+  { id: 'ios-compliance',   num: 3, label: 'Export Compliance' },
+  { id: 'ios-business',     num: 4, label: 'Business' },
+  { id: 'ios-distribution', num: 5, label: 'Regional Distribution' },
+];
+
+function makeBlankIOSAnswers() {
+  return {
+    // Privacy
+    privacyPolicyUrl:       '',
+    collectsData:           null,   // 'yes' / 'no'
+    dataTypes:              [],
+    dataLinkedToUser:       null,
+    dataForTracking:        null,
+    // Content Rating — Step 1: Features (Yes/No)
+    parentalControls:       null,
+    ageAssurance:           null,
+    unrestrictedInternet:   null,
+    userGenContent:         null,
+    messagingChat:          null,
+    advertising:            null,
+    // Content Rating — Step 2: Mature Themes (intensity: null / 'none' / 'infrequent' / 'frequent')
+    profanity:              null,
+    horrorFear:             null,
+    substancesAlcohol:      null,
+    // Content Rating — Step 3: Medical or Wellness (pre-populated for most games)
+    medicalTreatment:       'none',
+    healthWellness:         'no',
+    // Content Rating — Step 4: Sexuality or Nudity (intensity)
+    matureSuggestive:       null,
+    sexualContent:          null,
+    graphicSexual:          null,
+    // Content Rating — Step 5: Violence (intensity)
+    cartoonViolence:        null,
+    realisticViolence:      null,
+    extendedViolence:       null,
+    gunsWeapons:            null,
+    // Content Rating — Step 6: Chance-Based Activities
+    simulatedGambling:      null,
+    contests:               null,
+    realMoneyGambling:      null,
+    lootBoxes:              null,
+    // Content Rating — Step 7: Additional Information
+    ageCategory:            null,   // 'not_applicable' / 'made_for_kids' / 'override_higher'
+    kidsAgeRange:           null,   // 'under5' / '6to8' / '9to11'
+    overrideRating:         null,   // '9' / '13' / '16' / '18'
+    ageSuitabilityUrl:      '',
+    // Export Compliance
+    usesEncryption:         null,
+    encryptionExempt:       null,
+    hasERN:                 null,
+    ernNumber:              '',
+    // Business
+    hasIAP:                 null,
+    iapTypes:               [],
+    hasFreeTrial:           null,
+    taxCategory:            '',
+    // Regional Distribution
+    allRegions:             null,   // true = all, false = specific
+    selectedRegions:        [],
+    koreaHasPaidContent:    null,
+    vietnamAcknowledge:     false,
+    chinaDistribute:        null,
+    chinaICP:               '',
+    germanyUSKContent:      null,
+  };
+}
+
+function computeIOSSectionRisk(sectionId) {
+  const a = state.iosSubmitAnswers;
+
+  if (sectionId === 'ios-privacy') {
+    if (!a.privacyPolicyUrl.trim()) return 'HIGH';
+    if (a.collectsData === 'yes') {
+      if (a.dataTypes.length === 0) return 'HIGH';
+      if (a.dataForTracking === 'yes') return 'MEDIUM';
+      return 'MEDIUM';
+    }
+    if (a.collectsData === null) return 'NONE';
+    return 'LOW';
+  }
+
+  if (sectionId === 'ios-content') {
+    if (a.graphicSexual === 'frequent' || a.sexualContent === 'frequent' ||
+        a.realMoneyGambling === 'yes' || a.lootBoxes === 'yes') return 'HIGH';
+    const hasFrequent = IOS_INTENSITY_QUESTIONS.some(q => a[q.id] === 'frequent');
+    if (hasFrequent || a.messagingChat === 'yes' || a.unrestrictedInternet === 'yes' ||
+        a.userGenContent === 'yes') return 'MEDIUM';
+    const anyAnswered = IOS_INTENSITY_QUESTIONS.some(q => a[q.id] !== null) ||
+                        IOS_CONTENT_YN_QUESTIONS.some(q => a[q.id] !== null);
+    return anyAnswered ? 'LOW' : 'NONE';
+  }
+
+  if (sectionId === 'ios-compliance') {
+    if (a.usesEncryption === 'yes') {
+      if (a.encryptionExempt === 'no' && a.hasERN === 'no') return 'HIGH';
+      if (a.encryptionExempt === null || (a.encryptionExempt === 'no' && a.hasERN === null)) return 'MEDIUM';
+      return 'LOW';
+    }
+    return a.usesEncryption === null ? 'NONE' : 'LOW';
+  }
+
+  if (sectionId === 'ios-business') {
+    if (a.hasIAP === 'yes') return 'MEDIUM';
+    return a.hasIAP === null ? 'NONE' : 'LOW';
+  }
+
+  if (sectionId === 'ios-distribution') {
+    if (a.allRegions === null) return 'NONE';
+    const active = a.allRegions ? IOS_REGIONS.map(r => r.code) : a.selectedRegions;
+    if (active.includes('kr') && a.koreaHasPaidContent === 'yes') return 'HIGH';
+    if (active.includes('cn') && a.chinaDistribute === 'yes') return 'MEDIUM';
+    return 'LOW';
+  }
+
+  return 'NONE';
+}
+
+function isIOSSectionComplete(sectionId) {
+  const a = state.iosSubmitAnswers;
+
+  if (sectionId === 'ios-privacy') {
+    if (!a.privacyPolicyUrl.trim()) return false;
+    if (a.collectsData === null) return false;
+    if (a.collectsData === 'yes') {
+      if (a.dataTypes.length === 0) return false;
+      if (a.dataLinkedToUser === null || a.dataForTracking === null) return false;
+    }
+    return true;
+  }
+
+  if (sectionId === 'ios-content') {
+    if (!IOS_INTENSITY_QUESTIONS.every(q => a[q.id] !== null)) return false;
+    if (!IOS_CONTENT_YN_QUESTIONS.every(q => a[q.id] !== null)) return false;
+    if (a.ageCategory === null) return false;
+    if (a.ageCategory === 'made_for_kids'   && a.kidsAgeRange  === null) return false;
+    if (a.ageCategory === 'override_higher' && a.overrideRating === null) return false;
+    return true;
+  }
+
+  if (sectionId === 'ios-compliance') {
+    if (a.usesEncryption === null) return false;
+    if (a.usesEncryption === 'yes') {
+      if (a.encryptionExempt === null) return false;
+      if (a.encryptionExempt === 'no') {
+        if (a.hasERN === null) return false;
+        if (a.hasERN === 'yes' && !a.ernNumber.trim()) return false;
+      }
+    }
+    return true;
+  }
+
+  if (sectionId === 'ios-business') {
+    if (a.hasIAP === null) return false;
+    if (a.hasIAP === 'yes' && a.iapTypes.length === 0) return false;
+    return true;
+  }
+
+  if (sectionId === 'ios-distribution') {
+    if (a.allRegions === null) return false;
+    if (a.allRegions === false && a.selectedRegions.length === 0) return false;
+    const active = a.allRegions ? IOS_REGIONS.map(r => r.code) : a.selectedRegions;
+    if (active.includes('kr') && a.koreaHasPaidContent === null) return false;
+    if (active.includes('cn') && a.chinaDistribute === null) return false;
+    return true;
+  }
+
+  return false;
+}
+
 /* ── Risk Categories (Submit Modal) ─────────────────── */
 
 const RISK_CATEGORIES = [
@@ -498,4 +761,7 @@ const state = {
     platformId: null,
     expanded: [],
   },
+
+  // iOS App Store submission questionnaire answers
+  iosSubmitAnswers: makeBlankIOSAnswers(),
 };

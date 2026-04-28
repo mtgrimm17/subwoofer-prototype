@@ -271,7 +271,15 @@ body {
   gap: 10px;
   cursor: pointer;
   color: var(--text);
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  border-radius: 8px;
+  transition: opacity 0.15s;
 }
+
+.profile-block:hover { opacity: 0.75; }
 
 .profile-avatar {
   width: 28px;
@@ -793,6 +801,10 @@ body {
 .task-dot.is-complete {
   background: var(--green);
   border-color: var(--green);
+}
+
+/* Animation only fires on the dot that was just completed, not all completed dots */
+.task-dot.just-completed {
   animation: checkPop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -1130,7 +1142,7 @@ body {
   color: var(--text-faint);
   font-size: 9px;
   display: inline-flex; align-items: center; justify-content: center;
-  cursor: help;
+  cursor: default;
   margin-left: 6px;
   font-weight: 700;
   transition: border-color 0.15s, color 0.15s;
@@ -1498,12 +1510,13 @@ select.form-input {
 }
 .question-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
 
-/* YES / NO column on the right */
+/* YES / NO buttons side-by-side */
 .question-yn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .yn-btn {
@@ -1728,3 +1741,254 @@ select.form-input {
 
 .submit-confirm-btn { background: var(--green); color: var(--bg); font-weight: 700; }
 .submit-confirm-btn:hover { background: #5eeb92; }
+
+.btn-danger { background: var(--magenta); color: #fff; font-weight: 700; }
+.btn-danger:hover { background: #ff2060; }
+
+
+/* ============================================================
+   CONFIRM / INFO MODAL
+   ============================================================ */
+
+.confirm-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 380px;
+  padding: 32px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  animation: modalIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.confirm-modal-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.confirm-modal-message {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.confirm-modal-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  justify-content: center;
+}
+
+
+/* ── Project dropdown danger item + divider ──────────── */
+
+.project-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
+.project-item.danger { color: var(--magenta); }
+.project-item.danger:hover { background: var(--magenta-soft); }
+
+
+/* ============================================================
+   iOS SUBMIT MODAL — QUESTIONNAIRE SECTIONS
+   ============================================================ */
+
+.ios-submit-intro {
+  font-size: 13px; color: var(--text-dim); line-height: 1.65;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;
+}
+
+.ios-sections { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+
+/* Section card */
+.ios-section {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  transition: border-color 0.15s;
+}
+.ios-section:hover { border-color: var(--border-hover); }
+.ios-section.is-complete { border-color: rgba(74, 222, 128, 0.3); }
+
+/* Section header row */
+.ios-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+  transition: background 0.12s;
+}
+.ios-section-head:hover { background: var(--panel-3); }
+
+.ios-section-left  { display: flex; align-items: center; gap: 10px; }
+.ios-section-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Numbered badge — becomes checkmark when complete */
+.ios-section-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--panel-3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--text-faint);
+  flex-shrink: 0; transition: all 0.2s;
+}
+.ios-section-num.is-done {
+  background: var(--green); border-color: var(--green); color: var(--bg);
+}
+
+.ios-section-label { font-size: 14px; font-weight: 600; color: var(--text); }
+
+.ios-section-incomplete {
+  font-size: 10px; font-weight: 600; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* Content Rating step headers */
+.ios-content-step-label {
+  font-size: 11px; font-weight: 700; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin: 16px 0 8px; padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+.ios-content-step-label:first-child { margin-top: 0; }
+.ios-content-step-sub {
+  font-size: 11px; font-weight: 600; color: var(--text-faint);
+  margin: 10px 0 4px;
+}
+
+/* Radio groups (Step 7 age category follow-ups) */
+.ios-radio-group { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.ios-radio-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-dim); cursor: pointer;
+}
+.ios-radio-label input[type="radio"] { accent-color: var(--blue); width: 14px; height: 14px; cursor: pointer; }
+
+.ios-section-chevron {
+  font-size: 14px; color: var(--text-faint);
+  transition: transform 0.2s;
+}
+.ios-section.is-expanded .ios-section-chevron { transform: rotate(90deg); }
+
+/* Collapsible body */
+.ios-section-body { display: none; border-top: 1px solid var(--border); }
+.ios-section.is-expanded .ios-section-body { display: block; }
+
+.ios-section-content { padding: 16px; }
+
+/* ── Question rows ───────────────────────────────────── */
+
+.ios-q-row {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 14px;
+  margin-bottom: 10px;
+}
+.ios-q-row:last-child { margin-bottom: 0; }
+.ios-q-row-intensity { align-items: center; margin-bottom: 4px; }
+
+.ios-q-left { flex: 1; min-width: 0; }
+
+.ios-q-label { font-size: 13px; font-weight: 500; color: var(--text-dim); line-height: 1.4; }
+.ios-q-label-sm { font-size: 12px; }
+.ios-q-desc { font-size: 12px; color: var(--text-dim); line-height: 1.45; margin-top: 2px; }
+
+/* ── Intensity buttons (None / Infrequent / Frequent) ── */
+
+.ios-intensity-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+
+.intensity-group { display: flex; gap: 2px; flex-shrink: 0; }
+
+.intensity-btn {
+  padding: 5px 10px; border-radius: 5px;
+  border: 1px solid var(--border); background: var(--panel-3);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+  cursor: pointer; font-family: inherit; color: var(--text-faint);
+  transition: all 0.12s; white-space: nowrap; text-align: center;
+}
+.intensity-btn:hover { border-color: var(--border-hover); color: var(--text-dim); }
+.intensity-btn.is-sel-none       { background: var(--green-soft);   border-color: var(--green);   color: var(--green); }
+.intensity-btn.is-sel-infrequent { background: var(--orange-soft);  border-color: var(--orange);  color: var(--orange); }
+.intensity-btn.is-sel-frequent   { background: var(--magenta-soft); border-color: var(--magenta); color: var(--magenta); }
+
+/* ── Multi-select chips (data types, IAP types, regions) */
+
+.data-type-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.data-type-chip {
+  padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px;
+  font-size: 12px; cursor: pointer; transition: all 0.15s;
+  color: var(--text-dim); background: transparent; font-family: inherit;
+}
+.data-type-chip:hover { border-color: var(--border-hover); color: var(--text); }
+.data-type-chip.is-on { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+
+/* ── Sub-sections ────────────────────────────────────── */
+
+.ios-subsection { margin-top: 12px; }
+.ios-subsection-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-faint); margin-bottom: 10px;
+}
+
+/* Indented follow-up block */
+.ios-followup { margin-top: 10px; padding-left: 14px; border-left: 2px solid var(--border); }
+
+/* ── Callout notes ───────────────────────────────────── */
+
+.ios-risk-note {
+  font-size: 12px; border-radius: 6px; padding: 10px 12px;
+  margin-top: 8px; line-height: 1.5;
+}
+.ios-risk-note.risk-HIGH   { background: var(--magenta-soft); border: 1px solid rgba(255,59,118,0.4); color: var(--magenta); }
+.ios-risk-note.risk-MEDIUM { background: var(--orange-soft);  border: 1px solid rgba(251,146,60,0.4); color: var(--orange); }
+
+.ios-note {
+  font-size: 12px; color: var(--text-dim);
+  background: var(--green-soft); border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 6px; padding: 10px 12px; margin-top: 8px; line-height: 1.5;
+}
+
+/* ── Content rating progress bar ─────────────────────── */
+
+.ios-rating-progress {
+  font-size: 12px; color: var(--text-dim);
+  background: var(--panel-3); border-radius: 6px;
+  padding: 8px 12px; margin-bottom: 12px;
+}
+.ios-rating-progress strong { color: var(--text); }
+
+/* ── Divider ─────────────────────────────────────────── */
+
+.ios-q-divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+/* ── Distribution territory toggle ──────────────────── */
+
+.ios-distribution-toggle { display: flex; gap: 2px; flex-shrink: 0; }
+
+.ios-dist-btn {
+  padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.3px; cursor: pointer;
+  font-family: inherit; color: var(--text-faint); background: var(--panel-3);
+  transition: all 0.12s;
+}
+.ios-dist-btn:hover { border-color: var(--border-hover); color: var(--text-dim); }
+.ios-dist-btn.is-active { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+
+/* ── Submit button — incomplete state ────────────────── */
+
+.submit-confirm-btn.is-ios-incomplete {
+  background: var(--panel-3);
+  color: var(--text-faint);
+  cursor: not-allowed;
+  font-weight: 600;
+}

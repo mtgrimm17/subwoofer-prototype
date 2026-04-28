@@ -46,6 +46,8 @@ function nextOnboardingTab() {
   if (state.onboardingTab < 2) {
     state.onboardingTab++;
     renderOnboarding();
+    const body = document.getElementById('ob-body');
+    if (body) body.scrollTop = 0;
   }
 }
 
@@ -53,6 +55,8 @@ function prevOnboardingTab() {
   if (state.onboardingTab > 0) {
     state.onboardingTab--;
     renderOnboarding();
+    const body = document.getElementById('ob-body');
+    if (body) body.scrollTop = 0;
   }
 }
 
@@ -125,7 +129,7 @@ function closeTaskModal() {
   state.activeModal = null;
   document.getElementById('task-overlay').classList.add('hidden');
   document.body.style.overflow = '';
-  renderDashboard();
+  // No renderDashboard() here — targeted updates handle any state changes
 }
 
 function taskOverlayClick(e) {
@@ -136,11 +140,68 @@ function taskOverlayClick(e) {
 
 function markTaskDone(platformId, stepId) {
   state.platformStepStatus[platformId][stepId] = 'complete';
+
+  // Targeted DOM update — animate only this dot, not all completed dots
+  const dot = document.getElementById(`dot-${platformId}-${stepId}`);
+  if (dot) {
+    dot.classList.add('is-complete', 'just-completed');
+    dot.addEventListener('animationend', () => dot.classList.remove('just-completed'), { once: true });
+    const taskRow = dot.closest('.card-task');
+    if (taskRow) taskRow.classList.add('is-done');
+  }
+
+  // Recalculate progress and update bar + step count
+  const counts = platformStepCount(platformId);
+  const pct = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+  const barFill = document.getElementById(`bar-fill-${platformId}`);
+  if (barFill) barFill.style.width = pct + '%';
+  const stepCountEl = document.getElementById(`step-count-${platformId}`);
+  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
+
+  // Unlock submit button if all required steps now done
+  if (counts.allRequired && !counts.submitDone) {
+    const submitBtn = document.getElementById(`submit-btn-${platformId}`);
+    if (submitBtn) {
+      submitBtn.classList.remove('is-locked');
+      submitBtn.removeAttribute('disabled');
+      submitBtn.setAttribute('title', 'Submit for review');
+      submitBtn.setAttribute('onclick', `openSubmitModal('${platformId}')`);
+    }
+  }
+
   closeTaskModal();
 }
 
 function markTaskUndone(platformId, stepId) {
   state.platformStepStatus[platformId][stepId] = 'not_started';
+
+  // Targeted DOM update — remove complete state from this dot only
+  const dot = document.getElementById(`dot-${platformId}-${stepId}`);
+  if (dot) {
+    dot.classList.remove('is-complete', 'just-completed');
+    const taskRow = dot.closest('.card-task');
+    if (taskRow) taskRow.classList.remove('is-done');
+  }
+
+  // Recalculate progress
+  const counts = platformStepCount(platformId);
+  const pct = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+  const barFill = document.getElementById(`bar-fill-${platformId}`);
+  if (barFill) barFill.style.width = pct + '%';
+  const stepCountEl = document.getElementById(`step-count-${platformId}`);
+  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
+
+  // Re-lock submit button if requirements no longer met
+  if (!counts.allRequired && !counts.submitDone) {
+    const submitBtn = document.getElementById(`submit-btn-${platformId}`);
+    if (submitBtn) {
+      submitBtn.classList.add('is-locked');
+      submitBtn.setAttribute('disabled', '');
+      submitBtn.setAttribute('title', 'Complete all steps first');
+      submitBtn.removeAttribute('onclick');
+    }
+  }
+
   closeTaskModal();
 }
 
@@ -149,7 +210,15 @@ function markTaskUndone(platformId, stepId) {
 
 function openSubmitModal(platformId) {
   state.submitModal.platformId = platformId;
-  state.submitModal.expanded   = [];
+  // For iOS, auto-expand section 1 and seed privacy URL from onboarding
+  if (platformId === 'ios') {
+    state.submitModal.expanded = ['ios-privacy'];
+    if (!state.iosSubmitAnswers.privacyPolicyUrl && state.formData.privacyUrl) {
+      state.iosSubmitAnswers.privacyPolicyUrl = state.formData.privacyUrl;
+    }
+  } else {
+    state.submitModal.expanded = [];
+  }
   renderSubmitModal();
   document.getElementById('submit-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -171,6 +240,82 @@ function toggleRiskCategory(catId) {
   // Toggle directly in DOM — no full re-render needed
   const el = document.getElementById('risk-cat-' + catId);
   if (el) el.classList.toggle('is-expanded', state.submitModal.expanded.includes(catId));
+}
+
+/* ── iOS Submit Modal — section toggle ───────────────── */
+
+function toggleIOSSection(sectionId) {
+  const idx = state.submitModal.expanded.indexOf(sectionId);
+  if (idx === -1) state.submitModal.expanded.push(sectionId);
+  else            state.submitModal.expanded.splice(idx, 1);
+  const el = document.getElementById('ios-sec-' + sectionId);
+  if (el) el.classList.toggle('is-expanded', state.submitModal.expanded.includes(sectionId));
+}
+
+/* ── iOS Submit Modal — answer handlers ──────────────── */
+
+// Full re-render of the scroll area with scroll-position preservation
+function reRenderIOSSubmitModal() {
+  const scrollEl = document.getElementById('ios-submit-scroll');
+  const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
+
+  if (scrollEl) scrollEl.innerHTML = buildIOSScrollContent();
+
+  // Update footer button state
+  const footer = document.querySelector('#submit-overlay .submit-modal-footer');
+  if (footer) {
+    const incomplete = IOS_SECTIONS.filter(s => !isIOSSectionComplete(s.id));
+    const allComplete = incomplete.length === 0;
+    const btn = footer.querySelector('.submit-confirm-btn');
+    if (btn) {
+      btn.textContent = allComplete ? 'Confirm & Submit →'
+        : `${incomplete.length} section${incomplete.length > 1 ? 's' : ''} incomplete`;
+      btn.classList.toggle('is-ios-incomplete', !allComplete);
+      btn.setAttribute('onclick', allComplete ? "confirmAndSubmit('ios')" : '');
+    }
+  }
+
+  // Restore scroll position
+  const newScrollEl = document.getElementById('ios-submit-scroll');
+  if (newScrollEl) newScrollEl.scrollTop = scrollTop;
+}
+
+// Called by YES/NO and intensity/chip clicks — re-renders immediately
+function answerIOSField(field, value) {
+  state.iosSubmitAnswers[field] = value;
+  reRenderIOSSubmitModal();
+}
+
+// Called by text oninput — updates state only, no re-render (prevents cursor jumping)
+function updateIOSTextField(field, value) {
+  state.iosSubmitAnswers[field] = value;
+}
+
+function toggleIOSDataType(typeId) {
+  const types = state.iosSubmitAnswers.dataTypes;
+  const idx = types.indexOf(typeId);
+  if (idx === -1) types.push(typeId); else types.splice(idx, 1);
+  reRenderIOSSubmitModal();
+}
+
+function toggleIOSIAPType(typeId) {
+  const types = state.iosSubmitAnswers.iapTypes;
+  const idx = types.indexOf(typeId);
+  if (idx === -1) types.push(typeId); else types.splice(idx, 1);
+  reRenderIOSSubmitModal();
+}
+
+function setIOSAllRegions(bool) {
+  state.iosSubmitAnswers.allRegions = bool;
+  if (bool) state.iosSubmitAnswers.selectedRegions = [];
+  reRenderIOSSubmitModal();
+}
+
+function toggleIOSRegion(code) {
+  const regions = state.iosSubmitAnswers.selectedRegions;
+  const idx = regions.indexOf(code);
+  if (idx === -1) regions.push(code); else regions.splice(idx, 1);
+  reRenderIOSSubmitModal();
 }
 
 function confirmAndSubmit(platformId) {
@@ -505,6 +650,158 @@ function toggleSubmissionMenu(e) {
 
 // Close dropdowns when clicking anywhere outside
 document.addEventListener('click', closeAllDropdowns);
+
+
+/* ── Confirm / Info Modal ────────────────────────────── */
+
+let _confirmCallback = null;
+
+function openConfirmModal(title, message, confirmLabel, onConfirm, isDanger = false) {
+  _confirmCallback = onConfirm;
+  document.getElementById('confirm-modal-title').textContent = title;
+  document.getElementById('confirm-modal-message').textContent = message;
+  const confirmBtn = document.getElementById('confirm-modal-confirm');
+  confirmBtn.textContent = confirmLabel;
+  confirmBtn.className = `btn ${isDanger ? 'btn-danger' : 'btn-primary'}`;
+  confirmBtn.onclick = () => { if (_confirmCallback) _confirmCallback(); };
+  const cancelBtn = document.getElementById('confirm-modal-cancel');
+  cancelBtn.style.display = '';
+  document.getElementById('confirm-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function openInfoModal(title, message) {
+  _confirmCallback = null;
+  document.getElementById('confirm-modal-title').textContent = title;
+  document.getElementById('confirm-modal-message').textContent = message;
+  const confirmBtn = document.getElementById('confirm-modal-confirm');
+  confirmBtn.textContent = 'OK';
+  confirmBtn.className = 'btn btn-primary';
+  confirmBtn.onclick = closeConfirmModal;
+  document.getElementById('confirm-modal-cancel').style.display = 'none';
+  document.getElementById('confirm-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirm-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  _confirmCallback = null;
+}
+
+
+/* ── Delete Submission ───────────────────────────────── */
+
+function deleteCurrentSubmission() {
+  closeAllDropdowns();
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  if (!proj) return;
+
+  // Case 1: Only one submission — can't delete
+  if (proj.submissions.length === 1) {
+    openInfoModal(
+      'Can\'t delete this submission',
+      'This is the only submission for this project. Create a new submission first, then delete this one.'
+    );
+    return;
+  }
+
+  const sub = proj.submissions.find(s => s.id === state.activeSubmissionId);
+  if (!sub) return;
+
+  // Check if any platform has been submitted in this submission
+  const hasSubmitted = Object.keys(PLATFORMS).some(
+    pid => sub.platformStepStatus[pid]?.submit === 'complete'
+  );
+
+  // Check if any platform is active (in-progress but not submitted)
+  const hasActivePlatforms = sub.activePlatforms && sub.activePlatforms.length > 0;
+
+  if (hasSubmitted) {
+    // Case 2: Submission has live store submissions
+    openConfirmModal(
+      'Delete submitted build?',
+      `"${sub.name}" has been submitted to one or more stores. Deleting it removes all submission records — this won't unpublish anything already live.`,
+      'Delete anyway',
+      () => _deleteSubmission(proj, sub.id),
+      true
+    );
+  } else if (hasActivePlatforms) {
+    // Case 3: Active platforms but nothing submitted yet
+    openConfirmModal(
+      'Delete submission?',
+      `Delete "${sub.name}"? Any progress on this submission will be lost.`,
+      'Delete',
+      () => _deleteSubmission(proj, sub.id),
+      true
+    );
+  } else {
+    // Empty submission — delete without ceremony
+    _deleteSubmission(proj, sub.id);
+  }
+}
+
+function _deleteSubmission(proj, subId) {
+  proj.submissions = proj.submissions.filter(s => s.id !== subId);
+  // Switch to the last remaining submission
+  const newSub = proj.submissions[proj.submissions.length - 1];
+  state.activeSubmissionId = newSub.id;
+  state.activePlatforms    = new Set(newSub.activePlatforms);
+  state.platformStepStatus = JSON.parse(JSON.stringify(newSub.platformStepStatus));
+  closeConfirmModal();
+  renderDashboard();
+}
+
+
+/* ── Delete Project ──────────────────────────────────── */
+
+function deleteCurrentProject() {
+  closeAllDropdowns();
+
+  // Can't delete the only project
+  if (state.projects.length === 1) {
+    openInfoModal(
+      'Can\'t delete this project',
+      'This is your only project. Create another project first, then delete this one.'
+    );
+    return;
+  }
+
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  if (!proj) return;
+
+  // Check if any submission has live store submissions
+  const hasSubmitted = proj.submissions.some(sub =>
+    Object.keys(PLATFORMS).some(pid => sub.platformStepStatus[pid]?.submit === 'complete')
+  );
+
+  if (hasSubmitted) {
+    openConfirmModal(
+      'Delete project with live submissions?',
+      `"${proj.name}" has active store submissions. All project data and submission records will be permanently deleted. This won't unpublish anything already live.`,
+      'Delete project',
+      () => _deleteProject(proj.id),
+      true
+    );
+  } else {
+    openConfirmModal(
+      'Delete project?',
+      `Delete "${proj.name}" and all its submissions? This cannot be undone.`,
+      'Delete project',
+      () => _deleteProject(proj.id),
+      true
+    );
+  }
+}
+
+function _deleteProject(projectId) {
+  state.projects = state.projects.filter(p => p.id !== projectId);
+  // Load the first remaining project
+  const newProj = state.projects[0];
+  loadProjectAndSubmission(newProj.id, null);
+  closeConfirmModal();
+  renderDashboard();
+}
 
 function changeInferredAnswer(key) {
   state.questionInferred[key] = false;
