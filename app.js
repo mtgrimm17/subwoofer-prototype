@@ -396,9 +396,7 @@ function renderDistributionMap() {
   const container = document.getElementById('distribution-map-container');
   if (!container || !_worldTopology) return;
 
-  const W  = container.offsetWidth || 480;
-  const IH = Math.round(W * 0.60);
-  const H  = Math.round(W * 0.47);
+  const W = container.offsetWidth || 480;
 
   const selected = new Set(
     (state.iosSubmitAnswers.selectedCountries || [])
@@ -406,7 +404,26 @@ function renderDistributionMap() {
       .filter(Boolean)
   );
 
-  _drawMap(container, W, IH, H, selected, new Set());
+  _drawMap(container, W, selected, new Set());
+}
+
+function toggleDistExpand() {
+  const list = document.getElementById('dist-country-list');
+  const btn  = document.getElementById('dist-expand-btn');
+  if (!list || !btn) return;
+
+  const isExpanded = list.classList.toggle('is-expanded');
+  const extraCount = IOS_COUNTRIES.length - 10;
+
+  if (isExpanded) {
+    btn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      Show fewer markets`;
+  } else {
+    btn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      Show ${extraCount} more markets`;
+  }
 }
 
 function toggleIOSCountry(code) {
@@ -514,10 +531,6 @@ function renderWorldMap() {
   if (!container || !_worldTopology || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
 
   const W = container.offsetWidth || 480;
-  // Render into a taller internal canvas, then crop via viewBox
-  // IH is the full internal canvas; H is what's displayed (crops Antarctica + polar ocean)
-  const IH = Math.round(W * 0.60);
-  const H  = Math.round(W * 0.47);
 
   // Build set of active numeric ISO codes
   const activeCodes = new Set();
@@ -530,14 +543,17 @@ function renderWorldMap() {
   // Build primary-language-only set for a slightly different shade
   const primaryCodes = new Set((LANG_COUNTRY_CODES[primary] || []).map(Number));
 
-  _drawMap(container, W, IH, H, activeCodes, primaryCodes);
+  _drawMap(container, W, activeCodes, primaryCodes);
 }
 
 /* ── Shared map renderer ─────────────────────────────── */
 // activeCodes  : Set of numeric ISO codes to highlight (active blue)
 // primaryCodes : Set of numeric ISO codes for primary shade (brighter blue)
-function _drawMap(container, W, IH, H, activeCodes, primaryCodes) {
+function _drawMap(container, W, activeCodes, primaryCodes) {
   if (!_worldTopology || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
+
+  // Natural Earth projection fits ~2:1 width-to-height; use 0.50 for full uncropped world
+  const H = Math.round(W * 0.50);
 
   // Colors (dark-theme palette)
   const C_OCEAN    = '#0d1117';
@@ -546,21 +562,16 @@ function _drawMap(container, W, IH, H, activeCodes, primaryCodes) {
   const C_BORDER   = '#0d1117';
   const C_PRIMARY  = '#3b82f6';
 
-  // Projection centered slightly above mid so Antarctica falls below the crop line
   const projection = d3.geoNaturalEarth1()
-    .scale(W / 5.4)
-    .translate([W / 2, IH / 2 + IH * 0.03]);
+    .scale(W / 5.5)
+    .translate([W / 2, H / 2]);
 
   const path      = d3.geoPath().projection(projection);
   const countries = topojson.feature(_worldTopology, _worldTopology.objects.countries);
   const borders   = topojson.mesh(_worldTopology, _worldTopology.objects.countries, (a, b) => a !== b);
 
-  // viewBox crops: trim ~7% from each side, show top H px of internal canvas
-  const cropX = Math.round(W * 0.07);
-  const cropW = W - cropX * 2;
-
   const svg = d3.create('svg')
-    .attr('viewBox', `${cropX} 0 ${cropW} ${H}`)
+    .attr('viewBox', `0 0 ${W} ${H}`)
     .attr('width',  W)
     .attr('height', H)
     .style('display', 'block');

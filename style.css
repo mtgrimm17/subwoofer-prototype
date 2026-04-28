@@ -1977,12 +1977,55 @@ select.form-input {
 
 /* ── Distribution country list ───────────────────────── */
 
-.dist-country-list {
-  max-height: 320px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+.dist-tip-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #86efac;
+  margin-bottom: 14px;
 }
+.dist-tip-box strong { color: #4ade80; font-weight: 600; }
+.dist-tip-box svg { color: #4ade80; margin-top: 1px; }
+
+.dist-list-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 5px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+.dist-list-col-country {
+  flex-shrink: 0;
+  width: 140px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.dist-list-col-bar { flex: 1; }
+.dist-list-col-count {
+  flex-shrink: 0;
+  width: 68px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.dist-country-list { /* no max-height — extras hidden via CSS */ }
+
+.dist-row-extra { display: none; }
+.dist-country-list.is-expanded .dist-row-extra { display: flex; }
 
 .dist-country-row {
   display: flex;
@@ -1995,7 +2038,7 @@ select.form-input {
 
 .dist-country-chip {
   flex-shrink: 0;
-  min-width: 140px;
+  width: 140px;
   padding: 4px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -2029,6 +2072,40 @@ select.form-input {
   height: 100%;
   border-radius: 2px;
   transition: width 0.2s ease, background 0.15s ease;
+}
+
+.dist-gamer-count {
+  flex-shrink: 0;
+  width: 68px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dist-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  width: 100%;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-3);
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.dist-expand-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text-dim);
+  background: var(--panel-2);
 }
 
 /* ── Global fixed-position tooltip ──────────────────── */

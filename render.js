@@ -1074,26 +1074,53 @@ function buildBusinessSection() {
 /* ── Distribution ────────────────────────────────────── */
 function buildDistributionSection() {
   const a = state.iosSubmitAnswers;
-  const MAX_USERS = 250; // China, for bar scaling
+  const MAX_GAMERS = 140; // China, for bar scaling
+  const VISIBLE = 10;
+
+  function fmtGamers(n) {
+    if (n >= 100) return n + 'M';
+    if (n >= 10)  return n + 'M';
+    return n + 'M';
+  }
+
+  const rows = IOS_COUNTRIES.map((c, i) => {
+    const isOn  = a.selectedCountries.includes(c.code);
+    const pct   = Math.round((c.iosGamers / MAX_GAMERS) * 100);
+    const label = fmtGamers(c.iosGamers);
+    const hidden = i >= VISIBLE ? ' dist-row-extra' : '';
+    return `
+      <div class="dist-country-row${hidden}">
+        <button class="dist-country-chip ${isOn ? 'is-on' : ''}"
+                id="dist-chip-${c.code}"
+                onclick="toggleIOSCountry('${c.code}')">${c.name}</button>
+        <div class="dist-bar-wrap">
+          <div class="dist-bar-fill" id="dist-bar-${c.code}" style="width:${pct}%; background:${isOn ? 'rgba(59,130,246,0.5)' : 'var(--border-hover)'}"></div>
+        </div>
+        <span class="dist-gamer-count">${label}</span>
+      </div>`;
+  }).join('');
+
+  const extraCount = IOS_COUNTRIES.length - VISIBLE;
 
   return `
     <div id="distribution-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
-    <div class="ios-q-label" style="margin-bottom:12px;">Where do you intend to make the game available?</div>
-    <div class="dist-country-list">
-      ${IOS_COUNTRIES.map(c => {
-        const isOn = a.selectedCountries.includes(c.code);
-        const pct  = Math.round((c.iosUsers / MAX_USERS) * 100);
-        return `
-          <div class="dist-country-row">
-            <button class="dist-country-chip ${isOn ? 'is-on' : ''}"
-                    id="dist-chip-${c.code}"
-                    onclick="toggleIOSCountry('${c.code}')">${c.name}</button>
-            <div class="dist-bar-wrap">
-              <div class="dist-bar-fill" style="width:${pct}%; background:${isOn ? 'rgba(59,130,246,0.5)' : 'var(--border-hover)'}"></div>
-            </div>
-          </div>`;
-      }).join('')}
-    </div>`;
+    <div class="ios-q-label" style="margin-bottom:8px;">Where do you intend to make the game available?</div>
+    <div class="dist-tip-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span><strong>Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
+    </div>
+    <div class="dist-list-header">
+      <span class="dist-list-col-country">Market</span>
+      <span class="dist-list-col-bar"></span>
+      <span class="dist-list-col-count">iOS Gamers</span>
+    </div>
+    <div class="dist-country-list" id="dist-country-list">
+      ${rows}
+    </div>
+    <button class="dist-expand-btn" id="dist-expand-btn" onclick="toggleDistExpand()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      Show ${extraCount} more markets
+    </button>`;
 }
 
 function buildRiskCategoryRow(cat, data) {
