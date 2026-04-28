@@ -2024,8 +2024,8 @@ select.form-input {
 
 .dist-country-list { /* no max-height — extras hidden via CSS */ }
 
-.dist-row-extra { display: none; }
-.dist-country-list.is-expanded .dist-row-extra { display: flex; }
+.dist-country-row.dist-row-extra { display: none; }
+.dist-country-list.is-expanded .dist-country-row.dist-row-extra { display: flex; }
 
 .dist-country-row {
   display: flex;
