@@ -69,7 +69,7 @@ function buildGameDetailsTab() {
         <input class="form-input" id="ob-title" type="text" maxlength="50"
                placeholder="e.g. Go Ape Ship!"
                oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30)">
-        <div class="char-count" id="ob-title-count">0 / 30 <span class="char-note">(Apple limit)</span></div>
+        <div class="char-count" id="ob-title-count">0 / 30</div>
       </div>
 
       <div class="form-group">
@@ -82,8 +82,14 @@ function buildGameDetailsTab() {
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="ob-price">Price (USD)</label>
-          <input class="form-input" id="ob-price" type="text" placeholder="4.99 (free = 0)"
+          <label class="form-label" for="ob-price">
+            Price (USD)
+            <span class="tooltip-anchor">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-body">Set your base price once. Subwoofer will automatically convert and localize it across every platform and region where you launch — no per-store pricing setup required.</span>
+            </span>
+          </label>
+          <input class="form-input" id="ob-price" type="text" placeholder="4.99 (or 0 for free)"
                  oninput="syncField('price', this.value)">
         </div>
         <div class="form-group">
@@ -128,10 +134,10 @@ function buildGameDetailsTab() {
       <div class="ob-section-label" style="margin-top:20px;">Release Timing</div>
       <div class="option-cards" id="ob-release-timing">
         <label class="option-card">
-          <input type="radio" name="ob-release" value="as_approved" onchange="pickTiming(this)">
+          <input type="radio" name="ob-release" value="manual" onchange="pickTiming(this)">
           <div>
-            <div class="option-card-title">As soon as approved</div>
-            <div class="option-card-desc">Each platform goes live automatically once it passes review.</div>
+            <div class="option-card-title">I'll release manually</div>
+            <div class="option-card-desc">You control when each platform goes live after approval.</div>
           </div>
         </label>
         <label class="option-card">
@@ -142,10 +148,10 @@ function buildGameDetailsTab() {
           </div>
         </label>
         <label class="option-card">
-          <input type="radio" name="ob-release" value="manual" onchange="pickTiming(this)">
+          <input type="radio" name="ob-release" value="as_approved" onchange="pickTiming(this)">
           <div>
-            <div class="option-card-title">I'll release manually</div>
-            <div class="option-card-desc">You control when each platform goes live after approval.</div>
+            <div class="option-card-title">As soon as approved</div>
+            <div class="option-card-desc">Each platform goes live automatically once it passes review.</div>
           </div>
         </label>
       </div>
@@ -162,80 +168,73 @@ function buildUploadAssetsTab() {
   return `
     <div class="ob-form">
       <div class="ob-section-label">App Icon</div>
-      <div class="icon-upload-row">
-        <div class="icon-dropzone" id="ob-icon-dropzone"
-             onclick="document.getElementById('ob-icon-input').click()"
-             ondragover="event.preventDefault(); this.classList.add('is-over')"
-             ondragleave="this.classList.remove('is-over')"
-             ondrop="handleIconDrop(event)">
-          <div id="ob-icon-preview">
-            <div style="font-size:24px;margin-bottom:6px;">🎮</div>
-            <div style="font-size:11px;font-weight:600;color:#888;">Drop icon</div>
-            <div style="font-size:10px;color:#bbb;margin-top:2px;">1024×1024</div>
-          </div>
-          <input type="file" id="ob-icon-input" accept="image/*" style="display:none"
-                 onchange="handleIconFiles(this.files); this.value=''">
+      <div class="asset-guidance">PNG · 1024×1024 · Required for all platforms. Upload without rounded corners — stores apply their own shape automatically.</div>
+      <div class="asset-dropzone" id="ob-icon-dropzone"
+           onclick="document.getElementById('ob-icon-input').click()"
+           ondragover="event.preventDefault(); this.classList.add('is-over')"
+           ondragleave="this.classList.remove('is-over')"
+           ondrop="handleIconDrop(event)">
+        <div id="ob-icon-preview">
+          <div class="asset-dropzone-icon">↑</div>
+          <div class="asset-dropzone-label">Drop icon here, or click to browse</div>
+          <div class="asset-dropzone-hint">PNG · 1024×1024</div>
         </div>
-        <div class="icon-upload-info">
-          <div class="icon-upload-title">App Icon</div>
-          <div class="icon-upload-desc">PNG · 1024×1024 · Required for all platforms. No rounded corners — stores apply them automatically.</div>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ob-icon-input').click()" style="margin-top:8px;">Choose file…</button>
-        </div>
+        <input type="file" id="ob-icon-input" accept="image/*" style="display:none"
+               onchange="handleIconFiles(this.files); this.value=''">
       </div>
 
-      <div class="ob-section-label" style="margin-top:20px;">Screenshots</div>
-      <div class="form-hint" style="margin-bottom:10px;">PNG or JPG · At least 1280×720 · Multiple files accepted</div>
-
-      <div class="dropzone" id="ob-screenshot-dropzone"
+      <div class="ob-section-label" style="margin-top:24px;">Screenshots</div>
+      <div class="asset-guidance">PNG or JPG · At least 1280×720 · Upload multiple. Stores will crop or adapt them to their required dimensions.</div>
+      <div class="asset-dropzone" id="ob-screenshot-dropzone"
            onclick="document.getElementById('ob-screenshot-input').click()"
            ondragover="event.preventDefault(); this.classList.add('is-over')"
            ondragleave="this.classList.remove('is-over')"
            ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
-        <div class="dropzone-icon">🖼</div>
-        <div class="dropzone-label">Drop screenshots here, or click to browse</div>
-        <div class="dropzone-hint">PNG or JPG · Multiple files accepted</div>
+        <div class="asset-dropzone-icon">↑</div>
+        <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
+        <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
         <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
                onchange="handleScreenshotFiles(this.files); this.value=''">
       </div>
       <div class="asset-grid" id="ob-screenshot-grid"></div>
 
       ${hasAndroid ? `
-      <div class="ob-section-label" style="margin-top:20px;">
+      <div class="ob-section-label" style="margin-top:24px;">
         Feature Graphic
-        <span class="platform-req-badge" style="background:#34A853;">Google Play</span>
+        <span class="platform-req-badge">Google Play</span>
       </div>
-      <div class="form-hint" style="margin-bottom:10px;">Exactly 1024×500 JPG or PNG — required for Google Play.</div>
-      <div class="dropzone dropzone-sm" id="ob-feature-dropzone"
+      <div class="asset-guidance">Exactly 1024×500 JPG or PNG — required for Google Play listings. Used as the hero image at the top of your store page.</div>
+      <div class="asset-dropzone" id="ob-feature-dropzone"
            onclick="document.getElementById('ob-feature-input').click()"
            ondragover="event.preventDefault(); this.classList.add('is-over')"
            ondragleave="this.classList.remove('is-over')"
            ondrop="handleFeatureDrop(event); this.classList.remove('is-over')">
-        <div class="dropzone-label">Drop feature graphic here, or click to browse</div>
-        <div class="dropzone-hint">1024×500 · PNG or JPG</div>
+        <div class="asset-dropzone-icon">↑</div>
+        <div class="asset-dropzone-label">Drop feature graphic here, or click to browse</div>
+        <div class="asset-dropzone-hint">PNG or JPG · 1024×500</div>
         <input type="file" id="ob-feature-input" accept="image/*" style="display:none"
                onchange="handleFeatureFiles(this.files); this.value=''">
       </div>
       <div id="ob-feature-preview"></div>` : ''}
 
-      <div class="ob-section-label" style="margin-top:20px;">Trailer <span class="form-section-note">Optional</span></div>
-      <div class="trailer-options">
-        <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label">YouTube URL</label>
-          <input class="form-input" id="ob-trailer-url" type="url" placeholder="https://youtube.com/watch?v=..."
-                 oninput="syncField('trailerUrl', this.value)">
-        </div>
-        <div class="trailer-divider">or upload a file</div>
-        <div class="dropzone dropzone-sm" id="ob-trailer-dropzone"
-             onclick="document.getElementById('ob-trailer-input').click()"
-             ondragover="event.preventDefault(); this.classList.add('is-over')"
-             ondragleave="this.classList.remove('is-over')"
-             ondrop="handleTrailerDrop(event); this.classList.remove('is-over')">
-          <div class="dropzone-label">Upload video file</div>
-          <div class="dropzone-hint">MP4 · Max 500 MB</div>
-          <input type="file" id="ob-trailer-input" accept="video/*" style="display:none"
-                 onchange="handleTrailerFiles(this.files); this.value=''">
-        </div>
-        <div id="ob-trailer-file-info" style="display:none;"></div>
+      <div class="ob-section-label" style="margin-top:24px;">Trailer <span class="form-section-note">Optional</span></div>
+      <div class="asset-guidance">A short gameplay trailer (60–90 seconds) shown on your store pages. Upload a video file or link a YouTube video below.</div>
+      <div class="asset-dropzone asset-dropzone-sm" id="ob-trailer-dropzone"
+           onclick="document.getElementById('ob-trailer-input').click()"
+           ondragover="event.preventDefault(); this.classList.add('is-over')"
+           ondragleave="this.classList.remove('is-over')"
+           ondrop="handleTrailerDrop(event); this.classList.remove('is-over')">
+        <div class="asset-dropzone-icon">↑</div>
+        <div class="asset-dropzone-label">Drop video file here, or click to browse</div>
+        <div class="asset-dropzone-hint">MP4 · Max 500 MB</div>
+        <input type="file" id="ob-trailer-input" accept="video/*" style="display:none"
+               onchange="handleTrailerFiles(this.files); this.value=''">
+      </div>
+      <div id="ob-trailer-file-info" style="display:none;"></div>
+      <div class="asset-url-row">
+        <label class="form-label" style="margin-bottom:6px;">Or paste a YouTube URL</label>
+        <input class="form-input" id="ob-trailer-url" type="url" placeholder="https://youtube.com/watch?v=..."
+               oninput="syncField('trailerUrl', this.value)">
       </div>
     </div>`;
 }
@@ -260,7 +259,7 @@ function buildComplianceTab() {
 
       <div class="ob-section-label" style="margin-top:20px;">Compliance Questions</div>
       <div class="questions-intro">
-        Your answers populate iOS Privacy Nutrition Labels, Google Play Data Safety, and IARC ratings — so you don't fill them out separately per platform.
+        Answer once — Subwoofer uses your responses to pre-fill content declarations, age rating questionnaires, and privacy disclosures across every platform you submit to.
       </div>
 
       <div id="ob-questions-list"></div>
@@ -377,18 +376,21 @@ function renderComplianceQuestions() {
     const inferred = state.questionInferred[q.id];
     h += `
       <div class="question-card ${answer !== null ? 'is-answered' : ''}">
-        <div class="question-text">${q.label}</div>
-        <div class="question-desc">${q.desc}</div>
-        ${inferred && answer !== null ? `
-          <div class="question-inferred">
-            <span class="inferred-badge">Detected</span>
-            <span class="inferred-answer">${answer === 'yes' ? 'Yes' : 'No'}</span>
-            <button class="btn btn-ghost btn-sm" onclick="changeInferredAnswer('${q.id}')">Change</button>
-          </div>` : `
-          <div class="question-toggles">
-            <button class="yn-btn ${answer === 'yes' ? 'is-yes' : ''}" onclick="answerQuestion('${q.id}','yes')">Yes</button>
-            <button class="yn-btn ${answer === 'no'  ? 'is-no'  : ''}" onclick="answerQuestion('${q.id}','no')">No</button>
-          </div>`}
+        <div class="question-body">
+          <div class="question-text">
+            ${q.label}
+            ${inferred && answer !== null ? '<span class="inferred-badge">Auto-detected</span>' : ''}
+          </div>
+          <div class="question-desc">${q.desc}</div>
+          ${inferred && answer !== null ? `
+            <button class="inferred-change-link" onclick="changeInferredAnswer('${q.id}')">Change answer</button>` : ''}
+        </div>
+        <div class="question-yn">
+          <button class="yn-btn yn-yes ${answer === 'yes' ? 'is-selected' : ''}"
+                  onclick="answerQuestion('${q.id}','yes')">YES</button>
+          <button class="yn-btn yn-no ${answer === 'no' ? 'is-selected' : ''}"
+                  onclick="answerQuestion('${q.id}','no')">NO</button>
+        </div>
       </div>`;
   }
   container.innerHTML = h;
@@ -398,18 +400,61 @@ function renderComplianceQuestions() {
 function renderKeyQuestionsScreen() { renderComplianceQuestions(); }
 
 
+/* ── Project bar ─────────────────────────────────────── */
+
+function renderProjectBar() {
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  const gameTitle = state.formData.title || proj?.name || 'My Game';
+
+  // Update selector button titles
+  const selTitle = document.getElementById('projectSelectorTitle');
+  if (selTitle) selTitle.textContent = gameTitle;
+  const subTitle = document.getElementById('submissionSelectorTitle');
+  const activeSub = proj?.submissions.find(s => s.id === state.activeSubmissionId);
+  if (subTitle) subTitle.textContent = activeSub?.name || 'Submission 1.0';
+
+  // Render project dropdown items
+  const projDD = document.getElementById('projectDropdown');
+  if (projDD) {
+    projDD.innerHTML = state.projects.map(p => `
+      <div class="project-item ${p.id === state.activeProjectId ? 'active' : ''}"
+           onclick="switchProject('${p.id}')">
+        ${p.name || 'Untitled Game'}
+      </div>`).join('') + `
+      <div class="project-item new-project" onclick="createNewProject()">
+        <span>New project</span><span class="plus">+</span>
+      </div>`;
+  }
+
+  // Render submission dropdown items
+  const subDD = document.getElementById('submissionDropdown');
+  if (subDD && proj) {
+    subDD.innerHTML = proj.submissions.map(s => `
+      <div class="project-item ${s.id === state.activeSubmissionId ? 'active' : ''}"
+           onclick="switchSubmission('${s.id}')">
+        ${s.name}
+      </div>`).join('') + `
+      <div class="project-item new-project" onclick="createNewSubmission()">
+        <span>New submission</span><span class="plus">+</span>
+      </div>`;
+  }
+
+  // Update profile name display
+  const profName = document.getElementById('profile-name');
+  const menuName = document.getElementById('profile-menu-name');
+  const name = state.formData.title ? 'Developer' : 'Developer';
+  if (profName) profName.textContent = name;
+  if (menuName) menuName.textContent = name;
+}
+
+
 /* ── Dashboard ───────────────────────────────────────── */
 
 function renderDashboard() {
   const el = document.getElementById('dashboard');
   if (!el) return;
 
-  // Update project selector title + profile name
-  const gameTitle = state.formData.title || 'Untitled Game';
-  const selectorEl = document.getElementById('projectSelectorTitle');
-  if (selectorEl) selectorEl.textContent = gameTitle;
-  const currentItemEl = document.getElementById('projectItemCurrent');
-  if (currentItemEl) currentItemEl.textContent = gameTitle;
+  renderProjectBar();
 
   const active   = [...state.activePlatforms];
   const inactive = Object.keys(PLATFORMS).filter(pid => !state.activePlatforms.has(pid));
@@ -419,7 +464,6 @@ function renderDashboard() {
   if (active.length === 0) {
     h += `
       <div class="dash-empty">
-        <div class="dash-empty-icon">🎮</div>
         <div class="dash-empty-title">No platforms activated yet</div>
         <div class="dash-empty-desc">Activate a platform below to start your submission checklist.</div>
       </div>`;
@@ -448,30 +492,15 @@ function buildActiveCard(pid) {
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+  const locked = !counts.allRequired;
+  const submitDone = counts.submitDone;
 
-  const steps = p.steps.map(step => {
-    const status = state.platformStepStatus[pid][step.id];
-    const done   = status === 'complete';
-
-    if (step.isSubmit) {
-      const locked = !counts.allRequired;
-      return `
-        <div class="card-task ${locked ? 'card-task-locked' : ''} ${done ? 'is-done' : ''}"
-             onclick="${locked ? '' : `openTaskModal('${pid}','${step.id}')`}"
-             ${locked ? 'title="Complete all tasks first"' : ''}>
-          <div class="task-dot ${done ? 'is-complete' : 'is-submit'} ${locked ? 'is-locked' : ''}">
-            ${done ? '✓' : ''}
-          </div>
-          <span class="task-label">${step.label}</span>
-          ${locked ? '<span class="task-lock">🔒</span>' : '<span class="task-arrow">›</span>'}
-        </div>`;
-    }
-
+  // Only non-submit steps in the task list
+  const steps = p.steps.filter(s => !s.isSubmit).map(step => {
+    const done = state.platformStepStatus[pid][step.id] === 'complete';
     return `
       <div class="card-task ${done ? 'is-done' : ''}" onclick="openTaskModal('${pid}','${step.id}')">
-        <div class="task-dot ${done ? 'is-complete' : ''}">
-          ${done ? '✓' : ''}
-        </div>
+        <div class="task-dot ${done ? 'is-complete' : ''}"></div>
         <span class="task-label">${step.label}</span>
         <span class="task-arrow">›</span>
       </div>`;
@@ -481,34 +510,51 @@ function buildActiveCard(pid) {
     <div class="active-card">
       <div class="active-card-head">
         <div class="active-card-platform">
-          <div class="active-card-icon" style="color:${p.color};">
+          <div class="active-card-icon">
             ${platformIcon(pid, 18)}
           </div>
           <div>
             <div class="active-card-name">${p.label}</div>
-            <div class="active-card-progress-label">${counts.complete} / ${counts.total} tasks</div>
+            <div class="active-card-progress-label">${counts.complete} / ${counts.total} steps</div>
           </div>
         </div>
         <button class="platform-toggle is-on" onclick="deactivatePlatform('${pid}')" title="Deactivate platform" aria-label="Toggle off"></button>
       </div>
       <div class="card-bar-wrap">
         <div class="card-bar">
-          <div class="card-bar-fill" style="width:${pct}%; background:${p.color};"></div>
+          <div class="card-bar-fill" style="width:${pct}%;"></div>
         </div>
+        <button class="card-submit-btn ${submitDone ? 'is-done' : locked ? 'is-locked' : ''}"
+                onclick="${submitDone || locked ? '' : `openSubmitModal('${pid}')`}"
+                title="${locked ? 'Complete all steps first' : submitDone ? 'Submitted' : 'Submit for review'}"
+                ${locked && !submitDone ? 'disabled' : ''}>
+          ${submitDone ? '✓' : 'Submit'}
+        </button>
       </div>
       <div class="card-tasks">${steps}</div>
     </div>`;
 }
 
 function buildInactiveCard(pid) {
-  const p = PLATFORMS[pid];
+  const p      = PLATFORMS[pid];
+  const counts = platformStepCount(pid);
+  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+  const label  = counts.complete > 0 ? `${counts.complete} / ${counts.total} steps` : 'Inactive';
   return `
     <div class="inactive-card">
-      <div class="inactive-card-icon" style="color:${p.color};">
-        ${platformIcon(pid, 16)}
+      <div class="inactive-card-head">
+        <div class="inactive-card-platform">
+          <div class="inactive-card-icon">${platformIcon(pid, 16)}</div>
+          <span class="inactive-card-name">${p.label}</span>
+        </div>
+        <button class="platform-toggle" onclick="activatePlatform('${pid}')" title="Activate platform" aria-label="Toggle on"></button>
       </div>
-      <span class="inactive-card-name">${p.label}</span>
-      <button class="platform-toggle" onclick="activatePlatform('${pid}')" title="Activate platform" aria-label="Toggle on"></button>
+      <div class="inactive-bar-wrap">
+        <div class="inactive-bar">
+          <div class="inactive-bar-fill" style="width:${pct}%;"></div>
+        </div>
+        <span class="inactive-status-label">${label}</span>
+      </div>
     </div>`;
 }
 

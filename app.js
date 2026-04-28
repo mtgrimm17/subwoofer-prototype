@@ -62,8 +62,46 @@ function completeOnboarding() {
     setOnboardingTab(0);
     return;
   }
-  state.onboardingComplete = true;
   computeInferences();
+
+  if (state._newProjectMode) {
+    // Creating a 2nd+ project
+    const sub  = makeEmptySubmission('Submission 1.0');
+    const proj = {
+      id:               generateId('proj'),
+      name:             state.formData.title,
+      formData:         JSON.parse(JSON.stringify(state.formData)),
+      uploads:          JSON.parse(JSON.stringify(state.uploads)),
+      questionAnswers:  JSON.parse(JSON.stringify(state.questionAnswers)),
+      questionInferred: JSON.parse(JSON.stringify(state.questionInferred)),
+      submissions:      [sub],
+    };
+    state.projects.push(proj);
+    state.activeProjectId    = proj.id;
+    state.activeSubmissionId = sub.id;
+    state.activePlatforms    = new Set();
+    state.platformStepStatus = makeEmptyPlatformSteps();
+    state._newProjectMode    = false;
+  } else {
+    // First project ever
+    const sub  = makeEmptySubmission('Submission 1.0');
+    const proj = {
+      id:               generateId('proj'),
+      name:             state.formData.title,
+      formData:         JSON.parse(JSON.stringify(state.formData)),
+      uploads:          JSON.parse(JSON.stringify(state.uploads)),
+      questionAnswers:  JSON.parse(JSON.stringify(state.questionAnswers)),
+      questionInferred: JSON.parse(JSON.stringify(state.questionInferred)),
+      submissions:      [sub],
+    };
+    state.projects.push(proj);
+    state.activeProjectId    = proj.id;
+    state.activeSubmissionId = sub.id;
+    state.activePlatforms    = new Set();
+    state.platformStepStatus = makeEmptyPlatformSteps();
+  }
+
+  state.onboardingComplete = true;
   showMainApp();
 }
 
@@ -160,8 +198,11 @@ function deactivatePlatform(platformId) {
 function syncField(field, value) {
   state.formData[field] = value;
   if (field === 'title') {
-    const nameEl = document.getElementById('app-game-name');
-    if (nameEl) nameEl.textContent = value || '—';
+    // Keep selector title in sync while the user types
+    const selEl = document.getElementById('projectSelectorTitle');
+    if (selEl) selEl.textContent = value || 'My Game';
+    const curEl = document.getElementById('projectItemCurrent');
+    if (curEl) curEl.textContent = value || 'My Game';
   }
 }
 
@@ -235,9 +276,9 @@ function removeIcon() {
   const preview = document.getElementById('ob-icon-preview');
   if (preview) {
     preview.innerHTML = `
-      <div style="font-size:24px;margin-bottom:6px;">🎮</div>
-      <div style="font-size:11px;font-weight:600;color:#888;">Drop icon</div>
-      <div style="font-size:10px;color:#bbb;margin-top:2px;">1024×1024</div>`;
+      <div class="asset-dropzone-icon">↑</div>
+      <div class="asset-dropzone-label">Drop icon here, or click to browse</div>
+      <div class="asset-dropzone-hint">PNG · 1024×1024</div>`;
   }
 }
 
@@ -375,6 +416,67 @@ function closeAllDropdowns() {
   document.getElementById('projectSelectorWrap')?.classList.remove('open');
   document.getElementById('submissionSelectorWrap')?.classList.remove('open');
   document.getElementById('submissionMenu')?.classList.remove('open');
+  document.getElementById('profileMenu')?.classList.remove('open');
+}
+
+/* ── Profile menu ────────────────────────────────────── */
+
+function toggleProfileMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('profileMenu');
+  const isOpen = menu.classList.contains('open');
+  closeAllDropdowns();
+  if (!isOpen) menu.classList.add('open');
+}
+
+/* ── Multi-project / submission management ───────────── */
+
+function createNewProject() {
+  saveCurrentToProject();
+  // Reset flat state for fresh onboarding
+  state.formData         = makeBlankFormData();
+  state.uploads          = makeBlankUploads();
+  state.questionAnswers  = makeBlankAnswers();
+  state.questionInferred = makeBlankInferred();
+  state.activePlatforms  = new Set();
+  state.platformStepStatus = makeEmptyPlatformSteps();
+  state._newProjectMode  = true;
+  closeAllDropdowns();
+  openOnboarding(0);
+}
+
+function createNewSubmission() {
+  saveCurrentToProject();
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  if (!proj) return;
+  const subNum = proj.submissions.length + 1;
+  const sub    = makeEmptySubmission('Submission ' + subNum + '.0');
+  proj.submissions.push(sub);
+  state.activeSubmissionId   = sub.id;
+  state.activePlatforms      = new Set();
+  state.platformStepStatus   = makeEmptyPlatformSteps();
+  closeAllDropdowns();
+  renderDashboard();
+}
+
+function switchProject(projectId) {
+  if (projectId === state.activeProjectId) { closeAllDropdowns(); return; }
+  loadProjectAndSubmission(projectId, null);
+  closeAllDropdowns();
+  renderDashboard();
+}
+
+function switchSubmission(submissionId) {
+  if (submissionId === state.activeSubmissionId) { closeAllDropdowns(); return; }
+  saveCurrentToProject();
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  const sub  = proj?.submissions.find(s => s.id === submissionId);
+  if (!sub) return;
+  state.activeSubmissionId   = sub.id;
+  state.activePlatforms      = new Set(sub.activePlatforms);
+  state.platformStepStatus   = JSON.parse(JSON.stringify(sub.platformStepStatus));
+  closeAllDropdowns();
+  renderDashboard();
 }
 
 function toggleProjectDropdown(e) {

@@ -86,9 +86,17 @@
         </svg>
         <span>Subwoofer</span>
       </div>
-      <div class="profile-block" aria-label="Profile">
-        <div class="profile-avatar"></div>
-        <span class="profile-name" id="profile-name">Developer</span>
+      <div class="profile-wrap" id="profileWrap">
+        <button class="profile-block" onclick="toggleProfileMenu(event)" aria-label="Profile menu">
+          <div class="profile-avatar"></div>
+          <span class="profile-name" id="profile-name">Developer</span>
+        </button>
+        <div class="profile-menu" id="profileMenu">
+          <div class="profile-menu-header" id="profile-menu-name">Developer</div>
+          <div class="profile-menu-divider"></div>
+          <button class="profile-menu-item" onclick="closeAllDropdowns()">Profile settings</button>
+          <button class="profile-menu-item danger" onclick="closeAllDropdowns()">Sign out</button>
+        </div>
       </div>
     </header>
 
@@ -100,10 +108,7 @@
             <span class="chev">⌄</span>
           </button>
           <div class="project-dropdown" id="projectDropdown">
-            <div class="project-item active" id="projectItemCurrent">My Game</div>
-            <div class="project-item new-project" onclick="openOnboarding(0); closeAllDropdowns()">
-              <span>New project</span><span class="plus">+</span>
-            </div>
+            <!-- Rendered by renderProjectBar() -->
           </div>
         </div>
         <button class="icon-btn" onclick="openOnboarding(0)" aria-label="Edit game details" title="Edit game details">
@@ -119,10 +124,7 @@
             <span class="chev">⌄</span>
           </button>
           <div class="submission-dropdown" id="submissionDropdown">
-            <div class="project-item active">Submission 1.0</div>
-            <div class="project-item new-project" onclick="closeAllDropdowns()">
-              <span>New submission</span><span class="plus">+</span>
-            </div>
+            <!-- Rendered by renderProjectBar() -->
           </div>
         </div>
         <div class="submission-menu-wrap" id="submissionMenuWrap">

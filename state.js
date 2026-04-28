@@ -379,24 +379,14 @@ function computeSubmitRisk() {
   return results;
 }
 
-/* ── Application State ───────────────────────────────── */
+/* ── Project / Submission helpers ────────────────────── */
 
-const state = {
-  // Onboarding
-  onboardingComplete: false,
-  onboardingTab: 0,          // 0 = Game Details, 1 = Upload Assets, 2 = Compliance
+function generateId(prefix) {
+  return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+}
 
-  // Modal: null | { type: 'task', platformId, stepId }
-  activeModal: null,
-
-  // Activated platforms (shown with full task list on dashboard)
-  activePlatforms: new Set(),
-
-  // Per-platform step completion
-  platformStepStatus: makeEmptyPlatformSteps(),
-
-  // Form data (collected during onboarding, editable via Edit Details)
-  formData: {
+function makeBlankFormData() {
+  return {
     title:            '',
     description:      '',
     price:            '',
@@ -405,38 +395,107 @@ const state = {
     primaryLanguage:  'en',
     localized:        false,
     localizations:    [],
-    releaseTiming:    'as_approved',
+    releaseTiming:    'manual',
     releaseDate:      '',
-    privacyGenerated: false,
     trailerUrl:       '',
-  },
+  };
+}
 
-  uploads: {
-    appIcon:        null,    // { name, dataUrl }
-    screenshots:    [],      // [{ id, name, dataUrl }]
-    featureGraphic: null,    // { name, dataUrl }
-    trailer:        null,    // { name, size }
-  },
+function makeBlankUploads() {
+  return {
+    appIcon:        null,
+    screenshots:    [],
+    featureGraphic: null,
+    trailer:        null,
+  };
+}
 
-  questionAnswers: {
-    violence:        null,
-    sexualContent:   null,
-    strongLanguage:  null,
-    dataCollection:  null,
-    inAppPurchases:  null,
-  },
+function makeBlankAnswers() {
+  return { violence: null, sexualContent: null, strongLanguage: null, dataCollection: null, inAppPurchases: null };
+}
 
-  questionInferred: {
-    violence:        false,
-    sexualContent:   false,
-    strongLanguage:  false,
-    dataCollection:  false,
-    inAppPurchases:  false,
-  },
+function makeBlankInferred() {
+  return { violence: false, sexualContent: false, strongLanguage: false, dataCollection: false, inAppPurchases: false };
+}
+
+function makeEmptySubmission(name) {
+  return {
+    id:                  generateId('sub'),
+    name,
+    activePlatforms:     [],            // serialized as array (converted to Set in flat state)
+    platformStepStatus:  makeEmptyPlatformSteps(),
+  };
+}
+
+// Save the current flat state back into the active project/submission record
+function saveCurrentToProject() {
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  if (!proj) return;
+  proj.name             = state.formData.title || proj.name;
+  proj.formData         = JSON.parse(JSON.stringify(state.formData));
+  proj.uploads          = JSON.parse(JSON.stringify(state.uploads));
+  proj.questionAnswers  = JSON.parse(JSON.stringify(state.questionAnswers));
+  proj.questionInferred = JSON.parse(JSON.stringify(state.questionInferred));
+  const sub = proj.submissions.find(s => s.id === state.activeSubmissionId);
+  if (!sub) return;
+  sub.activePlatforms    = [...state.activePlatforms];
+  sub.platformStepStatus = JSON.parse(JSON.stringify(state.platformStepStatus));
+}
+
+// Load a project + optional submission into flat state (saves current first)
+function loadProjectAndSubmission(projectId, submissionId) {
+  saveCurrentToProject();
+  const proj = state.projects.find(p => p.id === projectId);
+  if (!proj) return;
+  state.activeProjectId   = projectId;
+  state.formData          = JSON.parse(JSON.stringify(proj.formData));
+  state.uploads           = JSON.parse(JSON.stringify(proj.uploads));
+  state.questionAnswers   = JSON.parse(JSON.stringify(proj.questionAnswers));
+  state.questionInferred  = JSON.parse(JSON.stringify(proj.questionInferred));
+  const sub = submissionId
+    ? proj.submissions.find(s => s.id === submissionId) || proj.submissions[0]
+    : proj.submissions[0];
+  if (!sub) return;
+  state.activeSubmissionId   = sub.id;
+  state.activePlatforms      = new Set(sub.activePlatforms);
+  state.platformStepStatus   = JSON.parse(JSON.stringify(sub.platformStepStatus));
+}
+
+
+/* ── Application State ───────────────────────────────── */
+
+const state = {
+  // Onboarding
+  onboardingComplete: false,
+  onboardingTab: 0,          // 0 = Game Details, 1 = Upload Assets, 2 = Compliance
+  _newProjectMode: false,    // true when onboarding is creating a 2nd+ project
+
+  // Modal
+  activeModal: null,
+
+  // Activated platforms (shown with full task list on dashboard)
+  activePlatforms: new Set(),
+
+  // Per-platform step completion
+  platformStepStatus: makeEmptyPlatformSteps(),
+
+  // Form data (collected during onboarding)
+  formData: makeBlankFormData(),
+
+  uploads: makeBlankUploads(),
+
+  questionAnswers: makeBlankAnswers(),
+
+  questionInferred: makeBlankInferred(),
+
+  // Projects list — each entry mirrors a saved snapshot
+  projects: [],
+  activeProjectId:    null,
+  activeSubmissionId: null,
 
   // Submit modal
   submitModal: {
     platformId: null,
-    expanded: [],    // catId strings that are currently expanded
+    expanded: [],
   },
 };
