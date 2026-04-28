@@ -2084,29 +2084,22 @@ select.form-input {
   font-variant-numeric: tabular-nums;
 }
 
-.dist-expand-btn {
+.dist-expand-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 10px;
-  padding: 7px 12px;
-  width: 100%;
+  padding: 8px 0;
   justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel-3);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px dashed var(--border);
   color: var(--text-faint);
   font-size: 12px;
   font-weight: 500;
-  font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  transition: color 0.12s;
+  user-select: none;
 }
-.dist-expand-btn:hover {
-  border-color: var(--border-hover);
-  color: var(--text-dim);
-  background: var(--panel-2);
-}
+.dist-expand-row:hover { color: var(--text-dim); }
 
 /* ── Global fixed-position tooltip ──────────────────── */
 

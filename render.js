@@ -1083,12 +1083,23 @@ function buildDistributionSection() {
     return n + 'M';
   }
 
+  const extraCount = IOS_COUNTRIES.length - VISIBLE;
+
+  // Build rows; inject the expand button between row VISIBLE-1 and row VISIBLE
   const rows = IOS_COUNTRIES.map((c, i) => {
     const isOn  = a.selectedCountries.includes(c.code);
     const pct   = Math.round((c.iosGamers / MAX_GAMERS) * 100);
     const label = fmtGamers(c.iosGamers);
     const hidden = i >= VISIBLE ? ' dist-row-extra' : '';
-    return `
+
+    // Inject the expand toggle as a pseudo-row right after the 10th entry
+    const expandBtn = i === VISIBLE ? `
+      <div class="dist-expand-row" id="dist-expand-btn" onclick="toggleDistExpand()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        Show ${extraCount} more markets
+      </div>` : '';
+
+    return `${expandBtn}
       <div class="dist-country-row${hidden}">
         <button class="dist-country-chip ${isOn ? 'is-on' : ''}"
                 id="dist-chip-${c.code}"
@@ -1100,8 +1111,6 @@ function buildDistributionSection() {
       </div>`;
   }).join('');
 
-  const extraCount = IOS_COUNTRIES.length - VISIBLE;
-
   return `
     <div id="distribution-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
     <div class="ios-q-label" style="margin-bottom:8px;">Where do you intend to make the game available?</div>
@@ -1112,15 +1121,11 @@ function buildDistributionSection() {
     <div class="dist-list-header">
       <span class="dist-list-col-country">Market</span>
       <span class="dist-list-col-bar"></span>
-      <span class="dist-list-col-count">iOS Gamers</span>
+      <span class="dist-list-col-count">iOS Gamers (Approx)</span>
     </div>
     <div class="dist-country-list" id="dist-country-list">
       ${rows}
-    </div>
-    <button class="dist-expand-btn" id="dist-expand-btn" onclick="toggleDistExpand()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      Show ${extraCount} more markets
-    </button>`;
+    </div>`;
 }
 
 function buildRiskCategoryRow(cat, data) {
