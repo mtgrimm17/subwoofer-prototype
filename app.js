@@ -430,12 +430,115 @@ function toggleLocalization() {
     state.formData.localizations = [];
     document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('is-on'));
   }
+  if (state.formData.localized) {
+    // Lazy-load map data then render
+    initWorldMap();
+  } else {
+    updateWorldMap();
+  }
 }
 
 function toggleLang(el, code) {
   const idx = state.formData.localizations.indexOf(code);
   if (idx === -1) { state.formData.localizations.push(code); el.classList.add('is-on'); }
   else            { state.formData.localizations.splice(idx, 1); el.classList.remove('is-on'); }
+  updateWorldMap();
+}
+
+/* ── World Map ───────────────────────────────────────── */
+
+let _worldTopology = null;  // cached fetch
+
+async function initWorldMap() {
+  const container = document.getElementById('world-map-container');
+  if (!container) return;
+
+  if (!_worldTopology) {
+    container.innerHTML = '<div class="world-map-loading">Loading map…</div>';
+    try {
+      const res = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+      _worldTopology = await res.json();
+    } catch (e) {
+      container.innerHTML = '<div class="world-map-loading">Map unavailable offline</div>';
+      return;
+    }
+  }
+  renderWorldMap();
+}
+
+function updateWorldMap() {
+  if (_worldTopology) renderWorldMap();
+}
+
+function renderWorldMap() {
+  const container = document.getElementById('world-map-container');
+  if (!container || !_worldTopology || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
+
+  const W = container.offsetWidth || 480;
+  const H = Math.round(W * 0.48);
+
+  // Build set of active numeric ISO codes
+  const activeCodes = new Set();
+  const primary = state.formData.primaryLanguage || 'en';
+  const extras  = state.formData.localizations   || [];
+  [primary, ...extras].forEach(lang => {
+    (LANG_COUNTRY_CODES[lang] || []).forEach(c => activeCodes.add(c));
+  });
+
+  // Colors (dark-theme palette)
+  const C_OCEAN    = '#0d1117';
+  const C_INACTIVE = '#1e2230';
+  const C_ACTIVE   = '#2563d4';
+  const C_BORDER   = '#0d1117';
+  const C_PRIMARY  = '#3b82f6';
+
+  // Build primary-language-only set for a slightly different shade
+  const primaryCodes = new Set((LANG_COUNTRY_CODES[primary] || []).map(Number));
+
+  const projection = d3.geoNaturalEarth1()
+    .scale(W / 6.2)
+    .translate([W / 2, H / 2]);
+
+  const path     = d3.geoPath().projection(projection);
+  const countries = topojson.feature(_worldTopology, _worldTopology.objects.countries);
+  const borders   = topojson.mesh(_worldTopology, _worldTopology.objects.countries, (a, b) => a !== b);
+
+  const svg = d3.create('svg')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('width', W)
+    .attr('height', H)
+    .style('display', 'block');
+
+  // Ocean background
+  svg.append('path')
+    .datum({ type: 'Sphere' })
+    .attr('d', path)
+    .attr('fill', C_OCEAN);
+
+  // Country fills
+  svg.append('g')
+    .selectAll('path')
+    .data(countries.features)
+    .join('path')
+      .attr('d', path)
+      .attr('fill', d => {
+        const code = +d.id;
+        if (!activeCodes.has(code))  return C_INACTIVE;
+        if (primaryCodes.has(code))  return C_PRIMARY;
+        return C_ACTIVE;
+      })
+      .attr('stroke', 'none');
+
+  // Country borders (thin, dark)
+  svg.append('path')
+    .datum(borders)
+    .attr('d', path)
+    .attr('fill', 'none')
+    .attr('stroke', C_BORDER)
+    .attr('stroke-width', 0.4);
+
+  container.innerHTML = '';
+  container.appendChild(svg.node());
 }
 
 function pickTiming(radio) {

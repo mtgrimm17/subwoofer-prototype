@@ -116,6 +116,7 @@ function buildGameDetailsTab() {
         </div>
       </div>
       <div class="lang-picker" id="ob-lang-picker">
+        <div id="world-map-container" class="world-map-container"></div>
         <div class="form-label" style="margin-top:10px;margin-bottom:8px;">Additional languages</div>
         <div class="lang-chips" id="ob-lang-chips">
           <button class="lang-chip" onclick="toggleLang(this,'fr')">French</button>
