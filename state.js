@@ -5,7 +5,8 @@
 /* ── Language → ISO 3166-1 numeric country codes ────── */
 // Used by the world map to highlight countries where each language is primary
 const LANG_COUNTRY_CODES = {
-  en:  [36, 84, 124, 288, 328, 356, 372, 376, 388, 404, 410, 426, 454, 516, 524, 554,
+  // English: official language in English-speaking countries (S. Korea excluded)
+  en:  [36, 84, 124, 288, 328, 356, 372, 376, 388, 404, 426, 454, 516, 524, 554,
         566, 694, 706, 710, 716, 800, 826, 834, 840, 894],
   fr:  [56, 108, 120, 140, 178, 180, 204, 250, 262, 266, 324, 384, 442, 450, 466,
         492, 562, 646, 686, 756, 768, 854],
@@ -14,8 +15,10 @@ const LANG_COUNTRY_CODES = {
   pt:  [24, 76, 132, 508, 620, 624, 626, 678],
   de:  [40, 276, 438, 442, 756],
   ja:  [392],
-  zh:  [156, 158, 344, 446, 702],
-  ko:  [408, 410],
+  // Chinese: mainland + HK + Macau + Singapore (Taiwan excluded)
+  zh:  [156, 344, 446, 702],
+  // Korean: South Korea only (N. Korea excluded)
+  ko:  [410],
   ru:  [51, 112, 398, 417, 643, 762],
   ar:  [12, 48, 174, 262, 275, 368, 400, 414, 422, 434, 478, 504, 512, 634, 682,
         706, 729, 760, 784, 818, 887],
@@ -189,18 +192,89 @@ function platformStepCount(platformId) {
 
 /* ── iOS Submit Questionnaire ────────────────────────── */
 
+// Full Apple App Privacy data type taxonomy (matches App Store Connect questionnaire)
 const IOS_DATA_TYPES = [
-  { id: 'contactInfo',     label: 'Contact Info',      desc: 'Name, email, phone, address' },
-  { id: 'healthFitness',   label: 'Health & Fitness',  desc: 'Health, fitness, medical data' },
-  { id: 'financial',       label: 'Financial Info',    desc: 'Payment info, credit score' },
-  { id: 'location',        label: 'Location',          desc: 'Precise or coarse location data' },
-  { id: 'sensitiveInfo',   label: 'Sensitive Info',    desc: 'Racial, biometric, religious data' },
-  { id: 'contacts',        label: 'Contacts',          desc: 'Contacts or address book' },
-  { id: 'userContent',     label: 'User Content',      desc: 'Messages, gameplay content' },
-  { id: 'browsingHistory', label: 'Browsing History',  desc: 'Web browsing history' },
-  { id: 'searchHistory',   label: 'Search History',    desc: 'In-app search history' },
-  { id: 'identifiers',     label: 'Identifiers',       desc: 'User ID, device ID, IDFA' },
-  { id: 'usageData',       label: 'Usage Data',        desc: 'Product interaction, diagnostics' },
+  { group: 'Contact Info', types: [
+    { id: 'name',            label: 'Name',                   desc: 'Including first or last name' },
+    { id: 'email',           label: 'Email Address',          desc: 'Including but not limited to a hashed email address' },
+    { id: 'phone',           label: 'Phone Number',           desc: 'Including but not limited to a hashed phone number' },
+    { id: 'address',         label: 'Physical Address',       desc: 'Such as a home address, physical address, or mailing address' },
+    { id: 'other_contact',   label: 'Other Contact Info',     desc: 'Any other information that can be used to contact the user outside the app' },
+  ]},
+  { group: 'Health & Fitness', types: [
+    { id: 'health',          label: 'Health',                 desc: 'Health and medical data, including but not limited to from the Clinical Health Records API, HealthKit API, or user provided health data' },
+    { id: 'fitness',         label: 'Fitness',                desc: 'Fitness and exercise data, including but not limited to the Motion and Fitness API' },
+  ]},
+  { group: 'Financial Info', types: [
+    { id: 'payment_info',    label: 'Payment Info',           desc: 'Such as form of payment, payment card number, or bank account number' },
+    { id: 'credit_info',     label: 'Credit Info',            desc: 'Such as credit score' },
+    { id: 'other_financial', label: 'Other Financial Info',   desc: 'Such as salary, income, assets, debts, or any other financial information' },
+  ]},
+  { group: 'Location', types: [
+    { id: 'precise_loc',     label: 'Precise Location',       desc: 'Location with the same or greater resolution as latitude/longitude with three or more decimal places' },
+    { id: 'coarse_loc',      label: 'Coarse Location',        desc: 'Approximate location, such as city-level or approximate location services' },
+  ]},
+  { group: 'Sensitive Info', types: [
+    { id: 'sensitive',       label: 'Sensitive Info',         desc: 'Such as racial or ethnic data, sexual orientation, religious beliefs, political opinion, biometric data, or similar' },
+  ]},
+  { group: 'Contacts', types: [
+    { id: 'contacts',        label: 'Contacts',               desc: "Such as a list of contacts in the user's phone, address book, or social graph" },
+  ]},
+  { group: 'User Content', types: [
+    { id: 'messages',        label: 'Emails or Messages',     desc: 'Including subject line, sender, recipients, and contents of the email or message' },
+    { id: 'photos_videos',   label: 'Photos or Videos',       desc: "The user's photos or videos" },
+    { id: 'audio',           label: 'Audio Data',             desc: "The user's voice or sound recordings" },
+    { id: 'gameplay',        label: 'Gameplay Content',       desc: 'Such as user-generated content in-game' },
+    { id: 'customer_support',label: 'Customer Support',       desc: 'Data generated by the user during a customer support request' },
+    { id: 'other_uc',        label: 'Other User Content',     desc: 'Any other user-generated content' },
+  ]},
+  { group: 'Browsing History', types: [
+    { id: 'browsing',        label: 'Browsing History',       desc: 'Information about content the user has viewed outside the app, such as websites' },
+  ]},
+  { group: 'Search History', types: [
+    { id: 'search',          label: 'Search History',         desc: 'Information about searches performed in the app' },
+  ]},
+  { group: 'Identifiers', types: [
+    { id: 'user_id',         label: 'User ID',                desc: 'Such as screen name, account ID, customer number, or other user-level ID' },
+    { id: 'device_id',       label: 'Device ID',              desc: "Such as the device's advertising identifier or other device-level ID" },
+  ]},
+  { group: 'Purchases', types: [
+    { id: 'purchases',       label: 'Purchase History',       desc: "An account's or individual's purchases or purchase tendencies" },
+  ]},
+  { group: 'Usage Data', types: [
+    { id: 'product_use',     label: 'Product Interaction',    desc: 'Such as app launches, taps, clicks, scrolling, saved place in a game, or other interaction data' },
+    { id: 'ad_data',         label: 'Advertising Data',       desc: 'Such as information about the advertisements the user has seen' },
+    { id: 'other_usage',     label: 'Other Usage Data',       desc: 'Any other data about user activity in the app' },
+  ]},
+  { group: 'Diagnostics', types: [
+    { id: 'crash',           label: 'Crash Data',             desc: 'Such as crash logs' },
+    { id: 'performance',     label: 'Performance Data',       desc: 'Such as launch time, hang rate, or energy use' },
+    { id: 'other_diag',      label: 'Other Diagnostic Data',  desc: 'Any other data collected for measuring technical diagnostics' },
+  ]},
+  { group: 'Surroundings', types: [
+    { id: 'env_scan',        label: 'Environment Scanning',   desc: "Such as mesh, planes, scene classification, and/or image detection of the user's surroundings" },
+  ]},
+  { group: 'Body', types: [
+    { id: 'hands',           label: 'Hands',                  desc: "The user's hand structure and hand movements" },
+    { id: 'head',            label: 'Head',                   desc: "The user's head movement" },
+  ]},
+  { group: 'Other Data', types: [
+    { id: 'other',           label: 'Other Data',             desc: 'Any other data types not mentioned' },
+  ]},
+];
+
+// Flat type lookup: typeId → { id, label, desc, group }
+const IOS_DATA_TYPE_LOOKUP = {};
+IOS_DATA_TYPES.forEach(g => g.types.forEach(t => { IOS_DATA_TYPE_LOOKUP[t.id] = { ...t, group: g.group }; }));
+
+// How each collected data type is used (per-type selection)
+const IOS_PURPOSES = [
+  { id: 'first_party_ads',  label: 'Ads & Marketing',       desc: "Displaying first-party ads, sending marketing communications, or sharing data with entities who will display your ads" },
+  { id: 'third_party_ads',  label: '3rd-Party Advertising', desc: "Displaying third-party ads in your app, or sharing data with entities who display third-party ads" },
+  { id: 'analytics',        label: 'Analytics',             desc: "Evaluating user behavior, including to understand effectiveness of existing features, plan new features, or measure audience size" },
+  { id: 'personalization',  label: 'Personalization',       desc: "Customizing what the user sees, such as a list of recommended products, posts, or suggestions" },
+  { id: 'app_function',     label: 'App Functionality',     desc: "Such as to authenticate the user, enable features, prevent fraud, implement security measures, or perform customer support" },
+  { id: 'other_purpose',    label: 'Other Purposes',        desc: "Any other purpose not listed" },
 ];
 
 const IOS_INTENSITY_QUESTIONS = [
@@ -335,9 +409,8 @@ function makeBlankIOSAnswers() {
     // Privacy
     privacyPolicyUrl:       '',
     collectsData:           null,   // 'yes' / 'no'
-    dataTypes:              [],
-    dataLinkedToUser:       null,
-    dataForTracking:        null,
+    // dataPerType: { [typeId]: { purposes: [], identity: null, tracking: null } }
+    dataPerType:            {},
     // Content Rating — Step 1: Features (Yes/No)
     parentalControls:       null,
     ageAssurance:           null,
@@ -392,8 +465,9 @@ function computeIOSSectionRisk(sectionId) {
   if (sectionId === 'ios-privacy') {
     if (!a.privacyPolicyUrl.trim()) return 'HIGH';
     if (a.collectsData === 'yes') {
-      if (a.dataTypes.length === 0) return 'HIGH';
-      if (a.dataForTracking === 'yes') return 'MEDIUM';
+      if (Object.keys(a.dataPerType).length === 0) return 'HIGH';
+      const vals = Object.values(a.dataPerType);
+      if (vals.some(t => t.tracking === 'yes' || t.purposes.includes('third_party_ads'))) return 'HIGH';
       return 'MEDIUM';
     }
     if (a.collectsData === null) return 'NONE';
@@ -441,8 +515,12 @@ function isIOSSectionComplete(sectionId) {
     if (!a.privacyPolicyUrl.trim()) return false;
     if (a.collectsData === null) return false;
     if (a.collectsData === 'yes') {
-      if (a.dataTypes.length === 0) return false;
-      if (a.dataLinkedToUser === null || a.dataForTracking === null) return false;
+      const types = Object.entries(a.dataPerType);
+      if (types.length === 0) return false;
+      // Every selected type needs at least one purpose + identity + tracking answered
+      for (const [, t] of types) {
+        if (t.purposes.length === 0 || t.identity === null || t.tracking === null) return false;
+      }
     }
     return true;
   }

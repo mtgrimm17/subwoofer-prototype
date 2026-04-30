@@ -76,12 +76,13 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════
-       MAIN APP
+       TOPBAR — always visible (sits above onboarding overlay)
   ═══════════════════════════════════════════════════ -->
-  <div id="main-app" class="hidden">
-
-    <header class="topbar">
-      <div class="logo">
+  <header class="topbar" id="topbar">
+    <div class="logo">
+      <img src="logo.png" alt="Subwoofer" class="topbar-logo"
+           onerror="this.style.display='none'; document.getElementById('topbar-logo-fallback').style.display='flex'">
+      <span id="topbar-logo-fallback" style="display:none;align-items:center;gap:8px;">
         <svg class="logo-grid" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <g fill="#3a3a3a">
             <rect x="20" y="0" width="6" height="6" rx="1.5"/><rect x="30" y="0" width="6" height="6" rx="1.5"/><rect x="40" y="0" width="6" height="6" rx="1.5"/><rect x="50" y="0" width="6" height="6" rx="1.5"/>
@@ -101,18 +102,26 @@
           </g>
         </svg>
         <span>Subwoofer</span>
+      </span>
+    </div>
+    <div class="profile-wrap" id="profileWrap">
+      <button class="profile-block" onclick="toggleProfileMenu(event)" aria-label="Profile menu">
+        <div class="profile-avatar"></div>
+        <span class="profile-name" id="profile-name">Developer</span>
+      </button>
+      <div class="profile-menu" id="profileMenu">
+        <button class="profile-menu-item" id="profile-menu-signin"
+                onclick="closeAllDropdowns(); if(!state.onboardingComplete) completeOnboarding()">Sign in</button>
+        <button class="profile-menu-item" onclick="closeAllDropdowns()">Profile settings</button>
+        <button class="profile-menu-item danger" onclick="closeAllDropdowns()">Sign out</button>
       </div>
-      <div class="profile-wrap" id="profileWrap">
-        <button class="profile-block" onclick="toggleProfileMenu(event)" aria-label="Profile menu">
-          <div class="profile-avatar"></div>
-          <span class="profile-name" id="profile-name">Developer</span>
-        </button>
-        <div class="profile-menu" id="profileMenu">
-          <button class="profile-menu-item" onclick="closeAllDropdowns()">Profile settings</button>
-          <button class="profile-menu-item danger" onclick="closeAllDropdowns()">Sign out</button>
-        </div>
-      </div>
-    </header>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════
+       MAIN APP
+  ═══════════════════════════════════════════════════ -->
+  <div id="main-app" class="hidden">
 
     <div class="project-bar" id="project-bar">
       <div class="bar-left">

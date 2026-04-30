@@ -359,12 +359,36 @@ function updateIOSTextField(field, value) {
   state.iosSubmitAnswers[field] = value;
 }
 
-function toggleIOSDataType(typeId) {
-  const types = state.iosSubmitAnswers.dataTypes;
-  const idx = types.indexOf(typeId);
-  if (idx === -1) types.push(typeId); else types.splice(idx, 1);
+/* ── Privacy matrix handlers ─────────────────────────── */
+
+function togglePrivacyDataType(typeId) {
+  // Clicking a row (but not a checkbox inside it) toggles selection
+  const perType = state.iosSubmitAnswers.dataPerType;
+  if (perType[typeId]) {
+    delete perType[typeId];
+  } else {
+    perType[typeId] = { purposes: [], identity: null, tracking: null };
+  }
   reRenderIOSSubmitModal();
 }
+
+function togglePrivacyPurpose(typeId, purposeId, checked) {
+  const perType = state.iosSubmitAnswers.dataPerType;
+  if (!perType[typeId]) return;
+  const arr = perType[typeId].purposes;
+  if (checked && !arr.includes(purposeId)) arr.push(purposeId);
+  if (!checked) perType[typeId].purposes = arr.filter(p => p !== purposeId);
+  // No full re-render — checkboxes manage themselves
+}
+
+function setPrivacyMeta(typeId, field, checked) {
+  const perType = state.iosSubmitAnswers.dataPerType;
+  if (!perType[typeId]) return;
+  perType[typeId][field] = checked ? 'yes' : 'no';
+  // No full re-render — tracking warning updates lazily on section re-open
+}
+
+/* ── Legacy stub (IAP type toggle) ───────────────────── */
 
 function toggleIOSIAPType(typeId) {
   const types = state.iosSubmitAnswers.iapTypes;
@@ -445,6 +469,18 @@ function toggleIOSCountry(code) {
   renderDistributionMap();
 }
 
+function selectAllIOSCountries() {
+  state.iosSubmitAnswers.selectedCountries = IOS_COUNTRIES.map(c => c.code);
+  reRenderIOSSubmitModal();
+  requestAnimationFrame(() => initDistributionMap());
+}
+
+function deselectAllIOSCountries() {
+  state.iosSubmitAnswers.selectedCountries = [];
+  reRenderIOSSubmitModal();
+  requestAnimationFrame(() => initDistributionMap());
+}
+
 function confirmAndSubmit(platformId) {
   state.platformStepStatus[platformId]['reviewSubmission'] = 'complete';
   closeSubmitModal();
@@ -471,6 +507,19 @@ function deactivatePlatform(platformId) {
 
 
 /* ── Form helpers ────────────────────────────────────── */
+
+// Auto-round prices to .99 convention (e.g. 5 → 4.99, 10 → 9.99)
+function roundPrice(inputEl) {
+  let val = parseFloat(inputEl.value);
+  if (isNaN(val) || val <= 0) return; // free / blank — leave as-is
+  // If the cents portion is already .99 don't touch it
+  if (Math.abs(val - Math.floor(val) - 0.99) < 0.001) return;
+  // Round to nearest whole dollar then subtract 0.01
+  const rounded = Math.round(val);
+  const result = rounded > 0 ? (rounded - 0.01).toFixed(2) : val.toFixed(2);
+  inputEl.value = result;
+  state.formData['price'] = result;
+}
 
 function syncField(field, value) {
   state.formData[field] = value;

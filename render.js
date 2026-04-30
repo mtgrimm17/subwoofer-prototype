@@ -89,7 +89,8 @@ function buildGameDetailsTab() {
           </span>
         </label>
         <input class="form-input" id="ob-price" type="text" placeholder="4.99 (or 0 for free)"
-               oninput="syncField('price', this.value)">
+               oninput="syncField('price', this.value)"
+               onblur="roundPrice(this)">
       </div>
 
       <div class="ob-section-label" style="margin-top:20px;">Localization</div>
@@ -178,7 +179,7 @@ function buildUploadAssetsTab() {
       </div>
 
       <div class="ob-section-label" style="margin-top:24px;">Screenshots</div>
-      <div class="asset-guidance">Upload multiple. Stores will crop and adapt them to their required dimensions automatically.</div>
+      <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
       <div class="asset-dropzone" id="ob-screenshot-dropzone"
            onclick="document.getElementById('ob-screenshot-input').click()"
            ondragover="event.preventDefault(); this.classList.add('is-over')"
@@ -540,13 +541,15 @@ function buildInactiveCard(pid) {
   const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
   const label  = counts.complete > 0 ? `${counts.complete} / ${counts.total} steps` : 'Inactive';
   return `
-    <div class="inactive-card">
+    <div class="inactive-card" onclick="activatePlatform('${pid}')" role="button" tabindex="0"
+         title="Click to activate ${p.label}" style="cursor:pointer;">
       <div class="inactive-card-head">
         <div class="inactive-card-platform">
           <div class="inactive-card-icon">${platformIcon(pid, 16)}</div>
           <span class="inactive-card-name">${p.label}</span>
         </div>
-        <button class="platform-toggle" onclick="activatePlatform('${pid}')" title="Activate platform" aria-label="Toggle on"></button>
+        <button class="platform-toggle" onclick="event.stopPropagation(); activatePlatform('${pid}')"
+                title="Activate platform" aria-label="Toggle on"></button>
       </div>
       <div class="inactive-bar-wrap">
         <div class="inactive-bar">
@@ -779,21 +782,29 @@ function buildIOSSectionBody(sectionId) {
 }
 
 /* ── iOS section helper: YES/NO question row ─────────── */
-function iosYNRow(label, fieldId, desc, tooltip) {
+// inverted=true: NO is the "safe" answer — placed first and styled green
+function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
   const val = state.iosSubmitAnswers[fieldId];
-  // desc and tooltip both render as a ? icon tooltip; desc takes priority if tooltip not provided
   const ttText = tooltip || desc || '';
   const ttHTML = ttText ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${ttText}</span></span>` : '';
+
+  const yesClass = inverted
+    ? `yn-btn yn-no  ${val === 'yes' ? 'is-selected' : ''}`
+    : `yn-btn yn-yes ${val === 'yes' ? 'is-selected' : ''}`;
+  const noClass  = inverted
+    ? `yn-btn yn-yes ${val === 'no' ? 'is-selected' : ''}`
+    : `yn-btn yn-no  ${val === 'no' ? 'is-selected' : ''}`;
+
+  const yesBtn = `<button class="${yesClass}" onclick="answerIOSField('${fieldId}','yes')">YES</button>`;
+  const noBtn  = `<button class="${noClass}"  onclick="answerIOSField('${fieldId}','no')">NO</button>`;
+
   return `
     <div class="ios-q-row">
       <div class="ios-q-left">
         <div class="ios-q-label">${label}${ttHTML}</div>
       </div>
       <div class="question-yn">
-        <button class="yn-btn yn-yes ${val === 'yes' ? 'is-selected' : ''}"
-                onclick="answerIOSField('${fieldId}','yes')">YES</button>
-        <button class="yn-btn yn-no ${val === 'no' ? 'is-selected' : ''}"
-                onclick="answerIOSField('${fieldId}','no')">NO</button>
+        ${inverted ? noBtn + yesBtn : yesBtn + noBtn}
       </div>
     </div>`;
 }
@@ -818,25 +829,7 @@ function buildPrivacySection() {
   const a = state.iosSubmitAnswers;
   const noUrl = !a.privacyPolicyUrl.trim();
 
-  const dataTypeBlock = a.collectsData === 'yes' ? `
-    <div class="ios-subsection">
-      <div class="ios-subsection-label">What types of data does your app collect?</div>
-      <div class="data-type-chips">
-        ${IOS_DATA_TYPES.map(dt => `
-          <button class="data-type-chip ${a.dataTypes.includes(dt.id) ? 'is-on' : ''}"
-                  onclick="toggleIOSDataType('${dt.id}')" title="${dt.desc}">${dt.label}</button>`).join('')}
-      </div>
-      ${a.dataTypes.length > 0 ? `
-        <div style="margin-top:14px;">
-          ${iosYNRow('Is any collected data linked to the user\'s identity?',
-            'dataLinkedToUser',
-            'Includes data tied to accounts, names, or email addresses.')}
-          ${iosYNRow('Is any collected data used for tracking across other apps or websites?',
-            'dataForTracking',
-            'Tracking means linking data from your app with data from other apps for advertising.')}
-          ${a.dataForTracking === 'yes' ? '<div class="ios-risk-note risk-MEDIUM">Tracking requires implementing Apple\'s AppTrackingTransparency framework and requesting user permission before data is collected.</div>' : ''}
-        </div>` : ''}
-    </div>` : '';
+  const matrixBlock = a.collectsData === 'yes' ? buildPrivacyMatrix(a) : '';
 
   return `
     <div class="form-group">
@@ -854,7 +847,84 @@ function buildPrivacySection() {
     </div>
     ${iosYNRow('Does your app collect any data from users?', 'collectsData',
       'Includes analytics SDKs, crash reporters, accounts, device IDs, or any third-party SDK that collects data.')}
-    ${dataTypeBlock}`;
+    ${matrixBlock}`;
+}
+
+function buildPrivacyMatrix(a) {
+  const cols = IOS_PURPOSES;
+  const META_COLS = [
+    { id: 'linked_identity', label: 'Linked to Identity' },
+    { id: 'used_tracking',   label: 'Used for Tracking' },
+  ];
+
+  // Header row
+  const purposeHeaders = cols.map(c =>
+    `<th class="prv-col-hd" title="${c.desc}">${c.label}</th>`).join('');
+  const metaHeaders = META_COLS.map(c =>
+    `<th class="prv-col-hd prv-meta-col">${c.label}</th>`).join('');
+
+  // Data rows grouped
+  let bodyHtml = '';
+  IOS_DATA_TYPES.forEach(group => {
+    bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
+    group.types.forEach(t => {
+      const isOn = !!a.dataPerType[t.id];
+      const td = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
+      const purposeCells = cols.map(c => {
+        const checked = td.purposes.includes(c.id);
+        return `<td class="prv-check-cell">
+          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
+                 data-type="${t.id}" data-col="${c.id}"
+                 ${checked ? 'checked' : ''}
+                 onchange="togglePrivacyPurpose('${t.id}','${c.id}',this.checked)">
+        </td>`;
+      }).join('');
+      const metaCells = META_COLS.map(c => {
+        const isChecked = c.id === 'linked_identity' ? td.identity === 'yes' : td.tracking === 'yes';
+        const field = c.id === 'linked_identity' ? 'identity' : 'tracking';
+        return `<td class="prv-check-cell prv-meta-col">
+          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
+                 data-type="${t.id}" data-meta="${field}"
+                 ${isChecked ? 'checked' : ''}
+                 onchange="setPrivacyMeta('${t.id}','${field}',this.checked)">
+        </td>`;
+      }).join('');
+
+      bodyHtml += `
+        <tr class="prv-data-row ${isOn ? 'is-on' : ''}" onclick="togglePrivacyDataType('${t.id}')">
+          <td class="prv-type-cell" title="${t.desc}">
+            <span class="prv-type-name">${t.label}</span>
+          </td>
+          ${purposeCells}
+          ${metaCells}
+        </tr>`;
+    });
+  });
+
+  const selectedCount = Object.keys(a.dataPerType).length;
+
+  return `
+    <div class="ios-subsection">
+      <div class="ios-subsection-label" style="margin-bottom:6px;">
+        What data does your app collect?
+        ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} selected</span>` : ''}
+      </div>
+      <div class="prv-matrix-hint">Click a row to select it, then check how that data is used.</div>
+      <div class="prv-matrix-wrap">
+        <table class="prv-matrix">
+          <thead>
+            <tr>
+              <th class="prv-type-hd">Data Type</th>
+              ${purposeHeaders}
+              ${metaHeaders}
+            </tr>
+          </thead>
+          <tbody>${bodyHtml}</tbody>
+        </table>
+      </div>
+      ${Object.values(a.dataPerType).some(t => t.tracking === 'yes') ?
+        '<div class="ios-risk-note risk-HIGH" style="margin-top:10px;">Tracking requires implementing Apple\'s AppTrackingTransparency framework and requesting user permission before data is collected.</div>' : ''}
+    </div>`;
 }
 
 /* ── Content Rating ──────────────────────────────────── */
@@ -941,9 +1011,9 @@ function buildContentRatingSection() {
     <div class="ios-intensity-list">
       ${['simulatedGambling','contests'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
     </div>
-    ${iosYNRow(yq('realMoneyGambling').label, 'realMoneyGambling', '', yq('realMoneyGambling').tooltip)}
+    ${iosYNRow(yq('realMoneyGambling').label, 'realMoneyGambling', '', yq('realMoneyGambling').tooltip, true)}
     ${a.realMoneyGambling === 'yes' ? '<div class="ios-risk-note risk-HIGH">Real-money gambling requires a special Apple entitlement and proof of licensing in every territory where it is offered. Apple will ask for documentation during review.</div>' : ''}
-    ${iosYNRow(yq('lootBoxes').label, 'lootBoxes', '', yq('lootBoxes').tooltip)}
+    ${iosYNRow(yq('lootBoxes').label, 'lootBoxes', '', yq('lootBoxes').tooltip, true)}
     ${a.lootBoxes === 'yes' ? '<div class="ios-risk-note risk-MEDIUM">Apps with loot boxes must clearly disclose the odds of receiving each item type before a player makes a purchase.</div>' : ''}
 
     <div class="ios-q-divider"></div>
@@ -1122,6 +1192,10 @@ function buildDistributionSection() {
       <span class="dist-list-col-country">Market</span>
       <span class="dist-list-col-bar"></span>
       <span class="dist-list-col-count">iOS Gamers (Approx)</span>
+      <div class="dist-select-all-btns">
+        <button class="dist-sel-btn" onclick="selectAllIOSCountries()">All</button>
+        <button class="dist-sel-btn" onclick="deselectAllIOSCountries()">None</button>
+      </div>
     </div>
     <div class="dist-country-list" id="dist-country-list">
       ${rows}
