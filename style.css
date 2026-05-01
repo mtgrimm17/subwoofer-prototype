@@ -2263,20 +2263,7 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   pointer-events: none;
 }
 
-/* Placeholder dots for unselected rows */
-.prv-check-cell::before {
-  content: '';
-  position: absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
-  width: 13px;
-  height: 13px;
-  border: 1px dashed var(--border-hover);
-  border-radius: 3px;
-  pointer-events: none;
-  transition: opacity 0.15s;
-}
-.prv-data-row.is-on .prv-check-cell::before { opacity: 0; }
+/* No placeholder dots — checkboxes only appear when a row is selected (opacity:0 when disabled) */
 
 .prv-matrix-hint {
   font-size: 11px;
@@ -2295,26 +2282,34 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   font-weight: 600;
 }
 
-/* ── Distribution Select All / None ─────────────────── */
+/* ── Distribution Presets ────────────────────────────── */
 
-.dist-select-all-btns {
+.dist-preset-row {
   display: flex;
-  gap: 4px;
-  margin-left: auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 
-.dist-sel-btn {
-  padding: 2px 8px;
-  border-radius: 5px;
+.dist-preset-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--panel-3);
-  color: var(--text-faint);
-  font-size: 10px;
-  font-weight: 600;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  transition: border-color 0.12s, color 0.12s;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
-.dist-sel-btn:hover { border-color: var(--border-hover); color: var(--text-dim); }
+.dist-preset-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.dist-preset-btn.is-active {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-weight: 600;
+}

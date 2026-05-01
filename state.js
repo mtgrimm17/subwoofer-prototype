@@ -456,6 +456,7 @@ function makeBlankIOSAnswers() {
     taxCategory:            'games',
     // Distribution
     selectedCountries:      [],
+    distPreset:             'everywhere',
   };
 }
 

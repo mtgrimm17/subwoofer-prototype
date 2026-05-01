@@ -225,6 +225,7 @@ function openSubmitModal(platformId) {
       state.iosSubmitAnswers.selectedCountries = IOS_COUNTRIES
         .filter(c => langs.has(c.lang))
         .map(c => c.code);
+      state.iosSubmitAnswers.distPreset = 'custom';
     }
   } else {
     state.submitModal.expanded = [];
@@ -453,6 +454,9 @@ function toggleDistExpand() {
 }
 
 function toggleIOSCountry(code) {
+  // Manual edit → switch to Custom preset
+  state.iosSubmitAnswers.distPreset = 'custom';
+
   const arr = state.iosSubmitAnswers.selectedCountries;
   const idx = arr.indexOf(code);
   if (idx === -1) arr.push(code); else arr.splice(idx, 1);
@@ -466,17 +470,30 @@ function toggleIOSCountry(code) {
   const fill = row && row.querySelector('.dist-bar-fill');
   if (fill) fill.style.background = (idx === -1) ? 'rgba(59,130,246,0.5)' : 'var(--border-hover)';
 
+  // Update preset button highlights without full re-render
+  document.querySelectorAll('.dist-preset-btn').forEach(btn => {
+    btn.classList.toggle('is-active', btn.textContent.trim() === 'Custom');
+  });
+
   renderDistributionMap();
 }
 
-function selectAllIOSCountries() {
-  state.iosSubmitAnswers.selectedCountries = IOS_COUNTRIES.map(c => c.code);
-  reRenderIOSSubmitModal();
-  requestAnimationFrame(() => initDistributionMap());
-}
+// English-speaking iOS markets
+const DIST_PRESET_ENGLISH = IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
 
-function deselectAllIOSCountries() {
-  state.iosSubmitAnswers.selectedCountries = [];
+function setDistPreset(preset) {
+  const ans = state.iosSubmitAnswers;
+  ans.distPreset = preset;
+
+  if (preset === 'everywhere') {
+    ans.selectedCountries = IOS_COUNTRIES.map(c => c.code);
+  } else if (preset === 'everywhere_except_cn') {
+    ans.selectedCountries = IOS_COUNTRIES.filter(c => c.code !== 'CN').map(c => c.code);
+  } else if (preset === 'english_only') {
+    ans.selectedCountries = [...DIST_PRESET_ENGLISH];
+  }
+  // 'custom' → keep current selection as-is
+
   reRenderIOSSubmitModal();
   requestAnimationFrame(() => initDistributionMap());
 }

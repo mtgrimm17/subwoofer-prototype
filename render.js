@@ -162,23 +162,7 @@ function buildUploadAssetsTab() {
   const hasAndroid = state.activePlatforms.has('android');
   return `
     <div class="ob-form">
-      <div class="ob-section-label">App Icon</div>
-      <div class="asset-guidance">Required for all platforms. Upload without rounded corners — stores apply their own shape automatically.</div>
-      <div class="asset-dropzone" id="ob-icon-dropzone"
-           onclick="document.getElementById('ob-icon-input').click()"
-           ondragover="event.preventDefault(); this.classList.add('is-over')"
-           ondragleave="this.classList.remove('is-over')"
-           ondrop="handleIconDrop(event)">
-        <div id="ob-icon-preview">
-          <div class="asset-dropzone-icon">↑</div>
-          <div class="asset-dropzone-label">Drop icon here, or click to browse</div>
-          <div class="asset-dropzone-hint">PNG · 1024×1024</div>
-        </div>
-        <input type="file" id="ob-icon-input" accept="image/*" style="display:none"
-               onchange="handleIconFiles(this.files); this.value=''">
-      </div>
-
-      <div class="ob-section-label" style="margin-top:24px;">Screenshots</div>
+      <div class="ob-section-label">Screenshots</div>
       <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
       <div class="asset-dropzone" id="ob-screenshot-dropzone"
            onclick="document.getElementById('ob-screenshot-input').click()"
@@ -876,6 +860,7 @@ function buildPrivacyMatrix(a) {
           <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
                  data-type="${t.id}" data-col="${c.id}"
                  ${checked ? 'checked' : ''}
+                 onclick="event.stopPropagation()"
                  onchange="togglePrivacyPurpose('${t.id}','${c.id}',this.checked)">
         </td>`;
       }).join('');
@@ -886,6 +871,7 @@ function buildPrivacyMatrix(a) {
           <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
                  data-type="${t.id}" data-meta="${field}"
                  ${isChecked ? 'checked' : ''}
+                 onclick="event.stopPropagation()"
                  onchange="setPrivacyMeta('${t.id}','${field}',this.checked)">
         </td>`;
       }).join('');
@@ -1181,9 +1167,17 @@ function buildDistributionSection() {
       </div>`;
   }).join('');
 
+  const preset = a.distPreset || 'custom';
+
   return `
     <div id="distribution-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
     <div class="ios-q-label" style="margin-bottom:8px;">Where do you intend to make the game available?</div>
+    <div class="dist-preset-row">
+      <button class="dist-preset-btn ${preset === 'everywhere' ? 'is-active' : ''}" onclick="setDistPreset('everywhere')">Everywhere</button>
+      <button class="dist-preset-btn ${preset === 'everywhere_except_cn' ? 'is-active' : ''}" onclick="setDistPreset('everywhere_except_cn')">Everywhere except China</button>
+      <button class="dist-preset-btn ${preset === 'english_only' ? 'is-active' : ''}" onclick="setDistPreset('english_only')">English only</button>
+      <button class="dist-preset-btn ${preset === 'custom' ? 'is-active' : ''}" onclick="setDistPreset('custom')">Custom</button>
+    </div>
     <div class="dist-tip-box">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span><strong>Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
@@ -1192,10 +1186,6 @@ function buildDistributionSection() {
       <span class="dist-list-col-country">Market</span>
       <span class="dist-list-col-bar"></span>
       <span class="dist-list-col-count">iOS Gamers (Approx)</span>
-      <div class="dist-select-all-btns">
-        <button class="dist-sel-btn" onclick="selectAllIOSCountries()">All</button>
-        <button class="dist-sel-btn" onclick="deselectAllIOSCountries()">None</button>
-      </div>
     </div>
     <div class="dist-country-list" id="dist-country-list">
       ${rows}
