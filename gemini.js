@@ -2,9 +2,9 @@
    GEMINI — AI-powered questionnaire auto-fill
    ============================================================ */
 
-const GEMINI_MODEL    = 'gemini-2.0-flash-lite';
+const GEMINI_MODEL    = 'gemini-2.0-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const GEMINI_API_KEY  = 'AIzaSyCs_98cea9Lb8fsaVnMi94bARSdqyBzA9Q';
+const GEMINI_API_KEY  = 'AIzaSyCvFKPwJcPMeZqnPZPajgHIiVUTHD0OTl0';
 
 /* ── Prompt builder ───────────────────────────────────────── */
 
