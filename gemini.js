@@ -2,8 +2,8 @@
    AI — Claude-powered questionnaire auto-fill
    ============================================================ */
 
-const CLAUDE_API_KEY = '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';
-const CLAUDE_MODEL   = 'claude-haiku-4-5-20251001';
+const CLAUDE_API_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.CLAUDE_API_KEY : '';
+const CLAUDE_MODEL    = 'claude-haiku-4-5-20251001';
 const CLAUDE_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
 /* ── Prompt builder ───────────────────────────────────────── */
