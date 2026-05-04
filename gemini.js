@@ -70,6 +70,7 @@ SCHEMA (fill in every field — no nulls):
     "usesEncryption":  "yes|no",
     "encryptionExempt": "yes|no"
   },
+  "ageCategory": "not_applicable|made_for_kids|override_higher",
   "confidence": "low|medium|high",
   "reasoning": "2-3 sentence explanation of your key inferences"
 }
@@ -80,6 +81,8 @@ privacy.dataTypes[].id: name, email, phone, address, other_contact, health, fitn
 privacy.dataTypes[].purposes (array): first_party_ads, third_party_ads, analytics, personalization, app_function, other_purpose
 
 business.iapTypes (array): consumable, non-consumable, auto-renewable, non-renewing
+
+ageCategory: "not_applicable" for most games; "made_for_kids" only if explicitly designed for children under 13; "override_higher" only if a manual rating bump is needed.
 
 INFERENCE GUIDELINES:
 - Nearly all networked mobile games use HTTPS → usesEncryption: "yes", encryptionExempt: "yes" (standard TLS is exempt)
@@ -207,6 +210,13 @@ function applyGeminiResults(result) {
     const ee = result.exportCompliance.encryptionExempt;
     if (ue === 'yes' || ue === 'no') { a.usesEncryption = ue; filled++; }
     if (ee === 'yes' || ee === 'no') { a.encryptionExempt = ee; filled++; }
+  }
+
+  // Age category
+  const validAgeCategories = ['not_applicable', 'made_for_kids', 'override_higher'];
+  if (validAgeCategories.includes(result.ageCategory)) {
+    a.ageCategory = result.ageCategory;
+    filled++;
   }
 
   return {
