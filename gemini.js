@@ -2,7 +2,7 @@
    GEMINI — AI-powered questionnaire auto-fill
    ============================================================ */
 
-const GEMINI_MODEL    = 'gemini-2.0-flash';
+const GEMINI_MODEL    = 'gemini-1.5-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const GEMINI_API_KEY  = 'AIzaSyCs_98cea9Lb8fsaVnMi94bARSdqyBzA9Q';
 
@@ -119,8 +119,18 @@ async function analyzeGameWithGemini() {
   });
 
   if (!res.ok) {
-    let msg = `API error ${res.status}`;
-    try { const e = await res.json(); msg = e.error?.message || msg; } catch (_) {}
+    let msg = `Request failed (${res.status})`;
+    try {
+      const e = await res.json();
+      const raw = e.error?.message || '';
+      if (res.status === 429 || raw.includes('quota') || raw.includes('Quota')) {
+        msg = 'Rate limit reached — please wait a moment and retry.';
+      } else if (res.status === 400) {
+        msg = 'Invalid request — check that your game has a title and description.';
+      } else if (res.status === 403) {
+        msg = 'API key rejected. Please check the key is valid.';
+      }
+    } catch (_) {}
     throw new Error(msg);
   }
 
