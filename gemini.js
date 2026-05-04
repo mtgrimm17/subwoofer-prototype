@@ -2,7 +2,7 @@
    GEMINI — AI-powered questionnaire auto-fill
    ============================================================ */
 
-const GEMINI_MODEL    = 'gemini-2.0-flash';
+const GEMINI_MODEL    = 'gemini-2.5-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const GEMINI_API_KEY  = 'AIzaSyCvFKPwJcPMeZqnPZPajgHIiVUTHD0OTl0';
 
@@ -94,6 +94,8 @@ INFERENCE GUIDELINES:
 
 async function analyzeGameWithGemini() {
   const ups = state.uploads;
+  console.log('[Gemini] Calling model:', GEMINI_MODEL);
+  console.log('[Gemini] Endpoint:', `${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY.slice(0,8)}…`);
 
   // Build content parts: text prompt + up to 3 screenshots
   const parts = [{ text: buildGeminiPrompt() }];
@@ -119,22 +121,25 @@ async function analyzeGameWithGemini() {
   });
 
   if (!res.ok) {
-    let msg = `Request failed (${res.status})`;
-    try {
-      const e = await res.json();
-      const raw = e.error?.message || '';
-      if (res.status === 429 || raw.includes('quota') || raw.includes('Quota')) {
-        msg = 'Rate limit reached — please wait a moment and retry.';
-      } else if (res.status === 400) {
-        msg = 'Invalid request — check that your game has a title and description.';
-      } else if (res.status === 403) {
-        msg = 'API key rejected. Please check the key is valid.';
-      }
-    } catch (_) {}
+    let rawBody = {};
+    try { rawBody = await res.json(); } catch (_) {}
+    console.error('[Gemini] HTTP', res.status, 'from', res.url);
+    console.error('[Gemini] Response body:', JSON.stringify(rawBody, null, 2));
+    const raw = rawBody.error?.message || '';
+    let msg = `Request failed (${res.status}): ${raw || 'no details'}`;
+    if (res.status === 429 || raw.toLowerCase().includes('quota')) {
+      msg = 'Rate limit reached — please wait a moment and retry.';
+    } else if (res.status === 400) {
+      msg = `Bad request: ${raw}`;
+    } else if (res.status === 403) {
+      msg = `Auth error: ${raw}`;
+    }
     throw new Error(msg);
   }
 
   const data = await res.json();
+  console.log('[Gemini] Success:', JSON.stringify(data, null, 2));
+
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('Empty response from Gemini');
 

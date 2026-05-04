@@ -631,8 +631,7 @@ function renderSubmitModal() {
   } else {
     renderGenericSubmitModal(modal);
   }
-  // Re-run after DOM settles so tooltip bounds can be measured
-  requestAnimationFrame(() => positionTooltips());
+  // (global tooltip uses delegated events — no positioning call needed)
 }
 
 /* Generic (non-iOS) content-review modal — existing risk-summary approach */
