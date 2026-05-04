@@ -723,16 +723,14 @@ function buildIOSScrollContent() {
     aiBanner = `
       <div class="ai-banner ai-banner-loading">
         <span class="ai-spinner"></span>
-        <span>Analyzing your game with Gemini AI…</span>
+        <span>Analyzing your game…</span>
       </div>`;
   } else if (ai.status === 'done') {
-    const conf = ai.confidence || 'medium';
     aiBanner = `
       <div class="ai-banner ai-banner-done">
         <span class="ai-banner-icon">✦</span>
         <div class="ai-banner-text">
-          <strong>AI pre-filled ${ai.filled} fields</strong> · Confidence: ${conf}
-          ${ai.reasoning ? `<div class="ai-reasoning">${ai.reasoning}</div>` : ''}
+          Subwoofer was able to answer <strong>${ai.pct}%</strong> of the App Store's questions based on what you provided. Please review and confirm these responses before submitting.
         </div>
         <button class="ai-clear-btn" onclick="clearGeminiResults()" title="Reset to blank">Reset</button>
       </div>`;
@@ -747,9 +745,6 @@ function buildIOSScrollContent() {
 
   return `
     ${aiBanner}
-    <div class="ios-submit-intro">
-      Complete each section. Subwoofer pre-fills answers from your onboarding responses — review and confirm before submitting.
-    </div>
     <div class="ios-sections">
       ${IOS_SECTIONS.map(section => buildIOSSectionRow(section)).join('')}
     </div>`;
@@ -795,6 +790,22 @@ function buildIOSSectionBody(sectionId) {
   return '';
 }
 
+/* ── AI inference badge helper ───────────────────────── */
+function aiInferenceClass(fieldId, value) {
+  const val  = state.iosSubmitAnswers[fieldId];
+  const meta = state.iosAnswerMeta[fieldId];
+  if (val !== value || !meta || meta.humanConfirmed) return '';
+  if (meta.confidence >= 90) return ' ai-certain';
+  return ' ai-confident';
+}
+
+function aiInferenceBadge(fieldId, value) {
+  const val  = state.iosSubmitAnswers[fieldId];
+  const meta = state.iosAnswerMeta[fieldId];
+  if (val !== value || !meta || meta.humanConfirmed || meta.confidence >= 90) return '';
+  return '<span class="ai-badge"></span>';
+}
+
 /* ── iOS section helper: YES/NO question row ─────────── */
 // inverted=true: NO is the "safe" answer — placed first and styled green
 function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
@@ -802,15 +813,14 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
   const ttText = tooltip || desc || '';
   const ttHTML = ttText ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${ttText}</span></span>` : '';
 
-  const yesClass = inverted
-    ? `yn-btn yn-no  ${val === 'yes' ? 'is-selected' : ''}`
-    : `yn-btn yn-yes ${val === 'yes' ? 'is-selected' : ''}`;
-  const noClass  = inverted
-    ? `yn-btn yn-yes ${val === 'no' ? 'is-selected' : ''}`
-    : `yn-btn yn-no  ${val === 'no' ? 'is-selected' : ''}`;
+  const yesBase = inverted ? 'yn-btn yn-no' : 'yn-btn yn-yes';
+  const noBase  = inverted ? 'yn-btn yn-yes' : 'yn-btn yn-no';
 
-  const yesBtn = `<button class="${yesClass}" onclick="answerIOSField('${fieldId}','yes')">YES</button>`;
-  const noBtn  = `<button class="${noClass}"  onclick="answerIOSField('${fieldId}','no')">NO</button>`;
+  const yesClass = `${yesBase}${val === 'yes' ? ' is-selected' + aiInferenceClass(fieldId, 'yes') : ''}`;
+  const noClass  = `${noBase}${val === 'no'  ? ' is-selected' + aiInferenceClass(fieldId, 'no')  : ''}`;
+
+  const yesBtn = `<button class="${yesClass}" onclick="answerIOSField('${fieldId}','yes')">YES${aiInferenceBadge(fieldId, 'yes')}</button>`;
+  const noBtn  = `<button class="${noClass}"  onclick="answerIOSField('${fieldId}','no')">NO${aiInferenceBadge(fieldId, 'no')}</button>`;
 
   return `
     <div class="ios-q-row">
@@ -827,13 +837,16 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
 function iosIntensityRow(label, fieldId, tooltip) {
   const val = state.iosSubmitAnswers[fieldId];
   const ttHTML = tooltip ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>` : '';
+
+  function iClass(v, base) { return `intensity-btn ${val === v ? base + aiInferenceClass(fieldId, v) : ''}`; }
+
   return `
     <div class="ios-q-row ios-q-row-intensity">
       <div class="ios-q-label ios-q-label-sm">${label}${ttHTML}</div>
       <div class="intensity-group">
-        <button class="intensity-btn ${val === 'none'       ? 'is-sel-none'       : ''}" onclick="answerIOSField('${fieldId}','none')">None</button>
-        <button class="intensity-btn ${val === 'infrequent' ? 'is-sel-infrequent' : ''}" onclick="answerIOSField('${fieldId}','infrequent')">Infrequent</button>
-        <button class="intensity-btn ${val === 'frequent'   ? 'is-sel-frequent'   : ''}" onclick="answerIOSField('${fieldId}','frequent')">Frequent</button>
+        <button class="${iClass('none',       'is-sel-none')}"       onclick="answerIOSField('${fieldId}','none')">None${aiInferenceBadge(fieldId, 'none')}</button>
+        <button class="${iClass('infrequent', 'is-sel-infrequent')}" onclick="answerIOSField('${fieldId}','infrequent')">Infrequent${aiInferenceBadge(fieldId, 'infrequent')}</button>
+        <button class="${iClass('frequent',   'is-sel-frequent')}"   onclick="answerIOSField('${fieldId}','frequent')">Frequent${aiInferenceBadge(fieldId, 'frequent')}</button>
       </div>
     </div>`;
 }

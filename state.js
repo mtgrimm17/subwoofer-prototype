@@ -461,43 +461,55 @@ function makeBlankIOSAnswers() {
 }
 
 function computeIOSSectionRisk(sectionId) {
-  const a = state.iosSubmitAnswers;
+  const a    = state.iosSubmitAnswers;
+  const meta = state.iosAnswerMeta;
 
-  if (sectionId === 'ios-privacy') {
-    if (!a.privacyPolicyUrl.trim()) return 'HIGH';
-    if (a.collectsData === 'yes') {
-      if (Object.keys(a.dataPerType).length === 0) return 'HIGH';
-      const vals = Object.values(a.dataPerType);
-      if (vals.some(t => t.tracking === 'yes' || t.purposes.includes('third_party_ads'))) return 'HIGH';
-      return 'MEDIUM';
-    }
-    if (a.collectsData === null) return 'NONE';
+  // Returns the AIC status for a field:
+  // 'human'    — user clicked this answer (takes precedence, full confidence)
+  // 'certain'  — AI filled, confidence >= 90
+  // 'confident'— AI filled, confidence 70–89 (shows badge)
+  // 'missing'  — not filled at all (AIC < 70 or never answered)
+  function fieldStatus(fieldId) {
+    if (a[fieldId] === null || a[fieldId] === undefined) return 'missing';
+    const m = meta[fieldId];
+    if (!m) return 'human'; // filled by human, no AI meta
+    if (m.humanConfirmed) return 'human';
+    if (m.confidence >= 90) return 'certain';
+    return 'confident';
+  }
+
+  // Evaluate a list of mandatory field IDs and return section risk
+  function evalFields(fieldIds) {
+    const statuses = fieldIds.map(fieldStatus);
+    if (statuses.includes('missing'))   return 'HIGH';
+    if (statuses.includes('confident')) return 'MEDIUM';
     return 'LOW';
   }
 
+  if (sectionId === 'ios-privacy') {
+    // Privacy URL is human-entered — if missing, always HIGH
+    if (!a.privacyPolicyUrl.trim()) return 'HIGH';
+    return evalFields(['collectsData']);
+  }
+
   if (sectionId === 'ios-content') {
-    if (a.graphicSexual === 'frequent' || a.sexualContent === 'frequent' ||
-        a.realMoneyGambling === 'yes' || a.lootBoxes === 'yes') return 'HIGH';
-    const hasFrequent = IOS_INTENSITY_QUESTIONS.some(q => a[q.id] === 'frequent');
-    if (hasFrequent || a.messagingChat === 'yes' || a.unrestrictedInternet === 'yes' ||
-        a.userGenContent === 'yes') return 'MEDIUM';
-    const anyAnswered = IOS_INTENSITY_QUESTIONS.some(q => a[q.id] !== null) ||
-                        IOS_CONTENT_YN_QUESTIONS.some(q => a[q.id] !== null);
-    return anyAnswered ? 'LOW' : 'NONE';
+    const fields = [
+      ...IOS_INTENSITY_QUESTIONS.map(q => q.id),
+      ...IOS_CONTENT_YN_QUESTIONS.map(q => q.id),
+      'ageCategory',
+    ];
+    return evalFields(fields);
   }
 
   if (sectionId === 'ios-compliance') {
-    if (a.usesEncryption === 'yes') {
-      if (a.encryptionExempt === 'no' && a.hasERN === 'no') return 'HIGH';
-      if (a.encryptionExempt === null || (a.encryptionExempt === 'no' && a.hasERN === null)) return 'MEDIUM';
-      return 'LOW';
-    }
-    return a.usesEncryption === null ? 'NONE' : 'LOW';
+    if (a.usesEncryption === null) return 'HIGH';
+    const fields = ['usesEncryption'];
+    if (a.usesEncryption === 'yes') fields.push('encryptionExempt');
+    return evalFields(fields);
   }
 
   if (sectionId === 'ios-business') {
-    if (a.hasIAP === 'yes') return 'MEDIUM';
-    return a.hasIAP === null ? 'NONE' : 'LOW';
+    return evalFields(['hasIAP']);
   }
 
   if (sectionId === 'ios-distribution') {
@@ -902,6 +914,9 @@ const state = {
 
   // iOS App Store submission questionnaire answers
   iosSubmitAnswers: makeBlankIOSAnswers(),
+
+  // Per-field AI inference metadata: { [fieldId]: { confidence: 0-100, humanConfirmed: bool } }
+  iosAnswerMeta: {},
 
   // Gemini AI UI state (not persisted)
   geminiUI: {},

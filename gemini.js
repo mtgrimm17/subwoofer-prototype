@@ -24,55 +24,56 @@ Primary Language: ${fd.primaryLanguage || 'en'}
 In-App Purchases (from developer): ${hasIAP === 'yes' ? 'Yes' : hasIAP === 'no' ? 'No' : 'Unknown'}
 ${hasScreenshots ? `Screenshots provided: ${ups.screenshots.length} image(s) — analyze visual content carefully.` : 'No screenshots provided.'}
 
-Return ONLY a valid JSON object — no markdown fences, no explanation outside the JSON. Use exactly these value constraints:
-- Intensity fields: "none", "infrequent", or "frequent"
-- Boolean fields: "yes" or "no"
+Return ONLY a valid JSON object — no markdown fences, no explanation outside the JSON.
 
-SCHEMA (fill in every field — no nulls):
+Each answer must include a "confidence" integer from 0–100 indicating how certain you are based on the available information:
+- 90–100: Very certain (strong evidence from description/screenshots)
+- 70–89: Reasonably confident (some evidence, plausible inference)
+- Below 70: Uncertain (insufficient information — still provide your best guess)
+
+SCHEMA (every field required — no nulls):
 {
   "intensityQuestions": {
-    "profanity":          "none|infrequent|frequent",
-    "horrorFear":         "none|infrequent|frequent",
-    "substancesAlcohol":  "none|infrequent|frequent",
-    "medicalTreatment":   "none|infrequent|frequent",
-    "matureSuggestive":   "none|infrequent|frequent",
-    "sexualContent":      "none|infrequent|frequent",
-    "graphicSexual":      "none|infrequent|frequent",
-    "cartoonViolence":    "none|infrequent|frequent",
-    "realisticViolence":  "none|infrequent|frequent",
-    "extendedViolence":   "none|infrequent|frequent",
-    "gunsWeapons":        "none|infrequent|frequent",
-    "simulatedGambling":  "none|infrequent|frequent",
-    "contests":           "none|infrequent|frequent"
+    "profanity":          { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "horrorFear":         { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "substancesAlcohol":  { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "medicalTreatment":   { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "matureSuggestive":   { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "sexualContent":      { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "graphicSexual":      { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "cartoonViolence":    { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "realisticViolence":  { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "extendedViolence":   { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "gunsWeapons":        { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "simulatedGambling":  { "value": "none|infrequent|frequent", "confidence": 0-100 },
+    "contests":           { "value": "none|infrequent|frequent", "confidence": 0-100 }
   },
   "ynQuestions": {
-    "parentalControls":     "yes|no",
-    "ageAssurance":         "yes|no",
-    "unrestrictedInternet": "yes|no",
-    "userGenContent":       "yes|no",
-    "messagingChat":        "yes|no",
-    "advertising":          "yes|no",
-    "healthWellness":       "yes|no",
-    "realMoneyGambling":    "yes|no",
-    "lootBoxes":            "yes|no"
+    "parentalControls":     { "value": "yes|no", "confidence": 0-100 },
+    "ageAssurance":         { "value": "yes|no", "confidence": 0-100 },
+    "unrestrictedInternet": { "value": "yes|no", "confidence": 0-100 },
+    "userGenContent":       { "value": "yes|no", "confidence": 0-100 },
+    "messagingChat":        { "value": "yes|no", "confidence": 0-100 },
+    "advertising":          { "value": "yes|no", "confidence": 0-100 },
+    "healthWellness":       { "value": "yes|no", "confidence": 0-100 },
+    "realMoneyGambling":    { "value": "yes|no", "confidence": 0-100 },
+    "lootBoxes":            { "value": "yes|no", "confidence": 0-100 }
   },
   "privacy": {
-    "collectsData": "yes|no",
+    "collectsData": { "value": "yes|no", "confidence": 0-100 },
     "dataTypes": [
-      { "id": "crash", "purposes": ["analytics","app_function"], "identity": "no", "tracking": "no" }
+      { "id": "crash", "confidence": 0-100, "purposes": ["analytics","app_function"], "identity": "no", "tracking": "no" }
     ]
   },
   "business": {
-    "hasIAP": "yes|no",
+    "hasIAP": { "value": "yes|no", "confidence": 0-100 },
     "iapTypes": []
   },
   "exportCompliance": {
-    "usesEncryption":   "yes|no",
-    "encryptionExempt": "yes|no"
+    "usesEncryption":   { "value": "yes|no", "confidence": 0-100 },
+    "encryptionExempt": { "value": "yes|no", "confidence": 0-100 }
   },
-  "ageCategory": "not_applicable|made_for_kids|override_higher",
-  "confidence": "low|medium|high",
-  "reasoning": "2-3 sentence explanation of your key inferences"
+  "ageCategory": { "value": "not_applicable|made_for_kids|override_higher", "confidence": 0-100 }
 }
 
 VALID IDs — only use these exact strings:
@@ -85,12 +86,13 @@ business.iapTypes (array): consumable, non-consumable, auto-renewable, non-renew
 ageCategory: "not_applicable" for most games; "made_for_kids" only if explicitly designed for children under 13; "override_higher" only if a manual rating bump is needed.
 
 INFERENCE GUIDELINES:
-- Nearly all networked mobile games use HTTPS → usesEncryption: "yes", encryptionExempt: "yes"
-- Most games collect crash and performance data → include crash + performance with purposes: ["analytics","app_function"]
+- Nearly all networked mobile games use HTTPS → usesEncryption: "yes" (confidence: 95), encryptionExempt: "yes" (confidence: 90)
+- Most games collect crash and performance data → include crash + performance with purposes: ["analytics","app_function"], confidence 90
 - Games with accounts/login → add user_id
 - Games with analytics → add product_use with purposes: ["analytics"]
 - Be conservative: default to "no" / "none" for content you cannot confirm
-- "infrequent" = present but not central; "frequent" = a primary element of the experience`;
+- "infrequent" = present but not central; "frequent" = a primary element of the experience
+- Set confidence < 70 for fields where you genuinely cannot determine the answer from the game data`;
 }
 
 /* ── API call ─────────────────────────────────────────────── */
@@ -123,7 +125,7 @@ async function analyzeGameWithGemini() {
     },
     body: JSON.stringify({
       model:      CLAUDE_MODEL,
-      max_tokens: 2048,
+      max_tokens: 3000,
       messages:   [{ role: 'user', content }],
     }),
   });
@@ -141,10 +143,10 @@ async function analyzeGameWithGemini() {
     throw new Error(msg);
   }
 
-  const data = await res.json();
-  console.log('[Claude] Success — tokens used:', data.usage?.input_tokens, '+', data.usage?.output_tokens);
+  const apiData = await res.json();
+  console.log('[Claude] Success — tokens used:', apiData.usage?.input_tokens, '+', apiData.usage?.output_tokens);
 
-  const text = data.content?.[0]?.text;
+  const text = apiData.content?.[0]?.text;
   if (!text) throw new Error('Empty response from Claude');
 
   // Strip markdown fences if present, then parse
@@ -155,43 +157,51 @@ async function analyzeGameWithGemini() {
 /* ── Apply results to state ───────────────────────────────── */
 
 function applyGeminiResults(result) {
-  const a = state.iosSubmitAnswers;
+  const a    = state.iosSubmitAnswers;
+  const meta = state.iosAnswerMeta;
   let filled = 0;
+  let total  = 0;
+
+  // Helper: apply a field if valid value and confidence >= 70
+  function tryApply(fieldId, entry, validValues) {
+    total++;
+    if (!entry || typeof entry !== 'object') return;
+    const { value, confidence } = entry;
+    if (!validValues.includes(value)) return;
+    if (typeof confidence !== 'number' || confidence < 70) return;
+    a[fieldId] = value;
+    meta[fieldId] = { confidence, humanConfirmed: false };
+    filled++;
+  }
 
   // Intensity questions (none / infrequent / frequent)
   if (result.intensityQuestions) {
     IOS_INTENSITY_QUESTIONS.forEach(q => {
-      const val = result.intensityQuestions[q.id];
-      if (['none', 'infrequent', 'frequent'].includes(val)) {
-        a[q.id] = val;
-        filled++;
-      }
+      tryApply(q.id, result.intensityQuestions[q.id], ['none', 'infrequent', 'frequent']);
     });
   }
 
   // Boolean content questions (yes / no)
   if (result.ynQuestions) {
     IOS_CONTENT_YN_QUESTIONS.forEach(q => {
-      const val = result.ynQuestions[q.id];
-      if (val === 'yes' || val === 'no') {
-        a[q.id] = val;
-        filled++;
-      }
+      tryApply(q.id, result.ynQuestions[q.id], ['yes', 'no']);
     });
   }
 
   // Privacy
   if (result.privacy) {
-    const cd = result.privacy.collectsData;
-    if (cd === 'yes' || cd === 'no') { a.collectsData = cd; filled++; }
+    tryApply('collectsData', result.privacy.collectsData, ['yes', 'no']);
 
-    if (cd === 'yes' && Array.isArray(result.privacy.dataTypes)) {
+    if (a.collectsData === 'yes' && Array.isArray(result.privacy.dataTypes)) {
       result.privacy.dataTypes.forEach(dt => {
         if (!IOS_DATA_TYPE_LOOKUP[dt.id]) return;
+        const conf = typeof dt.confidence === 'number' ? dt.confidence : 75;
+        if (conf < 70) return;
         const validPurposes = (dt.purposes || []).filter(p => IOS_PURPOSES.some(ip => ip.id === p));
         const identity = (dt.identity === 'yes' || dt.identity === 'no') ? dt.identity : 'no';
         const tracking = (dt.tracking === 'yes' || dt.tracking === 'no') ? dt.tracking : 'no';
         a.dataPerType[dt.id] = { purposes: validPurposes, identity, tracking };
+        meta[`dataType_${dt.id}`] = { confidence: conf, humanConfirmed: false };
         filled++;
       });
     }
@@ -199,8 +209,7 @@ function applyGeminiResults(result) {
 
   // Business
   if (result.business) {
-    const hi = result.business.hasIAP;
-    if (hi === 'yes' || hi === 'no') { a.hasIAP = hi; filled++; }
+    tryApply('hasIAP', result.business.hasIAP, ['yes', 'no']);
     if (Array.isArray(result.business.iapTypes)) {
       const valid = ['consumable', 'non-consumable', 'auto-renewable', 'non-renewing'];
       a.iapTypes = result.business.iapTypes.filter(t => valid.includes(t));
@@ -209,22 +218,14 @@ function applyGeminiResults(result) {
 
   // Export compliance
   if (result.exportCompliance) {
-    const ue = result.exportCompliance.usesEncryption;
-    const ee = result.exportCompliance.encryptionExempt;
-    if (ue === 'yes' || ue === 'no') { a.usesEncryption = ue; filled++; }
-    if (ee === 'yes' || ee === 'no') { a.encryptionExempt = ee; filled++; }
+    tryApply('usesEncryption',   result.exportCompliance.usesEncryption,   ['yes', 'no']);
+    tryApply('encryptionExempt', result.exportCompliance.encryptionExempt, ['yes', 'no']);
   }
 
   // Age category
-  const validAgeCategories = ['not_applicable', 'made_for_kids', 'override_higher'];
-  if (validAgeCategories.includes(result.ageCategory)) {
-    a.ageCategory = result.ageCategory;
-    filled++;
-  }
+  tryApply('ageCategory', result.ageCategory, ['not_applicable', 'made_for_kids', 'override_higher']);
 
-  return {
-    filled,
-    confidence: result.confidence || 'medium',
-    reasoning:  result.reasoning  || '',
-  };
+  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  console.log(`[Claude] Applied ${filled}/${total} fields (${pct}%)`);
+  return { filled, total, pct };
 }

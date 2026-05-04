@@ -354,6 +354,10 @@ function reRenderIOSSubmitModal() {
 // Called by YES/NO and intensity/chip clicks — re-renders immediately
 function answerIOSField(field, value) {
   state.iosSubmitAnswers[field] = value;
+  // Mark as human-confirmed — removes AI badge and restores full opacity
+  if (state.iosAnswerMeta[field]) {
+    state.iosAnswerMeta[field].humanConfirmed = true;
+  }
   reRenderIOSSubmitModal();
 }
 
@@ -483,12 +487,13 @@ function toggleIOSCountry(code) {
 /* ── Gemini AI handlers ───────────────────────────────── */
 
 async function _runGeminiAnalysis() {
-  state.geminiUI = { status: 'loading' };
+  state.geminiUI    = { status: 'loading' };
+  state.iosAnswerMeta = {};
   reRenderIOSSubmitModal();
   try {
     const result = await analyzeGameWithGemini();
-    const { filled, confidence, reasoning } = applyGeminiResults(result);
-    state.geminiUI = { status: 'done', filled, confidence, reasoning };
+    const { filled, total, pct } = applyGeminiResults(result);
+    state.geminiUI = { status: 'done', filled, total, pct };
   } catch (err) {
     const msg = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
     state.geminiUI = { status: 'error', error: msg };
@@ -498,7 +503,8 @@ async function _runGeminiAnalysis() {
 
 function clearGeminiResults() {
   state.iosSubmitAnswers = makeBlankIOSAnswers();
-  state.geminiUI = {};
+  state.iosAnswerMeta    = {};
+  state.geminiUI         = {};
   reRenderIOSSubmitModal();
 }
 
