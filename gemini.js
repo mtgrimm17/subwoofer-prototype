@@ -95,10 +95,10 @@ INFERENCE GUIDELINES:
 
 /* ── API call ─────────────────────────────────────────────── */
 
-async function analyzeGameWithGemini() {
+async function analyzeGameWithGemini(attempt = 1) {
+  const MAX_ATTEMPTS = 4;
   const ups = state.uploads;
-  console.log('[Gemini] Calling model:', GEMINI_MODEL);
-  console.log('[Gemini] Endpoint:', `${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY.slice(0,8)}…`);
+  console.log('[Gemini] Calling model:', GEMINI_MODEL, attempt > 1 ? `(attempt ${attempt})` : '');
 
   // Build content parts: text prompt + up to 3 screenshots
   const parts = [{ text: buildGeminiPrompt() }];
@@ -126,12 +126,23 @@ async function analyzeGameWithGemini() {
   if (!res.ok) {
     let rawBody = {};
     try { rawBody = await res.json(); } catch (_) {}
-    console.error('[Gemini] HTTP', res.status, 'from', res.url);
-    console.error('[Gemini] Response body:', JSON.stringify(rawBody, null, 2));
+    console.error('[Gemini] HTTP', res.status, JSON.stringify(rawBody, null, 2));
     const raw = rawBody.error?.message || '';
+
+    // Auto-retry on transient server errors (503, 529) or rate limits (429)
+    const isTransient = res.status === 503 || res.status === 529 || res.status === 429;
+    if (isTransient && attempt < MAX_ATTEMPTS) {
+      const delay = attempt * 3000; // 3s, 6s, 9s
+      console.log(`[Gemini] Transient error — retrying in ${delay/1000}s…`);
+      await new Promise(r => setTimeout(r, delay));
+      return analyzeGameWithGemini(attempt + 1);
+    }
+
     let msg = `Request failed (${res.status}): ${raw || 'no details'}`;
     if (res.status === 429 || raw.toLowerCase().includes('quota')) {
       msg = 'Rate limit reached — please wait a moment and retry.';
+    } else if (res.status === 503 || res.status === 529) {
+      msg = 'Gemini is under high demand right now — please retry in a few seconds.';
     } else if (res.status === 400) {
       msg = `Bad request: ${raw}`;
     } else if (res.status === 403) {
