@@ -107,6 +107,12 @@ function completeOnboarding() {
 
   state.onboardingComplete = true;
   showMainApp();
+
+  // Fire Gemini once per onboarding completion. Only runs if no analysis
+  // is already in progress or done (guards against re-opening onboarding to edit).
+  if (!state.geminiUI.status) {
+    _runGeminiAnalysis();
+  }
 }
 
 
@@ -226,10 +232,6 @@ function openSubmitModal(platformId) {
         .filter(c => langs.has(c.lang))
         .map(c => c.code);
       state.iosSubmitAnswers.distPreset = 'custom';
-    }
-    // Trigger Gemini analysis the first time this modal opens (not on every open)
-    if (!state.geminiUI || !state.geminiUI.status) {
-      _runGeminiAnalysis();
     }
   } else {
     state.submitModal.expanded = [];
