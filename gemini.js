@@ -1,17 +1,10 @@
 /* ============================================================
-   GEMINI — AI-powered questionnaire auto-fill
+   AI — Claude-powered questionnaire auto-fill
    ============================================================ */
 
-const GEMINI_API_KEY  = 'AIzaSyCvFKPwJcPMeZqnPZPajgHIiVUTHD0OTl0';
-const GEMINI_BASE     = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-// Tried in order — first one that responds successfully wins
-const GEMINI_MODELS = [
-  'gemini-2.5-flash-preview-05-20',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash-latest',
-];
+const CLAUDE_API_KEY = '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';
+const CLAUDE_MODEL   = 'claude-haiku-4-5-20251001';
+const CLAUDE_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
 /* ── Prompt builder ───────────────────────────────────────── */
 
@@ -31,7 +24,7 @@ Primary Language: ${fd.primaryLanguage || 'en'}
 In-App Purchases (from developer): ${hasIAP === 'yes' ? 'Yes' : hasIAP === 'no' ? 'No' : 'Unknown'}
 ${hasScreenshots ? `Screenshots provided: ${ups.screenshots.length} image(s) — analyze visual content carefully.` : 'No screenshots provided.'}
 
-Return ONLY valid JSON. No markdown, no explanation outside the JSON. Use exactly these value constraints:
+Return ONLY a valid JSON object — no markdown fences, no explanation outside the JSON. Use exactly these value constraints:
 - Intensity fields: "none", "infrequent", or "frequent"
 - Boolean fields: "yes" or "no"
 
@@ -74,7 +67,7 @@ SCHEMA (fill in every field — no nulls):
     "iapTypes": []
   },
   "exportCompliance": {
-    "usesEncryption":  "yes|no",
+    "usesEncryption":   "yes|no",
     "encryptionExempt": "yes|no"
   },
   "ageCategory": "not_applicable|made_for_kids|override_higher",
@@ -92,83 +85,71 @@ business.iapTypes (array): consumable, non-consumable, auto-renewable, non-renew
 ageCategory: "not_applicable" for most games; "made_for_kids" only if explicitly designed for children under 13; "override_higher" only if a manual rating bump is needed.
 
 INFERENCE GUIDELINES:
-- Nearly all networked mobile games use HTTPS → usesEncryption: "yes", encryptionExempt: "yes" (standard TLS is exempt)
-- Most games collect crash and performance data → include crash + performance in dataTypes with purposes: ["analytics","app_function"]
+- Nearly all networked mobile games use HTTPS → usesEncryption: "yes", encryptionExempt: "yes"
+- Most games collect crash and performance data → include crash + performance with purposes: ["analytics","app_function"]
 - Games with accounts/login → add user_id
-- Games with analytics SDKs → add product_use with purposes: ["analytics"]
-- Be conservative: default to "no" / "none" for content you cannot confirm from the description or screenshots
-- "infrequent" = present but not central; "frequent" = a primary element of the game experience`;
+- Games with analytics → add product_use with purposes: ["analytics"]
+- Be conservative: default to "no" / "none" for content you cannot confirm
+- "infrequent" = present but not central; "frequent" = a primary element of the experience`;
 }
 
 /* ── API call ─────────────────────────────────────────────── */
 
-async function analyzeGameWithGemini(modelIndex = 0) {
-  if (modelIndex >= GEMINI_MODELS.length) {
-    throw new Error('All models unavailable right now — please retry in a minute.');
-  }
+async function analyzeGameWithGemini() {
+  const ups = state.uploads;
+  console.log('[Claude] Calling model:', CLAUDE_MODEL);
 
-  const model = GEMINI_MODELS[modelIndex];
-  const ups   = state.uploads;
-  console.log('[Gemini] Trying model:', model);
+  // Build message content: text prompt + up to 3 screenshots
+  const content = [];
 
-  // Build content parts: text prompt + up to 3 screenshots
-  const parts = [{ text: buildGeminiPrompt() }];
   const screenshots = (ups.screenshots || []).slice(0, 3);
   for (const sc of screenshots) {
     if (sc.dataUrl && sc.dataUrl.includes(',')) {
       const [meta, data] = sc.dataUrl.split(',');
       const mimeType = meta.split(':')[1]?.split(';')[0] || 'image/png';
-      parts.push({ inline_data: { mime_type: mimeType, data } });
+      content.push({ type: 'image', source: { type: 'base64', media_type: mimeType, data } });
     }
   }
 
-  const url = `${GEMINI_BASE}/${model}:generateContent?key=${GEMINI_API_KEY}`;
-  const res = await fetch(url, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+  content.push({ type: 'text', text: buildGeminiPrompt() });
+
+  const res = await fetch(CLAUDE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'x-api-key':                              CLAUDE_API_KEY,
+      'anthropic-version':                      '2023-06-01',
+      'content-type':                           'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
     body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        response_mime_type: 'application/json',
-        temperature: 0.1,
-      },
+      model:      CLAUDE_MODEL,
+      max_tokens: 2048,
+      messages:   [{ role: 'user', content }],
     }),
   });
 
   if (!res.ok) {
     let rawBody = {};
     try { rawBody = await res.json(); } catch (_) {}
-    console.warn(`[Gemini] ${model} → HTTP ${res.status}`, rawBody.error?.message || '');
-
-    // Overloaded or rate-limited → try next model after a brief pause
-    const tryNext = res.status === 503 || res.status === 529 || res.status === 429;
-    // Deprecated/not-found → try next model immediately
-    const tryNextNow = res.status === 404;
-
-    if (tryNext) {
-      await new Promise(r => setTimeout(r, 2000));
-      return analyzeGameWithGemini(modelIndex + 1);
-    }
-    if (tryNextNow) {
-      return analyzeGameWithGemini(modelIndex + 1);
-    }
-
-    // Hard errors — surface immediately
+    console.error('[Claude] HTTP', res.status, JSON.stringify(rawBody, null, 2));
     const raw = rawBody.error?.message || '';
     let msg = `Request failed (${res.status})`;
-    if (res.status === 403) msg = `Auth error — check API key is valid.`;
-    else if (res.status === 400) msg = `Bad request: ${raw}`;
+    if (res.status === 429) msg = 'Rate limit reached — please retry in a moment.';
+    else if (res.status === 401) msg = 'API key rejected — check the key is valid.';
+    else if (res.status === 500 || res.status === 529) msg = 'Claude is temporarily overloaded — please retry.';
     else msg = raw || msg;
     throw new Error(msg);
   }
 
   const data = await res.json();
-  console.log('[Gemini] Success with', model, '— tokens used:', data.usageMetadata?.totalTokenCount);
+  console.log('[Claude] Success — tokens used:', data.usage?.input_tokens, '+', data.usage?.output_tokens);
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Empty response from Gemini');
+  const text = data.content?.[0]?.text;
+  if (!text) throw new Error('Empty response from Claude');
 
-  return JSON.parse(text);
+  // Strip markdown fences if present, then parse
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(cleaned);
 }
 
 /* ── Apply results to state ───────────────────────────────── */
@@ -206,7 +187,7 @@ function applyGeminiResults(result) {
 
     if (cd === 'yes' && Array.isArray(result.privacy.dataTypes)) {
       result.privacy.dataTypes.forEach(dt => {
-        if (!IOS_DATA_TYPE_LOOKUP[dt.id]) return; // guard unknown ids
+        if (!IOS_DATA_TYPE_LOOKUP[dt.id]) return;
         const validPurposes = (dt.purposes || []).filter(p => IOS_PURPOSES.some(ip => ip.id === p));
         const identity = (dt.identity === 'yes' || dt.identity === 'no') ? dt.identity : 'no';
         const tracking = (dt.tracking === 'yes' || dt.tracking === 'no') ? dt.tracking : 'no';
