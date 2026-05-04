@@ -106,13 +106,9 @@ function completeOnboarding() {
   }
 
   state.onboardingComplete = true;
+  state.geminiUI = {}; // reset so banner shows spinner fresh on each run
   showMainApp();
-
-  // Fire Gemini once per onboarding completion. Only runs if no analysis
-  // is already in progress or done (guards against re-opening onboarding to edit).
-  if (!state.geminiUI.status) {
-    _runGeminiAnalysis();
-  }
+  _runGeminiAnalysis();
 }
 
 
