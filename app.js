@@ -478,6 +478,51 @@ function toggleIOSCountry(code) {
   renderDistributionMap();
 }
 
+/* ── Gemini AI handlers ───────────────────────────────── */
+
+function runGeminiAutofill() {
+  if (!hasGeminiKey()) {
+    state.geminiUI = { status: 'key-entry' };
+    reRenderIOSSubmitModal();
+    requestAnimationFrame(() => document.getElementById('ai-key-input')?.focus());
+    return;
+  }
+  _runGeminiAnalysis();
+}
+
+function saveGeminiKeyAndRun() {
+  const input = document.getElementById('ai-key-input');
+  const key = input ? input.value.trim() : '';
+  if (!key) { if (input) input.focus(); return; }
+  setGeminiKey(key);
+  _runGeminiAnalysis();
+}
+
+function cancelGeminiKeyEntry() {
+  state.geminiUI = {};
+  reRenderIOSSubmitModal();
+}
+
+async function _runGeminiAnalysis() {
+  state.geminiUI = { status: 'loading' };
+  reRenderIOSSubmitModal();
+  try {
+    const result = await analyzeGameWithGemini();
+    const { filled, confidence, reasoning } = applyGeminiResults(result);
+    state.geminiUI = { status: 'done', filled, confidence, reasoning };
+  } catch (err) {
+    const msg = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
+    state.geminiUI = { status: 'error', error: msg };
+  }
+  reRenderIOSSubmitModal();
+}
+
+function clearGeminiResults() {
+  state.iosSubmitAnswers = makeBlankIOSAnswers();
+  state.geminiUI = {};
+  reRenderIOSSubmitModal();
+}
+
 // English-speaking iOS markets
 const DIST_PRESET_ENGLISH = IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
 

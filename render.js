@@ -716,7 +716,67 @@ function renderIOSSubmitModal(modal) {
 }
 
 function buildIOSScrollContent() {
+  const ai = state.geminiUI || {};
+  const hasKey = hasGeminiKey();
+
+  // AI banner: idle / key-entry / loading / result / error
+  let aiBanner = '';
+  if (ai.status === 'loading') {
+    aiBanner = `
+      <div class="ai-banner ai-banner-loading">
+        <span class="ai-spinner"></span>
+        <span>Analyzing your game with Gemini AI…</span>
+      </div>`;
+  } else if (ai.status === 'done') {
+    const conf = ai.confidence || 'medium';
+    aiBanner = `
+      <div class="ai-banner ai-banner-done">
+        <span class="ai-banner-icon">✦</span>
+        <div class="ai-banner-text">
+          <strong>Auto-filled ${ai.filled} fields</strong> · Confidence: ${conf}
+          ${ai.reasoning ? `<div class="ai-reasoning">${ai.reasoning}</div>` : ''}
+        </div>
+        <button class="ai-clear-btn" onclick="clearGeminiResults()" title="Clear AI answers">Clear</button>
+      </div>`;
+  } else if (ai.status === 'error') {
+    aiBanner = `
+      <div class="ai-banner ai-banner-error">
+        <span class="ai-banner-icon">⚠</span>
+        <div class="ai-banner-text"><strong>Error:</strong> ${ai.error}</div>
+        <button class="ai-autofill-btn" onclick="runGeminiAutofill()">Retry</button>
+      </div>`;
+  } else if (ai.status === 'key-entry') {
+    aiBanner = `
+      <div class="ai-banner ai-banner-key">
+        <span class="ai-banner-icon">✦</span>
+        <div class="ai-banner-text">
+          <strong>Paste your Gemini API key to enable auto-fill</strong>
+          <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+            <input class="ai-key-input" id="ai-key-input" type="password"
+                   placeholder="AIzaSy…" autocomplete="off"
+                   onkeydown="if(event.key==='Enter') saveGeminiKeyAndRun()">
+            <button class="ai-autofill-btn" onclick="saveGeminiKeyAndRun()">Save & Run</button>
+            <button class="ai-ghost-btn" onclick="cancelGeminiKeyEntry()">Cancel</button>
+          </div>
+          <div style="margin-top:4px;font-size:11px;color:var(--text-faint);">
+            Get a free key at <a href="https://aistudio.google.com" target="_blank" style="color:var(--blue);">aistudio.google.com</a> — stored locally in your browser only.
+          </div>
+        </div>
+      </div>`;
+  } else {
+    // idle
+    aiBanner = `
+      <div class="ai-banner ai-banner-idle">
+        <span class="ai-banner-icon">✦</span>
+        <div class="ai-banner-text">
+          <strong>Auto-fill with Gemini AI</strong> — infer answers from your game title, description, and screenshots.
+        </div>
+        <button class="ai-autofill-btn" onclick="runGeminiAutofill()">Auto-fill</button>
+      </div>`;
+  }
+
   return `
+    ${aiBanner}
     <div class="ios-submit-intro">
       Complete each section. Subwoofer pre-fills answers from your onboarding responses — review and confirm before submitting.
     </div>

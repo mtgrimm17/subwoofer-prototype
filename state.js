@@ -902,4 +902,7 @@ const state = {
 
   // iOS App Store submission questionnaire answers
   iosSubmitAnswers: makeBlankIOSAnswers(),
+
+  // Gemini AI UI state (not persisted)
+  geminiUI: {},
 };
