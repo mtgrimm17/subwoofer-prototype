@@ -2,16 +2,9 @@
    GEMINI — AI-powered questionnaire auto-fill
    ============================================================ */
 
-const GEMINI_KEY_STORAGE = 'subwoofer_gemini_key';
-const GEMINI_MODEL       = 'gemini-2.0-flash';
-const GEMINI_ENDPOINT    = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
-/* ── Key management ───────────────────────────────────────── */
-
-function getGeminiKey()    { return localStorage.getItem(GEMINI_KEY_STORAGE) || ''; }
-function setGeminiKey(key) { localStorage.setItem(GEMINI_KEY_STORAGE, key.trim()); }
-function clearGeminiKey()  { localStorage.removeItem(GEMINI_KEY_STORAGE); }
-function hasGeminiKey()    { return !!getGeminiKey(); }
+const GEMINI_MODEL    = 'gemini-2.0-flash';
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_API_KEY  = 'AIzaSyCs_98cea9Lb8fsaVnMi94bARSdqyBzA9Q';
 
 /* ── Prompt builder ───────────────────────────────────────── */
 
@@ -100,9 +93,6 @@ INFERENCE GUIDELINES:
 /* ── API call ─────────────────────────────────────────────── */
 
 async function analyzeGameWithGemini() {
-  const key = getGeminiKey();
-  if (!key) throw new Error('NO_KEY');
-
   const ups = state.uploads;
 
   // Build content parts: text prompt + up to 3 screenshots
@@ -116,7 +106,7 @@ async function analyzeGameWithGemini() {
     }
   }
 
-  const res = await fetch(`${GEMINI_ENDPOINT}?key=${key}`, {
+  const res = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

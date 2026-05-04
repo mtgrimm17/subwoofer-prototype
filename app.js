@@ -107,6 +107,10 @@ function completeOnboarding() {
 
   state.onboardingComplete = true;
   showMainApp();
+
+  // Kick off Gemini analysis in the background — results will be ready
+  // by the time the user opens the iOS submit modal.
+  _runGeminiAnalysis();
 }
 
 
@@ -479,29 +483,6 @@ function toggleIOSCountry(code) {
 }
 
 /* ── Gemini AI handlers ───────────────────────────────── */
-
-function runGeminiAutofill() {
-  if (!hasGeminiKey()) {
-    state.geminiUI = { status: 'key-entry' };
-    reRenderIOSSubmitModal();
-    requestAnimationFrame(() => document.getElementById('ai-key-input')?.focus());
-    return;
-  }
-  _runGeminiAnalysis();
-}
-
-function saveGeminiKeyAndRun() {
-  const input = document.getElementById('ai-key-input');
-  const key = input ? input.value.trim() : '';
-  if (!key) { if (input) input.focus(); return; }
-  setGeminiKey(key);
-  _runGeminiAnalysis();
-}
-
-function cancelGeminiKeyEntry() {
-  state.geminiUI = {};
-  reRenderIOSSubmitModal();
-}
 
 async function _runGeminiAnalysis() {
   state.geminiUI = { status: 'loading' };
