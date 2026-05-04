@@ -107,10 +107,6 @@ function completeOnboarding() {
 
   state.onboardingComplete = true;
   showMainApp();
-
-  // Kick off Gemini analysis in the background — results will be ready
-  // by the time the user opens the iOS submit modal.
-  _runGeminiAnalysis();
 }
 
 
@@ -230,6 +226,10 @@ function openSubmitModal(platformId) {
         .filter(c => langs.has(c.lang))
         .map(c => c.code);
       state.iosSubmitAnswers.distPreset = 'custom';
+    }
+    // Trigger Gemini analysis the first time this modal opens (not on every open)
+    if (!state.geminiUI || !state.geminiUI.status) {
+      _runGeminiAnalysis();
     }
   } else {
     state.submitModal.expanded = [];
