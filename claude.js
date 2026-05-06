@@ -162,13 +162,15 @@ function applyClaudeResults(result) {
   let filled = 0;
   let total  = 0;
 
-  // Helper: apply a field if valid value and confidence >= 70
+  // Helper: apply a field if valid value, confidence >= 70, and not human-confirmed
   function tryApply(fieldId, entry, validValues) {
     total++;
     if (!entry || typeof entry !== 'object') return;
     const { value, confidence } = entry;
     if (!validValues.includes(value)) return;
     if (typeof confidence !== 'number' || confidence < 70) return;
+    // Precedence: human answer (direct click or onboarding seed) always wins
+    if (meta[fieldId]?.humanConfirmed) { filled++; return; }
     a[fieldId] = value;
     meta[fieldId] = { confidence, humanConfirmed: false };
     filled++;
@@ -193,7 +195,9 @@ function applyClaudeResults(result) {
   // Business
   if (result.business) {
     tryApply('hasIAP', result.business.hasIAP, ['yes', 'no']);
-    if (Array.isArray(result.business.iapTypes)) {
+    // Only suggest iapTypes if hasIAP wasn't human-confirmed — avoids overwriting
+    // user's explicit IAP type selections when they've already answered this section
+    if (Array.isArray(result.business.iapTypes) && !meta.hasIAP?.humanConfirmed) {
       const valid = ['consumable', 'non-consumable', 'auto-renewable', 'non-renewing'];
       a.iapTypes = result.business.iapTypes.filter(t => valid.includes(t));
     }

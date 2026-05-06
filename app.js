@@ -219,9 +219,11 @@ function openSubmitModal(platformId) {
     }
     if (state.iosSubmitAnswers.hasIAP === null && state.questionAnswers.inAppPurchases !== null) {
       state.iosSubmitAnswers.hasIAP = state.questionAnswers.inAppPurchases;
+      state.iosAnswerMeta.hasIAP = { humanConfirmed: true };
     }
     if (state.iosSubmitAnswers.collectsData === null && state.questionAnswers.dataCollection !== null) {
       state.iosSubmitAnswers.collectsData = state.questionAnswers.dataCollection;
+      state.iosAnswerMeta.collectsData = { humanConfirmed: true };
     }
     // Pre-select countries matching onboarding languages (only on first open)
     if (state.iosSubmitAnswers.selectedCountries.length === 0) {
@@ -356,10 +358,9 @@ function reRenderIOSSubmitModal() {
 // Called by YES/NO and intensity/chip clicks — re-renders immediately
 function answerIOSField(field, value) {
   state.iosSubmitAnswers[field] = value;
-  // Mark as human-confirmed — removes AI badge and restores full opacity
-  if (state.iosAnswerMeta[field]) {
-    state.iosAnswerMeta[field].humanConfirmed = true;
-  }
+  // Always upsert meta with humanConfirmed — protects this answer from any
+  // future AI overwrite, whether or not AI meta existed before the click
+  state.iosAnswerMeta[field] = { ...(state.iosAnswerMeta[field] || {}), humanConfirmed: true };
   reRenderIOSSubmitModal();
 }
 
@@ -489,8 +490,12 @@ function toggleIOSCountry(code) {
 /* ── Claude AI handlers ───────────────────────────────── */
 
 async function _runClaudeAnalysis() {
-  state.claudeUI    = { status: 'loading' };
-  state.iosAnswerMeta = {};
+  state.claudeUI = { status: 'loading' };
+  // Preserve human-confirmed answers; clear only AI-inferred meta so Claude
+  // can refresh its suggestions without trampling what the user already set
+  state.iosAnswerMeta = Object.fromEntries(
+    Object.entries(state.iosAnswerMeta).filter(([, v]) => v.humanConfirmed)
+  );
   reRenderIOSSubmitModal();
   try {
     const result = await analyzeGameWithClaude();
