@@ -796,7 +796,7 @@ function aiInferenceBadge(fieldId, value) {
   const val  = state.iosSubmitAnswers[fieldId];
   const meta = state.iosAnswerMeta[fieldId];
   if (val !== value || !meta || meta.humanConfirmed) return '';
-  return '<span class="ai-badge"></span>';
+  return '<span class="ai-badge">✦</span>';
 }
 
 /* ── iOS section helper: YES/NO question row ─────────── */

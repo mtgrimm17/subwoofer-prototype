@@ -1561,16 +1561,16 @@ select.form-input {
 .intensity-btn.ai-certain          { /* full opacity — badge alone signals AI */ }
 .intensity-btn.ai-confident        { opacity: 0.5 !important; }
 
-/* Orange dot badge for "Confident" AI answers (70–89% AIC) */
+/* ✦ sparkle badge for AI-inferred answers */
 .ai-badge {
   position: absolute;
-  top: -4px; right: -4px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #F5A623;
-  border: 1.5px solid var(--panel-2);
+  top: -6px; right: -5px;
+  font-size: 9px;
+  line-height: 1;
+  color: white;
   pointer-events: none;
   flex-shrink: 0;
+  text-shadow: 0 0 3px rgba(0,0,0,0.45);
 }
 
 .inferred-badge {
@@ -2467,9 +2467,10 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   font-size: 15px;
   flex-shrink: 0;
   margin-top: 1px;
-  opacity: 0.75;
+  color: white;
+  opacity: 0.9;
 }
-.ai-banner-done  .ai-banner-icon { color: #22c55e; opacity: 1; }
+.ai-banner-done  .ai-banner-icon { color: white; opacity: 1; }
 .ai-banner-error .ai-banner-icon { color: #ef4444; opacity: 1; }
 .ai-banner-key   .ai-banner-icon { color: var(--blue); opacity: 1; }
 
