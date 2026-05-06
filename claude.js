@@ -97,7 +97,7 @@ INFERENCE GUIDELINES:
 
 /* ── API call ─────────────────────────────────────────────── */
 
-async function analyzeGameWithGemini() {
+async function analyzeGameWithClaude() {
   const ups = state.uploads;
   console.log('[Claude] Calling model:', CLAUDE_MODEL);
 
@@ -156,7 +156,7 @@ async function analyzeGameWithGemini() {
 
 /* ── Apply results to state ───────────────────────────────── */
 
-function applyGeminiResults(result) {
+function applyClaudeResults(result) {
   const a    = state.iosSubmitAnswers;
   const meta = state.iosAnswerMeta;
   let filled = 0;

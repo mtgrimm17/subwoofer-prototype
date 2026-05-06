@@ -106,9 +106,9 @@ function completeOnboarding() {
   }
 
   state.onboardingComplete = true;
-  state.geminiUI = {}; // reset so banner shows spinner fresh on each run
+  state.claudeUI = {}; // reset so banner shows spinner fresh on each run
   showMainApp();
-  _runGeminiAnalysis();
+  _runClaudeAnalysis();
 }
 
 
@@ -484,27 +484,27 @@ function toggleIOSCountry(code) {
   renderDistributionMap();
 }
 
-/* ── Gemini AI handlers ───────────────────────────────── */
+/* ── Claude AI handlers ───────────────────────────────── */
 
-async function _runGeminiAnalysis() {
-  state.geminiUI    = { status: 'loading' };
+async function _runClaudeAnalysis() {
+  state.claudeUI    = { status: 'loading' };
   state.iosAnswerMeta = {};
   reRenderIOSSubmitModal();
   try {
-    const result = await analyzeGameWithGemini();
-    const { filled, total, pct } = applyGeminiResults(result);
-    state.geminiUI = { status: 'done', filled, total, pct };
+    const result = await analyzeGameWithClaude();
+    const { filled, total, pct } = applyClaudeResults(result);
+    state.claudeUI = { status: 'done', filled, total, pct };
   } catch (err) {
     const msg = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
-    state.geminiUI = { status: 'error', error: msg };
+    state.claudeUI = { status: 'error', error: msg };
   }
   reRenderIOSSubmitModal();
 }
 
-function clearGeminiResults() {
+function clearClaudeResults() {
   state.iosSubmitAnswers = makeBlankIOSAnswers();
   state.iosAnswerMeta    = {};
-  state.geminiUI         = {};
+  state.claudeUI         = {};
   reRenderIOSSubmitModal();
 }
 

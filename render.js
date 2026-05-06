@@ -715,7 +715,7 @@ function renderIOSSubmitModal(modal) {
 }
 
 function buildIOSScrollContent() {
-  const ai = state.geminiUI || {};
+  const ai = state.claudeUI || {};
 
   // AI banner: hidden when idle, visible while loading or after completion
   let aiBanner = '';
@@ -732,14 +732,14 @@ function buildIOSScrollContent() {
         <div class="ai-banner-text">
           Subwoofer was able to answer <strong>${ai.pct}%</strong> of the App Store's questions based on what you provided. Please review and confirm these responses before submitting.
         </div>
-        <button class="ai-clear-btn" onclick="clearGeminiResults()" title="Reset to blank">Reset</button>
+        <button class="ai-clear-btn" onclick="clearClaudeResults()" title="Reset to blank">Reset</button>
       </div>`;
   } else if (ai.status === 'error') {
     aiBanner = `
       <div class="ai-banner ai-banner-error">
         <span class="ai-banner-icon">⚠</span>
         <div class="ai-banner-text"><strong>AI analysis failed:</strong> ${ai.error}</div>
-        <button class="ai-autofill-btn" onclick="_runGeminiAnalysis()">Retry</button>
+        <button class="ai-autofill-btn" onclick="_runClaudeAnalysis()">Retry</button>
       </div>`;
   }
 

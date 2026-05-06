@@ -919,5 +919,5 @@ const state = {
   iosAnswerMeta: {},
 
   // Gemini AI UI state (not persisted)
-  geminiUI: {},
+  claudeUI: {},
 };
