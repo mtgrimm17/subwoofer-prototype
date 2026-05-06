@@ -385,13 +385,18 @@ function togglePrivacyPurpose(typeId, purposeId, checked) {
   const arr = perType[typeId].purposes;
   if (checked && !arr.includes(purposeId)) arr.push(purposeId);
   if (!checked) perType[typeId].purposes = arr.filter(p => p !== purposeId);
-  reRenderIOSSubmitModal();
+  // Checkboxes manage themselves — no full re-render needed
 }
 
 function setPrivacyMeta(typeId, field, checked) {
   const perType = state.iosSubmitAnswers.dataPerType;
   if (!perType[typeId]) return;
   perType[typeId][field] = checked ? 'yes' : 'no';
+  // Tracking warning updates lazily on next section re-open
+}
+
+function setPrvShowCommon(val) {
+  state.prvShowCommon = val;
   reRenderIOSSubmitModal();
 }
 

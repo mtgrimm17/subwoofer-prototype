@@ -736,7 +736,7 @@ function buildIOSScrollContent() {
         <button class="ai-clear-btn" onclick="clearClaudeResults()" title="Reset to blank">Reset</button>
       </div>
       <div class="ai-filter-row">
-        <button class="ai-filter-btn ${!showAll ? 'is-active' : ''}" onclick="setIOSShowAll(false)">Needs Review</button>
+        <button class="ai-filter-btn ${!showAll ? 'is-active' : ''}" onclick="setIOSShowAll(false)">Show Needs Review Only</button>
         <button class="ai-filter-btn ${showAll  ? 'is-active' : ''}" onclick="setIOSShowAll(true)">Show All</button>
       </div>`;
   } else if (ai.status === 'error') {
@@ -900,82 +900,97 @@ function buildPrivacySection() {
 }
 
 function buildPrivacyMatrix(a) {
-  const selectedIds = Object.keys(a.dataPerType);
-  const selectedCount = selectedIds.length;
+  const cols = IOS_PURPOSES;
+  const META_COLS = [
+    { id: 'linked_identity', label: 'Linked to Identity' },
+    { id: 'used_tracking',   label: 'Used for Tracking' },
+  ];
 
-  // ── Step 1: Chip list — one chip per data type, grouped ──
-  let chipGroups = '';
-  IOS_DATA_TYPES.forEach(group => {
-    const chips = group.types.map(t => {
+  const showCommon = state.prvShowCommon !== false; // default true
+
+  // Filter groups/types based on toggle
+  const visibleGroups = IOS_DATA_TYPES.map(group => ({
+    ...group,
+    types: group.types.filter(t => !showCommon || t.common || !!a.dataPerType[t.id]),
+  })).filter(group => group.types.length > 0);
+
+  // Toggle (mirroring the Content Rating filter row style)
+  const toggleRow = `
+    <div class="ai-filter-row" style="margin-bottom:10px;">
+      <button class="ai-filter-btn ${showCommon ? 'is-active' : ''}" onclick="setPrvShowCommon(true)">Commonly Used Data Types</button>
+      <button class="ai-filter-btn ${!showCommon ? 'is-active' : ''}" onclick="setPrvShowCommon(false)">All Data Types</button>
+    </div>`;
+
+  // Header row
+  const purposeHeaders = cols.map(c =>
+    `<th class="prv-col-hd" title="${c.desc}">${c.label}</th>`).join('');
+  const metaHeaders = META_COLS.map(c =>
+    `<th class="prv-col-hd prv-meta-col">${c.label}</th>`).join('');
+
+  // Data rows
+  let bodyHtml = '';
+  visibleGroups.forEach(group => {
+    bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
+    group.types.forEach(t => {
       const isOn = !!a.dataPerType[t.id];
-      return `<button class="data-type-chip ${isOn ? 'is-on' : ''}"
-                      onclick="togglePrivacyDataType('${t.id}')"
-                      title="${t.desc}">${t.label}</button>`;
-    }).join('');
-    chipGroups += `
-      <div class="prv-chip-group">
-        <div class="prv-chip-group-label">${group.group}</div>
-        <div class="prv-chip-row">${chips}</div>
-      </div>`;
+      const td = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
+      const purposeCells = cols.map(c => {
+        const checked = td.purposes.includes(c.id);
+        return `<td class="prv-check-cell">
+          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
+                 data-type="${t.id}" data-col="${c.id}"
+                 ${checked ? 'checked' : ''}
+                 onclick="event.stopPropagation()"
+                 onchange="togglePrivacyPurpose('${t.id}','${c.id}',this.checked)">
+        </td>`;
+      }).join('');
+      const metaCells = META_COLS.map(c => {
+        const isChecked = c.id === 'linked_identity' ? td.identity === 'yes' : td.tracking === 'yes';
+        const field = c.id === 'linked_identity' ? 'identity' : 'tracking';
+        return `<td class="prv-check-cell prv-meta-col">
+          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
+                 data-type="${t.id}" data-meta="${field}"
+                 ${isChecked ? 'checked' : ''}
+                 onclick="event.stopPropagation()"
+                 onchange="setPrivacyMeta('${t.id}','${field}',this.checked)">
+        </td>`;
+      }).join('');
+
+      bodyHtml += `
+        <tr class="prv-data-row ${isOn ? 'is-on' : ''}" onclick="togglePrivacyDataType('${t.id}')">
+          <td class="prv-type-cell" title="${t.desc}">
+            <span class="prv-type-name">${t.label}</span>
+          </td>
+          ${purposeCells}
+          ${metaCells}
+        </tr>`;
+    });
   });
 
-  // ── Step 2: Detail rows — only for selected types ──
-  let detailRows = '';
-  if (selectedCount > 0) {
-    IOS_DATA_TYPES.forEach(group => {
-      group.types.forEach(t => {
-        if (!a.dataPerType[t.id]) return;
-        const td = a.dataPerType[t.id];
-        const purposeChips = IOS_PURPOSES.map(p => {
-          const checked = td.purposes.includes(p.id);
-          return `<button class="data-type-chip ${checked ? 'is-on' : ''}"
-                          onclick="togglePrivacyPurpose('${t.id}','${p.id}',${!checked})"
-                          title="${p.desc}">${p.label}</button>`;
-        }).join('');
-
-        detailRows += `
-          <div class="prv-detail-row">
-            <div class="prv-detail-header">
-              <span class="prv-detail-type">${t.label}</span>
-              <button class="prv-detail-remove" onclick="togglePrivacyDataType('${t.id}')" title="Remove">×</button>
-            </div>
-            <div class="prv-detail-label">How is this data used?</div>
-            <div class="prv-chip-row" style="margin-bottom:10px;">${purposeChips}</div>
-            <div class="prv-detail-meta">
-              <label class="prv-meta-label">
-                <input type="checkbox" ${td.identity === 'yes' ? 'checked' : ''}
-                       onchange="setPrivacyMeta('${t.id}','identity',this.checked)">
-                Linked to identity
-              </label>
-              <label class="prv-meta-label">
-                <input type="checkbox" ${td.tracking === 'yes' ? 'checked' : ''}
-                       onchange="setPrivacyMeta('${t.id}','tracking',this.checked)">
-                Used for tracking
-              </label>
-            </div>
-          </div>`;
-      });
-    });
-  }
-
-  const hasTracking = Object.values(a.dataPerType).some(t => t.tracking === 'yes');
+  const selectedCount = Object.keys(a.dataPerType).length;
 
   return `
     <div class="ios-subsection">
-      <div class="ios-subsection-label" style="margin-bottom:8px;">
+      <div class="ios-subsection-label" style="margin-bottom:6px;">
         What data does your app collect?
-        ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} type${selectedCount > 1 ? 's' : ''} selected</span>` : ''}
+        ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} selected</span>` : ''}
       </div>
-      <div class="prv-chip-picker">
-        ${chipGroups}
+      ${toggleRow}
+      <div class="prv-matrix-hint">Click a row to select it, then check how that data is used.</div>
+      <div class="prv-matrix-wrap">
+        <table class="prv-matrix">
+          <thead>
+            <tr>
+              <th class="prv-type-hd">Data Type</th>
+              ${purposeHeaders}
+              ${metaHeaders}
+            </tr>
+          </thead>
+          <tbody>${bodyHtml}</tbody>
+        </table>
       </div>
-      ${selectedCount > 0 ? `
-        <div class="prv-detail-section">
-          <div class="prv-detail-section-label">Data usage details</div>
-          ${detailRows}
-        </div>` : ''}
-      ${hasTracking ?
-        `<div class="dist-tip-box" style="margin-top:12px;">
+      ${Object.values(a.dataPerType).some(t => t.tracking === 'yes') ?
+        `<div class="dist-tip-box" style="margin-top:10px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span><strong>Tracking:</strong> You must implement Apple's AppTrackingTransparency framework and request user permission before collecting any data used for tracking.</span>
         </div>` : ''}
