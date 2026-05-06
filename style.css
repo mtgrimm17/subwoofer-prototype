@@ -1554,9 +1554,9 @@ select.form-input {
 .yn-btn.yn-no.is-selected:hover { background: rgba(255, 59, 118, 0.3); }
 
 /* AI inference confidence states */
-.yn-btn.is-selected.ai-certain     { opacity: 0.7; }
+.yn-btn.is-selected.ai-certain     { opacity: 0.5 !important; }
 .yn-btn.is-selected.ai-confident   { /* badge only, no opacity change */ }
-.intensity-btn.ai-certain          { opacity: 0.7; }
+.intensity-btn.ai-certain          { opacity: 0.5 !important; }
 .intensity-btn.ai-confident        { /* badge only */ }
 
 /* Orange dot badge for "Confident" AI answers (70–89% AIC) */

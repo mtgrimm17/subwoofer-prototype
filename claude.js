@@ -188,24 +188,7 @@ function applyClaudeResults(result) {
     });
   }
 
-  // Privacy
-  if (result.privacy) {
-    tryApply('collectsData', result.privacy.collectsData, ['yes', 'no']);
-
-    if (a.collectsData === 'yes' && Array.isArray(result.privacy.dataTypes)) {
-      result.privacy.dataTypes.forEach(dt => {
-        if (!IOS_DATA_TYPE_LOOKUP[dt.id]) return;
-        const conf = typeof dt.confidence === 'number' ? dt.confidence : 75;
-        if (conf < 70) return;
-        const validPurposes = (dt.purposes || []).filter(p => IOS_PURPOSES.some(ip => ip.id === p));
-        const identity = (dt.identity === 'yes' || dt.identity === 'no') ? dt.identity : 'no';
-        const tracking = (dt.tracking === 'yes' || dt.tracking === 'no') ? dt.tracking : 'no';
-        a.dataPerType[dt.id] = { purposes: validPurposes, identity, tracking };
-        meta[`dataType_${dt.id}`] = { confidence: conf, humanConfirmed: false };
-        filled++;
-      });
-    }
-  }
+  // Privacy — not inferred by AI; user must fill manually via the matrix
 
   // Business
   if (result.business) {

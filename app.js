@@ -220,6 +220,9 @@ function openSubmitModal(platformId) {
     if (state.iosSubmitAnswers.hasIAP === null && state.questionAnswers.inAppPurchases !== null) {
       state.iosSubmitAnswers.hasIAP = state.questionAnswers.inAppPurchases;
     }
+    if (state.iosSubmitAnswers.collectsData === null && state.questionAnswers.dataCollection !== null) {
+      state.iosSubmitAnswers.collectsData = state.questionAnswers.dataCollection;
+    }
     // Pre-select countries matching onboarding languages (only on first open)
     if (state.iosSubmitAnswers.selectedCountries.length === 0) {
       const langs = new Set([state.formData.primaryLanguage, ...state.formData.localizations]);
