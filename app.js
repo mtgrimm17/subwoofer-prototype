@@ -66,7 +66,6 @@ function completeOnboarding() {
     setOnboardingTab(0);
     return;
   }
-  computeInferences();
 
   if (state._newProjectMode) {
     // Creating a 2nd+ project
@@ -395,11 +394,6 @@ function setPrivacyMeta(typeId, field, checked) {
   // Tracking warning updates lazily on next section re-open
 }
 
-function setPrvShowCommon(val) {
-  state.prvShowCommon = val;
-  reRenderIOSSubmitModal();
-}
-
 /* ── Legacy stub (IAP type toggle) ───────────────────── */
 
 function toggleIOSIAPType(typeId) {
@@ -497,8 +491,12 @@ async function _runClaudeAnalysis() {
   reRenderIOSSubmitModal();
   try {
     const result = await analyzeGameWithClaude();
-    const { filled, total, pct } = applyClaudeResults(result);
-    state.claudeUI = { status: 'done', filled, total, pct };
+    applyClaudeResults(result);
+    // Base pct on actual section completion so Business (and others) can't
+    // show "100%" while still displaying Incomplete
+    const completeSections = IOS_SECTIONS.filter(s => isIOSSectionComplete(s.id)).length;
+    const pct = Math.round((completeSections / IOS_SECTIONS.length) * 100);
+    state.claudeUI = { status: 'done', filled: completeSections, total: IOS_SECTIONS.length, pct };
   } catch (err) {
     const msg = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
     state.claudeUI = { status: 'error', error: msg };
@@ -510,14 +508,9 @@ function clearClaudeResults() {
   state.iosSubmitAnswers = makeBlankIOSAnswers();
   state.iosAnswerMeta    = {};
   state.claudeUI         = {};
-  state.iosShowAll       = false;
   reRenderIOSSubmitModal();
 }
 
-function setIOSShowAll(val) {
-  state.iosShowAll = val;
-  reRenderIOSSubmitModal();
-}
 
 // English-speaking iOS markets
 const DIST_PRESET_ENGLISH = IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);

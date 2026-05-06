@@ -341,21 +341,14 @@ function renderOnboardingFeaturePreview() {
 function renderComplianceQuestions() {
   const container = document.getElementById('ob-questions-list');
   if (!container) return;
-  computeInferences();
   let h = '';
   for (const q of QUESTIONS) {
-    const answer   = state.questionAnswers[q.id];
-    const inferred = state.questionInferred[q.id];
+    const answer = state.questionAnswers[q.id];
     h += `
       <div class="question-card ${answer !== null ? 'is-answered' : ''}">
         <div class="question-body">
-          <div class="question-text">
-            ${q.label}
-            ${inferred && answer !== null ? '<span class="inferred-badge">Auto-detected</span>' : ''}
-          </div>
+          <div class="question-text">${q.label}</div>
           <div class="question-desc">${q.desc}</div>
-          ${inferred && answer !== null ? `
-            <button class="inferred-change-link" onclick="changeInferredAnswer('${q.id}')">Change answer</button>` : ''}
         </div>
         <div class="question-yn">
           <button class="yn-btn yn-yes ${answer === 'yes' ? 'is-selected' : ''}"
@@ -726,7 +719,6 @@ function buildIOSScrollContent() {
         <span>Analyzing your game…</span>
       </div>`;
   } else if (ai.status === 'done') {
-    const showAll = state.iosShowAll || false;
     aiBanner = `
       <div class="ai-banner ai-banner-done">
         <span class="ai-banner-icon">✦</span>
@@ -734,10 +726,6 @@ function buildIOSScrollContent() {
           Based on the information you provided, Subwoofer pre-populated <strong>${ai.pct}%</strong> of the App Store submission. Please review these responses before submitting.
         </div>
         <button class="ai-clear-btn" onclick="clearClaudeResults()" title="Reset to blank">Reset</button>
-      </div>
-      <div class="ai-filter-row">
-        <button class="ai-filter-btn ${!showAll ? 'is-active' : ''}" onclick="setIOSShowAll(false)">Show Needs Review Only</button>
-        <button class="ai-filter-btn ${showAll  ? 'is-active' : ''}" onclick="setIOSShowAll(true)">Show All</button>
       </div>`;
   } else if (ai.status === 'error') {
     aiBanner = `
@@ -795,19 +783,6 @@ function buildIOSSectionBody(sectionId) {
   return '';
 }
 
-/* ── Needs Review filter helper ─────────────────────── */
-// Returns true if this field should be HIDDEN in "Needs Review" mode
-// (i.e. it's already answered with high AI confidence or human-confirmed)
-function isFieldHiddenByFilter(fieldId) {
-  if (state.iosShowAll) return false; // Show All — never hide
-  const val  = state.iosSubmitAnswers[fieldId];
-  if (val === null || val === undefined) return false; // unanswered — always show
-  const meta = state.iosAnswerMeta[fieldId];
-  if (!meta) return false; // human answered, no AI meta — show it (let them review)
-  if (meta.humanConfirmed) return false; // human explicitly chose — keep visible
-  return meta.confidence >= 90; // AI-certain — hide in Needs Review mode
-}
-
 /* ── AI inference badge helper ───────────────────────── */
 function aiInferenceClass(fieldId, value) {
   const val  = state.iosSubmitAnswers[fieldId];
@@ -827,8 +802,6 @@ function aiInferenceBadge(fieldId, value) {
 /* ── iOS section helper: YES/NO question row ─────────── */
 // inverted=true: NO is the "safe" answer — placed first and styled green
 function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
-  if (isFieldHiddenByFilter(fieldId)) return ''; // hidden in Needs Review mode
-
   const val = state.iosSubmitAnswers[fieldId];
   const ttText = tooltip || desc || '';
   const ttHTML = ttText ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${ttText}</span></span>` : '';
@@ -855,8 +828,6 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
 
 /* ── iOS section helper: None / Infrequent / Frequent row */
 function iosIntensityRow(label, fieldId, tooltip) {
-  if (isFieldHiddenByFilter(fieldId)) return ''; // hidden in Needs Review mode
-
   const val = state.iosSubmitAnswers[fieldId];
   const ttHTML = tooltip ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>` : '';
 
@@ -906,30 +877,15 @@ function buildPrivacyMatrix(a) {
     { id: 'used_tracking',   label: 'Used for Tracking' },
   ];
 
-  const showCommon = state.prvShowCommon !== false; // default true
-
-  // Filter groups/types based on toggle
-  const visibleGroups = IOS_DATA_TYPES.map(group => ({
-    ...group,
-    types: group.types.filter(t => !showCommon || t.common || !!a.dataPerType[t.id]),
-  })).filter(group => group.types.length > 0);
-
-  // Toggle (mirroring the Content Rating filter row style)
-  const toggleRow = `
-    <div class="ai-filter-row" style="margin-bottom:10px;">
-      <button class="ai-filter-btn ${showCommon ? 'is-active' : ''}" onclick="setPrvShowCommon(true)">Commonly Used Data Types</button>
-      <button class="ai-filter-btn ${!showCommon ? 'is-active' : ''}" onclick="setPrvShowCommon(false)">All Data Types</button>
-    </div>`;
-
   // Header row
   const purposeHeaders = cols.map(c =>
     `<th class="prv-col-hd" title="${c.desc}">${c.label}</th>`).join('');
   const metaHeaders = META_COLS.map(c =>
     `<th class="prv-col-hd prv-meta-col">${c.label}</th>`).join('');
 
-  // Data rows
+  // Data rows — all types always visible
   let bodyHtml = '';
-  visibleGroups.forEach(group => {
+  IOS_DATA_TYPES.forEach(group => {
     bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
     group.types.forEach(t => {
       const isOn = !!a.dataPerType[t.id];
@@ -975,7 +931,6 @@ function buildPrivacyMatrix(a) {
         What data does your app collect?
         ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} selected</span>` : ''}
       </div>
-      ${toggleRow}
       <div class="prv-matrix-hint">Click a row to select it, then check how that data is used.</div>
       <div class="prv-matrix-wrap">
         <table class="prv-matrix">

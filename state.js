@@ -918,12 +918,6 @@ const state = {
   // Per-field AI inference metadata: { [fieldId]: { confidence: 0-100, humanConfirmed: bool } }
   iosAnswerMeta: {},
 
-  // "Needs Review" filter toggle — false = show only uncertain/unanswered, true = show all
-  iosShowAll: false,
-
-  // Privacy matrix toggle — true = show only common game data types, false = show all
-  prvShowCommon: true,
-
   // Claude AI UI state (not persisted)
   claudeUI: {},
 };
