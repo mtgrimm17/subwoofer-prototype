@@ -1553,11 +1553,13 @@ select.form-input {
 .yn-btn.yn-no.is-selected  { background: var(--magenta-soft); border-color: var(--magenta); color: var(--magenta); }
 .yn-btn.yn-no.is-selected:hover { background: rgba(255, 59, 118, 0.3); }
 
-/* AI inference confidence states */
-.yn-btn.is-selected.ai-certain     { opacity: 0.5 !important; }
-.yn-btn.is-selected.ai-confident   { /* badge only, no opacity change */ }
-.intensity-btn.ai-certain          { opacity: 0.5 !important; }
-.intensity-btn.ai-confident        { /* badge only */ }
+/* AI inference confidence states
+   ai-certain  (≥90%): full opacity + badge — AI is sure, show the answer clearly
+   ai-confident (70–89%): dimmed + badge — AI is less sure, flag for review      */
+.yn-btn.is-selected.ai-certain     { /* full opacity — badge alone signals AI */ }
+.yn-btn.is-selected.ai-confident   { opacity: 0.5 !important; }
+.intensity-btn.ai-certain          { /* full opacity — badge alone signals AI */ }
+.intensity-btn.ai-confident        { opacity: 0.5 !important; }
 
 /* Orange dot badge for "Confident" AI answers (70–89% AIC) */
 .ai-badge {

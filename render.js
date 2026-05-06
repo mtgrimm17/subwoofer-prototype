@@ -795,7 +795,7 @@ function aiInferenceClass(fieldId, value) {
 function aiInferenceBadge(fieldId, value) {
   const val  = state.iosSubmitAnswers[fieldId];
   const meta = state.iosAnswerMeta[fieldId];
-  if (val !== value || !meta || meta.humanConfirmed || meta.confidence >= 90) return '';
+  if (val !== value || !meta || meta.humanConfirmed) return '';
   return '<span class="ai-badge"></span>';
 }
 
