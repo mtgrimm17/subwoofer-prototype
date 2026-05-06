@@ -918,6 +918,9 @@ const state = {
   // Per-field AI inference metadata: { [fieldId]: { confidence: 0-100, humanConfirmed: bool } }
   iosAnswerMeta: {},
 
-  // Gemini AI UI state (not persisted)
+  // "Needs Review" filter toggle — false = show only uncertain/unanswered, true = show all
+  iosShowAll: false,
+
+  // Claude AI UI state (not persisted)
   claudeUI: {},
 };

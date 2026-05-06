@@ -225,7 +225,7 @@ function applyClaudeResults(result) {
   // Age category
   tryApply('ageCategory', result.ageCategory, ['not_applicable', 'made_for_kids', 'override_higher']);
 
-  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+  const pct = total > 0 ? Math.min(100, Math.round((filled / total) * 100)) : 0;
   console.log(`[Claude] Applied ${filled}/${total} fields (${pct}%)`);
   return { filled, total, pct };
 }

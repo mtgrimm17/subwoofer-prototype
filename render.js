@@ -726,13 +726,18 @@ function buildIOSScrollContent() {
         <span>Analyzing your game…</span>
       </div>`;
   } else if (ai.status === 'done') {
+    const showAll = state.iosShowAll || false;
     aiBanner = `
       <div class="ai-banner ai-banner-done">
         <span class="ai-banner-icon">✦</span>
         <div class="ai-banner-text">
-          Subwoofer was able to answer <strong>${ai.pct}%</strong> of the App Store's questions based on what you provided. Please review and confirm these responses before submitting.
+          Based on the information you provided, Subwoofer pre-populated <strong>${ai.pct}%</strong> of the App Store submission. Please review these responses before submitting.
         </div>
         <button class="ai-clear-btn" onclick="clearClaudeResults()" title="Reset to blank">Reset</button>
+      </div>
+      <div class="ai-filter-row">
+        <button class="ai-filter-btn ${!showAll ? 'is-active' : ''}" onclick="setIOSShowAll(false)">Needs Review</button>
+        <button class="ai-filter-btn ${showAll  ? 'is-active' : ''}" onclick="setIOSShowAll(true)">Show All</button>
       </div>`;
   } else if (ai.status === 'error') {
     aiBanner = `
@@ -790,6 +795,19 @@ function buildIOSSectionBody(sectionId) {
   return '';
 }
 
+/* ── Needs Review filter helper ─────────────────────── */
+// Returns true if this field should be HIDDEN in "Needs Review" mode
+// (i.e. it's already answered with high AI confidence or human-confirmed)
+function isFieldHiddenByFilter(fieldId) {
+  if (state.iosShowAll) return false; // Show All — never hide
+  const val  = state.iosSubmitAnswers[fieldId];
+  if (val === null || val === undefined) return false; // unanswered — always show
+  const meta = state.iosAnswerMeta[fieldId];
+  if (!meta) return false; // human answered, no AI meta — show it (let them review)
+  if (meta.humanConfirmed) return false; // human explicitly chose — keep visible
+  return meta.confidence >= 90; // AI-certain — hide in Needs Review mode
+}
+
 /* ── AI inference badge helper ───────────────────────── */
 function aiInferenceClass(fieldId, value) {
   const val  = state.iosSubmitAnswers[fieldId];
@@ -809,6 +827,8 @@ function aiInferenceBadge(fieldId, value) {
 /* ── iOS section helper: YES/NO question row ─────────── */
 // inverted=true: NO is the "safe" answer — placed first and styled green
 function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
+  if (isFieldHiddenByFilter(fieldId)) return ''; // hidden in Needs Review mode
+
   const val = state.iosSubmitAnswers[fieldId];
   const ttText = tooltip || desc || '';
   const ttHTML = ttText ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${ttText}</span></span>` : '';
@@ -835,6 +855,8 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
 
 /* ── iOS section helper: None / Infrequent / Frequent row */
 function iosIntensityRow(label, fieldId, tooltip) {
+  if (isFieldHiddenByFilter(fieldId)) return ''; // hidden in Needs Review mode
+
   const val = state.iosSubmitAnswers[fieldId];
   const ttHTML = tooltip ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>` : '';
 
@@ -878,81 +900,85 @@ function buildPrivacySection() {
 }
 
 function buildPrivacyMatrix(a) {
-  const cols = IOS_PURPOSES;
-  const META_COLS = [
-    { id: 'linked_identity', label: 'Linked to Identity' },
-    { id: 'used_tracking',   label: 'Used for Tracking' },
-  ];
+  const selectedIds = Object.keys(a.dataPerType);
+  const selectedCount = selectedIds.length;
 
-  // Header row
-  const purposeHeaders = cols.map(c =>
-    `<th class="prv-col-hd" title="${c.desc}">${c.label}</th>`).join('');
-  const metaHeaders = META_COLS.map(c =>
-    `<th class="prv-col-hd prv-meta-col">${c.label}</th>`).join('');
-
-  // Data rows grouped
-  let bodyHtml = '';
+  // ── Step 1: Chip list — one chip per data type, grouped ──
+  let chipGroups = '';
   IOS_DATA_TYPES.forEach(group => {
-    bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
-    group.types.forEach(t => {
+    const chips = group.types.map(t => {
       const isOn = !!a.dataPerType[t.id];
-      const td = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
-      const purposeCells = cols.map(c => {
-        const checked = td.purposes.includes(c.id);
-        return `<td class="prv-check-cell">
-          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
-                 data-type="${t.id}" data-col="${c.id}"
-                 ${checked ? 'checked' : ''}
-                 onclick="event.stopPropagation()"
-                 onchange="togglePrivacyPurpose('${t.id}','${c.id}',this.checked)">
-        </td>`;
-      }).join('');
-      const metaCells = META_COLS.map(c => {
-        const isChecked = c.id === 'linked_identity' ? td.identity === 'yes' : td.tracking === 'yes';
-        const field = c.id === 'linked_identity' ? 'identity' : 'tracking';
-        return `<td class="prv-check-cell prv-meta-col">
-          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
-                 data-type="${t.id}" data-meta="${field}"
-                 ${isChecked ? 'checked' : ''}
-                 onclick="event.stopPropagation()"
-                 onchange="setPrivacyMeta('${t.id}','${field}',this.checked)">
-        </td>`;
-      }).join('');
-
-      bodyHtml += `
-        <tr class="prv-data-row ${isOn ? 'is-on' : ''}" onclick="togglePrivacyDataType('${t.id}')">
-          <td class="prv-type-cell" title="${t.desc}">
-            <span class="prv-type-name">${t.label}</span>
-          </td>
-          ${purposeCells}
-          ${metaCells}
-        </tr>`;
-    });
+      return `<button class="data-type-chip ${isOn ? 'is-on' : ''}"
+                      onclick="togglePrivacyDataType('${t.id}')"
+                      title="${t.desc}">${t.label}</button>`;
+    }).join('');
+    chipGroups += `
+      <div class="prv-chip-group">
+        <div class="prv-chip-group-label">${group.group}</div>
+        <div class="prv-chip-row">${chips}</div>
+      </div>`;
   });
 
-  const selectedCount = Object.keys(a.dataPerType).length;
+  // ── Step 2: Detail rows — only for selected types ──
+  let detailRows = '';
+  if (selectedCount > 0) {
+    IOS_DATA_TYPES.forEach(group => {
+      group.types.forEach(t => {
+        if (!a.dataPerType[t.id]) return;
+        const td = a.dataPerType[t.id];
+        const purposeChips = IOS_PURPOSES.map(p => {
+          const checked = td.purposes.includes(p.id);
+          return `<button class="data-type-chip ${checked ? 'is-on' : ''}"
+                          onclick="togglePrivacyPurpose('${t.id}','${p.id}',${!checked})"
+                          title="${p.desc}">${p.label}</button>`;
+        }).join('');
+
+        detailRows += `
+          <div class="prv-detail-row">
+            <div class="prv-detail-header">
+              <span class="prv-detail-type">${t.label}</span>
+              <button class="prv-detail-remove" onclick="togglePrivacyDataType('${t.id}')" title="Remove">×</button>
+            </div>
+            <div class="prv-detail-label">How is this data used?</div>
+            <div class="prv-chip-row" style="margin-bottom:10px;">${purposeChips}</div>
+            <div class="prv-detail-meta">
+              <label class="prv-meta-label">
+                <input type="checkbox" ${td.identity === 'yes' ? 'checked' : ''}
+                       onchange="setPrivacyMeta('${t.id}','identity',this.checked)">
+                Linked to identity
+              </label>
+              <label class="prv-meta-label">
+                <input type="checkbox" ${td.tracking === 'yes' ? 'checked' : ''}
+                       onchange="setPrivacyMeta('${t.id}','tracking',this.checked)">
+                Used for tracking
+              </label>
+            </div>
+          </div>`;
+      });
+    });
+  }
+
+  const hasTracking = Object.values(a.dataPerType).some(t => t.tracking === 'yes');
 
   return `
     <div class="ios-subsection">
-      <div class="ios-subsection-label" style="margin-bottom:6px;">
+      <div class="ios-subsection-label" style="margin-bottom:8px;">
         What data does your app collect?
-        ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} selected</span>` : ''}
+        ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} type${selectedCount > 1 ? 's' : ''} selected</span>` : ''}
       </div>
-      <div class="prv-matrix-hint">Click a row to select it, then check how that data is used.</div>
-      <div class="prv-matrix-wrap">
-        <table class="prv-matrix">
-          <thead>
-            <tr>
-              <th class="prv-type-hd">Data Type</th>
-              ${purposeHeaders}
-              ${metaHeaders}
-            </tr>
-          </thead>
-          <tbody>${bodyHtml}</tbody>
-        </table>
+      <div class="prv-chip-picker">
+        ${chipGroups}
       </div>
-      ${Object.values(a.dataPerType).some(t => t.tracking === 'yes') ?
-        '<div class="ios-risk-note risk-HIGH" style="margin-top:10px;">Tracking requires implementing Apple\'s AppTrackingTransparency framework and requesting user permission before data is collected.</div>' : ''}
+      ${selectedCount > 0 ? `
+        <div class="prv-detail-section">
+          <div class="prv-detail-section-label">Data usage details</div>
+          ${detailRows}
+        </div>` : ''}
+      ${hasTracking ?
+        `<div class="dist-tip-box" style="margin-top:12px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span><strong>Tracking:</strong> You must implement Apple's AppTrackingTransparency framework and request user permission before collecting any data used for tracking.</span>
+        </div>` : ''}
     </div>`;
 }
 
@@ -1002,7 +1028,7 @@ function buildContentRatingSection() {
       ${rating ? ` · Estimated rating: <strong>${rating}</strong>` : ''}
     </div>
 
-    <div class="ios-content-step-label">Step 1 — Features</div>
+    <div class="ios-content-step-label">Features</div>
     ${iosYNRow(yq('parentalControls').label,    'parentalControls',    '', yq('parentalControls').tooltip)}
     ${iosYNRow(yq('ageAssurance').label,         'ageAssurance',        '', yq('ageAssurance').tooltip)}
     ${iosYNRow(yq('unrestrictedInternet').label, 'unrestrictedInternet','', yq('unrestrictedInternet').tooltip)}
@@ -1011,32 +1037,32 @@ function buildContentRatingSection() {
     ${iosYNRow(yq('advertising').label,          'advertising',         '', yq('advertising').tooltip)}
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Step 2 — Mature Themes</div>
+    <div class="ios-content-step-label">Mature Themes</div>
     <div class="ios-intensity-list">
       ${['profanity','horrorFear','substancesAlcohol'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
     </div>
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Step 3 — Medical or Wellness</div>
+    <div class="ios-content-step-label">Medical or Wellness</div>
     <div class="ios-intensity-list">
       ${(() => { const q=iq('medicalTreatment'); return iosIntensityRow(q.label,q.id,q.tooltip); })()}
     </div>
     ${iosYNRow(yq('healthWellness').label, 'healthWellness', '', yq('healthWellness').tooltip)}
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Step 4 — Sexuality or Nudity</div>
+    <div class="ios-content-step-label">Sexuality or Nudity</div>
     <div class="ios-intensity-list">
       ${['matureSuggestive','sexualContent','graphicSexual'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
     </div>
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Step 5 — Violence</div>
+    <div class="ios-content-step-label">Violence</div>
     <div class="ios-intensity-list">
       ${['cartoonViolence','realisticViolence','extendedViolence','gunsWeapons'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
     </div>
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Step 6 — Chance-Based Activities</div>
+    <div class="ios-content-step-label">Chance-Based Activities</div>
     <div class="ios-intensity-list">
       ${['simulatedGambling','contests'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
     </div>
@@ -1046,7 +1072,7 @@ function buildContentRatingSection() {
     ${a.lootBoxes === 'yes' ? '<div class="ios-risk-note risk-MEDIUM">Apps with loot boxes must clearly disclose the odds of receiving each item type before a player makes a purchase.</div>' : ''}
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Step 7 — Additional Information</div>
+    <div class="ios-content-step-label">Additional Information</div>
     <div class="ios-q-row" style="align-items:center;gap:12px;">
       <div class="ios-q-left">
         <div class="ios-q-label">Age Category

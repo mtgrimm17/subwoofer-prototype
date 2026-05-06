@@ -385,14 +385,14 @@ function togglePrivacyPurpose(typeId, purposeId, checked) {
   const arr = perType[typeId].purposes;
   if (checked && !arr.includes(purposeId)) arr.push(purposeId);
   if (!checked) perType[typeId].purposes = arr.filter(p => p !== purposeId);
-  // No full re-render — checkboxes manage themselves
+  reRenderIOSSubmitModal();
 }
 
 function setPrivacyMeta(typeId, field, checked) {
   const perType = state.iosSubmitAnswers.dataPerType;
   if (!perType[typeId]) return;
   perType[typeId][field] = checked ? 'yes' : 'no';
-  // No full re-render — tracking warning updates lazily on section re-open
+  reRenderIOSSubmitModal();
 }
 
 /* ── Legacy stub (IAP type toggle) ───────────────────── */
@@ -505,6 +505,12 @@ function clearClaudeResults() {
   state.iosSubmitAnswers = makeBlankIOSAnswers();
   state.iosAnswerMeta    = {};
   state.claudeUI         = {};
+  state.iosShowAll       = false;
+  reRenderIOSSubmitModal();
+}
+
+function setIOSShowAll(val) {
+  state.iosShowAll = val;
   reRenderIOSSubmitModal();
 }
 

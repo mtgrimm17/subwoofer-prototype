@@ -1554,9 +1554,9 @@ select.form-input {
 .yn-btn.yn-no.is-selected:hover { background: rgba(255, 59, 118, 0.3); }
 
 /* AI inference confidence states */
-.yn-btn.is-selected.ai-certain     { opacity: 0.9; }
+.yn-btn.is-selected.ai-certain     { opacity: 0.7; }
 .yn-btn.is-selected.ai-confident   { /* badge only, no opacity change */ }
-.intensity-btn.ai-certain          { opacity: 0.9; }
+.intensity-btn.ai-certain          { opacity: 0.7; }
 .intensity-btn.ai-confident        { /* badge only */ }
 
 /* Orange dot badge for "Confident" AI answers (70–89% AIC) */
@@ -1888,10 +1888,12 @@ select.form-input {
 
 /* Content Rating step headers */
 .ios-content-step-label {
-  font-size: 11px; font-weight: 700; color: var(--text-dim);
-  text-transform: uppercase; letter-spacing: 0.06em;
-  margin: 16px 0 8px; padding-bottom: 5px;
-  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 700; color: var(--text);
+  letter-spacing: 0.01em;
+  margin: 20px 0 10px; padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 .ios-content-step-label:first-child { margin-top: 0; }
 .ios-content-step-sub {
@@ -2301,6 +2303,112 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   font-size: 11px;
   font-weight: 600;
 }
+
+/* ── Privacy chip picker (new matrix replacement) ────── */
+
+.prv-chip-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.prv-chip-group { display: flex; flex-direction: column; gap: 6px; }
+.prv-chip-group-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-faint);
+}
+.prv-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.prv-detail-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.prv-detail-section-label {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.prv-detail-row {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.prv-detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.prv-detail-type {
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+}
+
+.prv-detail-remove {
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; line-height: 1;
+  color: var(--text-faint);
+  padding: 0 4px;
+  transition: color 0.15s;
+}
+.prv-detail-remove:hover { color: var(--text); }
+
+.prv-detail-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.prv-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.prv-meta-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-dim);
+  cursor: pointer;
+}
+.prv-meta-label input[type="checkbox"] {
+  accent-color: var(--blue);
+  width: 13px; height: 13px; cursor: pointer;
+}
+
+/* ── Needs Review / Show All toggle ──────────────────── */
+
+.ai-filter-row {
+  display: flex;
+  gap: 0;
+  margin: 8px 0 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px;
+  width: fit-content;
+}
+
+.ai-filter-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 500;
+  color: var(--text-dim);
+  padding: 4px 14px;
+  border-radius: 5px;
+  transition: background 0.15s, color 0.15s;
+}
+.ai-filter-btn.is-active {
+  background: var(--panel-3);
+  color: var(--text);
+  font-weight: 600;
+}
+.ai-filter-btn:hover:not(.is-active) { color: var(--text); }
 
 /* ── Distribution Presets ────────────────────────────── */
 
