@@ -235,15 +235,11 @@ async function openStepModal(pid, stepId) {
 
   // Open overlay immediately so user sees something
   renderStepModal();
+  // Mark Store Page Preview as visited before rendering
+  if (stepId === 'storePreview') state.iosStorePreviewSeen = true;
+
   document.getElementById('submit-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-
-  // Mark Store Page Preview as visited
-  if (stepId === 'storePreview') {
-    state.iosStorePreviewSeen = true;
-    updateIOSCard();
-    return;
-  }
 
   // For inference steps: run analysis the first time (cache thereafter)
   const step = PLATFORMS[pid].steps.find(s => s.id === stepId);
@@ -463,8 +459,16 @@ function togglePrivacyDataType(typeId) {
   if (perType[typeId]) {
     delete perType[typeId];
   } else {
-    perType[typeId] = { purposes: [], identity: null, tracking: null };
+    // identity/tracking default to 'no' (unchecked = no, not unknown)
+    perType[typeId] = { purposes: [], identity: 'no', tracking: 'no' };
   }
+  reRenderStepModal();
+}
+
+function setPrivacyMeta(typeId, field, checked) {
+  const perType = state.iosSubmitAnswers.dataPerType;
+  if (!perType[typeId]) return;
+  perType[typeId][field] = checked ? 'yes' : 'no';
   reRenderStepModal();
 }
 

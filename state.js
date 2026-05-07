@@ -522,8 +522,9 @@ function isIOSSectionComplete(sectionId) {
     if (a.collectsData === 'yes') {
       const types = Object.entries(a.dataPerType);
       if (types.length === 0) return false;
+      // Each selected type needs at least one purpose checked
       for (const [, t] of types) {
-        if (t.purposes.length === 0 || t.identity === null || t.tracking === null) return false;
+        if (t.purposes.length === 0) return false;
       }
     }
     return true;
@@ -559,12 +560,8 @@ function isIOSSectionComplete(sectionId) {
   }
 
   if (sectionId === 'storePreview') {
-    // Complete once the user has visited the preview and all other steps are done
-    return !!(state.iosStorePreviewSeen &&
-      isIOSSectionComplete('privacy') &&
-      isIOSSectionComplete('contentRating') &&
-      isIOSSectionComplete('business') &&
-      isIOSSectionComplete('distribution'));
+    // Complete once the user has opened and reviewed the Store Preview
+    return !!state.iosStorePreviewSeen;
   }
 
   return false;
