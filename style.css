@@ -643,6 +643,11 @@ body {
   justify-content: space-between;
   padding: 18px 18px 12px;
   gap: 12px;
+  border-radius: 14px 14px 0 0;
+  transition: background 0.15s;
+}
+.active-card-head:hover {
+  background: var(--surface-hover, rgba(255,255,255,0.04));
 }
 
 .active-card-platform {
@@ -812,10 +817,7 @@ body {
   font-size: 13px; font-weight: 600; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ios-step-status {
-  font-size: 11px; color: var(--text-faint); margin-top: 1px;
-}
-.ios-step-card.is-complete .ios-step-status { color: var(--green, #4ade80); }
+
 
 .ios-step-risk {
   width: 7px; height: 7px;
@@ -825,6 +827,7 @@ body {
 .ios-step-risk-high   { background: var(--magenta, #ff3b78); }
 .ios-step-risk-medium { background: var(--orange, #f5a623); }
 .ios-step-risk-low    { background: var(--green, #4ade80); }
+.ios-step-risk-none   { background: var(--text-faint, #555); opacity: 0.5; }
 
 .ios-step-arrow { font-size: 16px; color: var(--text-faint); flex-shrink: 0; }
 

@@ -484,7 +484,7 @@ function buildActiveCard(pid) {
 
   return `
     <div class="active-card" id="active-card-${pid}">
-      <div class="active-card-head">
+      <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 18)}</div>
           <div>
@@ -492,7 +492,6 @@ function buildActiveCard(pid) {
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
           </div>
         </div>
-        <button class="platform-toggle is-on" onclick="deactivatePlatform('${pid}')" title="Deactivate platform" aria-label="Toggle off"></button>
       </div>
       <div class="card-bar-wrap">
         <div class="card-bar">
@@ -520,14 +519,10 @@ function buildIOSActiveCard(pid) {
   const stepCards = p.steps.map((step, i) => {
     const done = isIOSSectionComplete(step.id);
     const risk = computeIOSSectionRisk(step.id);
-    let statusText = 'Not started';
-    if (done)               statusText = 'Complete';
-    else if (risk === 'HIGH')    statusText = 'Needs attention';
-    else if (risk === 'MEDIUM')  statusText = 'Needs review';
 
-    const riskDot = !done && risk !== 'NONE'
-      ? `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`
-      : '';
+    // Show a dot for every incomplete step; color reflects risk level
+    const dotClass = risk === 'HIGH' ? 'high' : risk === 'MEDIUM' ? 'medium' : 'none';
+    const riskDot = done ? '' : `<span class="ios-step-risk ios-step-risk-${dotClass}"></span>`;
 
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="ios-step-card-${step.id}"
@@ -535,7 +530,6 @@ function buildIOSActiveCard(pid) {
         <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
           <div class="ios-step-name">${step.label}</div>
-          <div class="ios-step-status">${statusText}</div>
         </div>
         ${riskDot}
         <span class="ios-step-arrow">›</span>
@@ -544,7 +538,7 @@ function buildIOSActiveCard(pid) {
 
   return `
     <div class="active-card" id="active-card-${pid}">
-      <div class="active-card-head">
+      <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 18)}</div>
           <div>
@@ -552,7 +546,6 @@ function buildIOSActiveCard(pid) {
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
           </div>
         </div>
-        <button class="platform-toggle is-on" onclick="deactivatePlatform('${pid}')" title="Deactivate platform" aria-label="Toggle off"></button>
       </div>
       <div class="card-bar-wrap">
         <div class="card-bar">
@@ -583,8 +576,6 @@ function buildInactiveCard(pid) {
           <div class="inactive-card-icon">${platformIcon(pid, 16)}</div>
           <span class="inactive-card-name">${p.label}</span>
         </div>
-        <button class="platform-toggle" onclick="event.stopPropagation(); activatePlatform('${pid}')"
-                title="Activate platform" aria-label="Toggle on"></button>
       </div>
       <div class="inactive-bar-wrap">
         <div class="inactive-bar">

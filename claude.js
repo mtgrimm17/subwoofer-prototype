@@ -2,7 +2,10 @@
    AI — Claude-powered questionnaire auto-fill
    ============================================================ */
 
-const CLAUDE_API_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.CLAUDE_API_KEY : '';
+const CLAUDE_API_KEY  = (typeof CONFIG !== 'undefined' &&
+                         CONFIG.CLAUDE_API_KEY &&
+                         CONFIG.CLAUDE_API_KEY !== '__CLAUDE_API_KEY__')
+                        ? CONFIG.CLAUDE_API_KEY : '';
 const CLAUDE_MODEL    = 'claude-haiku-4-5-20251001';
 const CLAUDE_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
@@ -98,6 +101,7 @@ INFERENCE GUIDELINES:
 /* ── API call ─────────────────────────────────────────────── */
 
 async function analyzeGameWithClaude() {
+  if (!CLAUDE_API_KEY) throw new Error('NO_KEY');
   const ups = state.uploads;
   console.log('[Claude] Calling model:', CLAUDE_MODEL);
 
