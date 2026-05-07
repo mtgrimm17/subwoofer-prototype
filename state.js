@@ -83,13 +83,11 @@ const PLATFORMS = {
   ios: {
     id: 'ios', label: 'iOS App Store', color: '#007AFF',
     steps: [
-      { id: 'reviewMetadata',     label: 'Review Metadata' },
-      { id: 'confirmScreenshots', label: 'Confirm Screenshots' },
-      { id: 'exportCompliance',   label: 'Export Compliance' },
-      { id: 'releaseType',        label: 'Select Release Type' },
-      { id: 'storePreview',       label: 'Store Page Preview' },
-      { id: 'reviewSubmission',   label: 'Review Submission',     isReview: true },
-      { id: 'submit',             label: 'Submit to App Store',   isSubmit: true },
+      { id: 'privacy',       label: 'Data Privacy',      hasInference: false },
+      { id: 'contentRating', label: 'Content Rating',    hasInference: true  },
+      { id: 'business',      label: 'Business',          hasInference: true  },
+      { id: 'distribution',  label: 'Distribution',      hasInference: false },
+      { id: 'storePreview',  label: 'Store Page Preview',hasInference: false },
     ],
   },
   android: {
@@ -178,7 +176,12 @@ function makeEmptyPlatformSteps() {
 }
 
 function platformStepCount(platformId) {
-  const p        = PLATFORMS[platformId];
+  const p = PLATFORMS[platformId];
+  // iOS: completion is computed from submission answers, not manual task status
+  if (platformId === 'ios') {
+    const complete = p.steps.filter(s => isIOSSectionComplete(s.id)).length;
+    return { total: p.steps.length, complete, submitDone: false, allRequired: complete === p.steps.length };
+  }
   const required = p.steps.filter(s => !s.isSubmit);
   const statuses = state.platformStepStatus[platformId];
   const complete = required.filter(s => statuses[s.id] === 'complete').length;
@@ -397,11 +400,11 @@ const IOS_COUNTRIES = [
 ];
 
 const IOS_SECTIONS = [
-  { id: 'ios-privacy',      num: 1, label: 'Privacy' },
-  { id: 'ios-content',      num: 2, label: 'Content Rating' },
-  { id: 'ios-compliance',   num: 3, label: 'Export Compliance' },
-  { id: 'ios-business',     num: 4, label: 'Business' },
-  { id: 'ios-distribution', num: 5, label: 'Distribution' },
+  { id: 'privacy',       label: 'Data Privacy'      },
+  { id: 'contentRating', label: 'Content Rating'    },
+  { id: 'business',      label: 'Business'          },
+  { id: 'distribution',  label: 'Distribution'      },
+  { id: 'storePreview',  label: 'Store Page Preview'},
 ];
 
 function makeBlankIOSAnswers() {
@@ -464,21 +467,15 @@ function computeIOSSectionRisk(sectionId) {
   const a    = state.iosSubmitAnswers;
   const meta = state.iosAnswerMeta;
 
-  // Returns the AIC status for a field:
-  // 'human'    — user clicked this answer (takes precedence, full confidence)
-  // 'certain'  — AI filled, confidence >= 90
-  // 'confident'— AI filled, confidence 70–89 (shows badge)
-  // 'missing'  — not filled at all (AIC < 70 or never answered)
   function fieldStatus(fieldId) {
     if (a[fieldId] === null || a[fieldId] === undefined) return 'missing';
     const m = meta[fieldId];
-    if (!m) return 'human'; // filled by human, no AI meta
+    if (!m) return 'human';
     if (m.humanConfirmed) return 'human';
     if (m.confidence >= 90) return 'certain';
     return 'confident';
   }
 
-  // Evaluate a list of mandatory field IDs and return section risk
   function evalFields(fieldIds) {
     const statuses = fieldIds.map(fieldStatus);
     if (statuses.includes('missing'))   return 'HIGH';
@@ -486,13 +483,12 @@ function computeIOSSectionRisk(sectionId) {
     return 'LOW';
   }
 
-  if (sectionId === 'ios-privacy') {
-    // Privacy URL is human-entered — if missing, always HIGH
+  if (sectionId === 'privacy') {
     if (!a.privacyPolicyUrl.trim()) return 'HIGH';
     return evalFields(['collectsData']);
   }
 
-  if (sectionId === 'ios-content') {
+  if (sectionId === 'contentRating') {
     const fields = [
       ...IOS_INTENSITY_QUESTIONS.map(q => q.id),
       ...IOS_CONTENT_YN_QUESTIONS.map(q => q.id),
@@ -501,18 +497,14 @@ function computeIOSSectionRisk(sectionId) {
     return evalFields(fields);
   }
 
-  if (sectionId === 'ios-compliance') {
+  if (sectionId === 'business') {
     if (a.usesEncryption === null) return 'HIGH';
-    const fields = ['usesEncryption'];
+    const fields = ['hasIAP', 'usesEncryption'];
     if (a.usesEncryption === 'yes') fields.push('encryptionExempt');
     return evalFields(fields);
   }
 
-  if (sectionId === 'ios-business') {
-    return evalFields(['hasIAP']);
-  }
-
-  if (sectionId === 'ios-distribution') {
+  if (sectionId === 'distribution') {
     if (a.selectedCountries.length === 0) return 'NONE';
     if (a.selectedCountries.includes('CN')) return 'MEDIUM';
     return 'LOW';
@@ -524,13 +516,12 @@ function computeIOSSectionRisk(sectionId) {
 function isIOSSectionComplete(sectionId) {
   const a = state.iosSubmitAnswers;
 
-  if (sectionId === 'ios-privacy') {
+  if (sectionId === 'privacy') {
     if (!a.privacyPolicyUrl.trim()) return false;
     if (a.collectsData === null) return false;
     if (a.collectsData === 'yes') {
       const types = Object.entries(a.dataPerType);
       if (types.length === 0) return false;
-      // Every selected type needs at least one purpose + identity + tracking answered
       for (const [, t] of types) {
         if (t.purposes.length === 0 || t.identity === null || t.tracking === null) return false;
       }
@@ -538,7 +529,7 @@ function isIOSSectionComplete(sectionId) {
     return true;
   }
 
-  if (sectionId === 'ios-content') {
+  if (sectionId === 'contentRating') {
     if (!IOS_INTENSITY_QUESTIONS.every(q => a[q.id] !== null)) return false;
     if (!IOS_CONTENT_YN_QUESTIONS.every(q => a[q.id] !== null)) return false;
     if (a.ageCategory === null) return false;
@@ -547,7 +538,11 @@ function isIOSSectionComplete(sectionId) {
     return true;
   }
 
-  if (sectionId === 'ios-compliance') {
+  if (sectionId === 'business') {
+    // IAP
+    if (a.hasIAP === null) return false;
+    if (a.hasIAP === 'yes' && a.iapTypes.length === 0) return false;
+    // Export compliance (merged into business step)
     if (a.usesEncryption === null) return false;
     if (a.usesEncryption === 'yes') {
       if (a.encryptionExempt === null) return false;
@@ -559,14 +554,17 @@ function isIOSSectionComplete(sectionId) {
     return true;
   }
 
-  if (sectionId === 'ios-business') {
-    if (a.hasIAP === null) return false;
-    if (a.hasIAP === 'yes' && a.iapTypes.length === 0) return false;
-    return true;
+  if (sectionId === 'distribution') {
+    return a.selectedCountries.length > 0;
   }
 
-  if (sectionId === 'ios-distribution') {
-    return a.selectedCountries.length > 0;
+  if (sectionId === 'storePreview') {
+    // Complete once the user has visited the preview and all other steps are done
+    return !!(state.iosStorePreviewSeen &&
+      isIOSSectionComplete('privacy') &&
+      isIOSSectionComplete('contentRating') &&
+      isIOSSectionComplete('business') &&
+      isIOSSectionComplete('distribution'));
   }
 
   return false;
@@ -906,17 +904,26 @@ const state = {
   activeProjectId:    null,
   activeSubmissionId: null,
 
-  // Submit modal
+  // Legacy generic submit modal (non-iOS platforms)
   submitModal: {
     platformId: null,
     expanded: [],
   },
+
+  // iOS step modal — which step is currently open
+  stepModal: {},
 
   // iOS App Store submission questionnaire answers
   iosSubmitAnswers: makeBlankIOSAnswers(),
 
   // Per-field AI inference metadata: { [fieldId]: { confidence: 0-100, humanConfirmed: bool } }
   iosAnswerMeta: {},
+
+  // Cached Claude analysis result — populated on first inference step open, reused thereafter
+  claudeCache: null,
+
+  // Whether the user has visited Store Page Preview (makes it count as complete)
+  iosStorePreviewSeen: false,
 
   // Claude AI UI state (not persisted)
   claudeUI: {},

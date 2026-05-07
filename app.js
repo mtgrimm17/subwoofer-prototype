@@ -105,16 +105,13 @@ function completeOnboarding() {
   }
 
   state.onboardingComplete = true;
-  state.claudeUI = {}; // reset so banner shows spinner fresh on each run
   showMainApp();
-  _runClaudeAnalysis();
 }
 
 
 /* ── Task modal ──────────────────────────────────────── */
 
 function openTaskModal(platformId, stepId) {
-  // Intercept submit/review steps → open content review modal instead
   const step = PLATFORMS[platformId].steps.find(s => s.id === stepId);
   if (step && (step.isSubmit || step.isReview)) {
     openSubmitModal(platformId);
@@ -207,35 +204,135 @@ function markTaskUndone(platformId, stepId) {
 }
 
 
-/* ── Submit (Content Review) Modal ───────────────────── */
+/* ── iOS Step Modal ───────────────────────────────────── */
+
+// Seed onboarding answers into iOS submission state (idempotent — only fills nulls)
+function seedOnboardingToIOS() {
+  if (!state.iosSubmitAnswers.privacyPolicyUrl && state.formData.privacyUrl) {
+    state.iosSubmitAnswers.privacyPolicyUrl = state.formData.privacyUrl;
+  }
+  if (state.iosSubmitAnswers.hasIAP === null && state.questionAnswers.inAppPurchases !== null) {
+    state.iosSubmitAnswers.hasIAP = state.questionAnswers.inAppPurchases;
+    state.iosAnswerMeta.hasIAP = { humanConfirmed: true };
+  }
+  if (state.iosSubmitAnswers.collectsData === null && state.questionAnswers.dataCollection !== null) {
+    state.iosSubmitAnswers.collectsData = state.questionAnswers.dataCollection;
+    state.iosAnswerMeta.collectsData = { humanConfirmed: true };
+  }
+  if (state.iosSubmitAnswers.selectedCountries.length === 0) {
+    const langs = new Set([state.formData.primaryLanguage, ...state.formData.localizations]);
+    state.iosSubmitAnswers.selectedCountries = IOS_COUNTRIES
+      .filter(c => langs.has(c.lang))
+      .map(c => c.code);
+    state.iosSubmitAnswers.distPreset = 'custom';
+  }
+}
+
+async function openStepModal(pid, stepId) {
+  seedOnboardingToIOS();
+
+  state.stepModal = { platformId: pid, stepId, inferenceStatus: null };
+
+  // Open overlay immediately so user sees something
+  renderStepModal();
+  document.getElementById('submit-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Mark Store Page Preview as visited
+  if (stepId === 'storePreview') {
+    state.iosStorePreviewSeen = true;
+    updateIOSCard();
+    return;
+  }
+
+  // For inference steps: run analysis the first time (cache thereafter)
+  const step = PLATFORMS[pid].steps.find(s => s.id === stepId);
+  if (step?.hasInference && !state.claudeCache) {
+    state.stepModal.inferenceStatus = 'loading';
+    renderStepModal();
+    try {
+      const result = await analyzeGameWithClaude();
+      state.claudeCache = { result };
+      // Preserve human-confirmed answers, clear only AI-inferred meta
+      state.iosAnswerMeta = Object.fromEntries(
+        Object.entries(state.iosAnswerMeta).filter(([, v]) => v.humanConfirmed)
+      );
+      applyClaudeResults(result);
+      state.stepModal.inferenceStatus = 'done';
+    } catch(err) {
+      state.stepModal.inferenceStatus = 'error';
+      state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
+    }
+    reRenderStepModal();
+    updateIOSCard();
+  }
+}
+
+function closeStepModal() {
+  document.getElementById('submit-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  updateIOSCard();
+}
+
+function submitOverlayClick(e) {
+  if (e.target === document.getElementById('submit-overlay')) closeStepModal();
+}
+
+// Update the iOS active card progress bar + step counts + submit button without full re-render
+function updateIOSCard() {
+  if (!state.activePlatforms.has('ios')) return;
+  const counts = platformStepCount('ios');
+  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+
+  const barFill = document.getElementById('bar-fill-ios');
+  if (barFill) barFill.style.width = pct + '%';
+
+  const stepCountEl = document.getElementById('step-count-ios');
+  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
+
+  // Update each step card status text + completion class
+  PLATFORMS.ios.steps.forEach(step => {
+    const card = document.getElementById(`ios-step-card-${step.id}`);
+    if (!card) return;
+    const done = isIOSSectionComplete(step.id);
+    card.classList.toggle('is-complete', done);
+    const statusEl = card.querySelector('.ios-step-status');
+    if (statusEl) {
+      const risk = computeIOSSectionRisk(step.id);
+      if (done)              statusEl.textContent = 'Complete';
+      else if (risk === 'HIGH')   statusEl.textContent = 'Needs attention';
+      else if (risk === 'MEDIUM') statusEl.textContent = 'Needs review';
+      else                        statusEl.textContent = 'Not started';
+    }
+    const numEl = card.querySelector('.ios-step-num');
+    if (numEl) {
+      numEl.classList.toggle('is-done', done);
+      numEl.innerHTML = done
+        ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+        : String(PLATFORMS.ios.steps.indexOf(step) + 1);
+    }
+  });
+
+  // Submit button
+  const submitBtn = document.getElementById('submit-btn-ios');
+  if (submitBtn) {
+    const allDone = counts.allRequired;
+    submitBtn.classList.toggle('is-locked', !allDone);
+    if (allDone) {
+      submitBtn.removeAttribute('disabled');
+      submitBtn.setAttribute('onclick', "finalSubmit('ios')");
+    } else {
+      submitBtn.setAttribute('disabled', '');
+      submitBtn.removeAttribute('onclick');
+    }
+  }
+}
+
+/* ── Legacy submit modal (non-iOS platforms) ─────────── */
 
 function openSubmitModal(platformId) {
   state.submitModal.platformId = platformId;
-  // For iOS, seed answers from onboarding where available (only if not yet set)
-  if (platformId === 'ios') {
-    state.submitModal.expanded = [];
-    if (!state.iosSubmitAnswers.privacyPolicyUrl && state.formData.privacyUrl) {
-      state.iosSubmitAnswers.privacyPolicyUrl = state.formData.privacyUrl;
-    }
-    if (state.iosSubmitAnswers.hasIAP === null && state.questionAnswers.inAppPurchases !== null) {
-      state.iosSubmitAnswers.hasIAP = state.questionAnswers.inAppPurchases;
-      state.iosAnswerMeta.hasIAP = { humanConfirmed: true };
-    }
-    if (state.iosSubmitAnswers.collectsData === null && state.questionAnswers.dataCollection !== null) {
-      state.iosSubmitAnswers.collectsData = state.questionAnswers.dataCollection;
-      state.iosAnswerMeta.collectsData = { humanConfirmed: true };
-    }
-    // Pre-select countries matching onboarding languages (only on first open)
-    if (state.iosSubmitAnswers.selectedCountries.length === 0) {
-      const langs = new Set([state.formData.primaryLanguage, ...state.formData.localizations]);
-      state.iosSubmitAnswers.selectedCountries = IOS_COUNTRIES
-        .filter(c => langs.has(c.lang))
-        .map(c => c.code);
-      state.iosSubmitAnswers.distPreset = 'custom';
-    }
-  } else {
-    state.submitModal.expanded = [];
-  }
+  state.submitModal.expanded   = [];
   renderSubmitModal();
   document.getElementById('submit-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -244,10 +341,6 @@ function openSubmitModal(platformId) {
 function closeSubmitModal() {
   document.getElementById('submit-overlay').classList.add('hidden');
   document.body.style.overflow = '';
-}
-
-function submitOverlayClick(e) {
-  if (e.target === document.getElementById('submit-overlay')) closeSubmitModal();
 }
 
 function toggleRiskCategory(catId) {
@@ -275,31 +368,13 @@ function toggleIOSSection(sectionId) {
 
 /* ── iOS Submit Modal — answer handlers ──────────────── */
 
-// Full re-render of the scroll area with scroll-position preservation
-function reRenderIOSSubmitModal() {
-  const scrollEl = document.getElementById('ios-submit-scroll');
-  const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
-
-  if (scrollEl) scrollEl.innerHTML = buildIOSScrollContent();
-
-  // Update footer button state
-  const footer = document.querySelector('#submit-overlay .submit-modal-footer');
-  if (footer) {
-    const incomplete = IOS_SECTIONS.filter(s => !isIOSSectionComplete(s.id));
-    const allComplete = incomplete.length === 0;
-    const btn = footer.querySelector('.submit-confirm-btn');
-    if (btn) {
-      btn.textContent = allComplete ? 'Confirm & Submit →'
-        : `${incomplete.length} section${incomplete.length > 1 ? 's' : ''} incomplete`;
-      btn.classList.toggle('is-ios-incomplete', !allComplete);
-      btn.setAttribute('onclick', allComplete ? "confirmAndSubmit('ios')" : '');
-    }
-  }
-
-  // Restore scroll position
-  const newScrollEl = document.getElementById('ios-submit-scroll');
-  if (newScrollEl) newScrollEl.scrollTop = scrollTop;
-
+// Re-render the step modal body while preserving scroll position
+function reRenderStepModal() {
+  const bodyEl   = document.getElementById('step-modal-body');
+  const scrollTop = bodyEl ? bodyEl.scrollTop : 0;
+  renderStepModal();
+  const newBodyEl = document.getElementById('step-modal-body');
+  if (newBodyEl) newBodyEl.scrollTop = scrollTop;
 }
 
 /* ── Global fixed-position tooltip ───────────────────── */
@@ -489,34 +564,36 @@ function toggleIOSCountry(code) {
 
 /* ── Claude AI handlers ───────────────────────────────── */
 
+// Called by the Retry button on analysis error
 async function _runClaudeAnalysis() {
-  state.claudeUI = { status: 'loading' };
-  // Preserve human-confirmed answers; clear only AI-inferred meta so Claude
-  // can refresh its suggestions without trampling what the user already set
+  state.stepModal.inferenceStatus = 'loading';
+  state.stepModal.inferenceError  = null;
   state.iosAnswerMeta = Object.fromEntries(
     Object.entries(state.iosAnswerMeta).filter(([, v]) => v.humanConfirmed)
   );
-  reRenderIOSSubmitModal();
+  reRenderStepModal();
   try {
     const result = await analyzeGameWithClaude();
+    state.claudeCache = { result };
     applyClaudeResults(result);
-    // Base pct on actual section completion so Business (and others) can't
-    // show "100%" while still displaying Incomplete
-    const completeSections = IOS_SECTIONS.filter(s => isIOSSectionComplete(s.id)).length;
-    const pct = Math.round((completeSections / IOS_SECTIONS.length) * 100);
-    state.claudeUI = { status: 'done', filled: completeSections, total: IOS_SECTIONS.length, pct };
-  } catch (err) {
-    const msg = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
-    state.claudeUI = { status: 'error', error: msg };
+    state.stepModal.inferenceStatus = 'done';
+  } catch(err) {
+    state.stepModal.inferenceStatus = 'error';
+    state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
   }
-  reRenderIOSSubmitModal();
+  reRenderStepModal();
+  updateIOSCard();
 }
 
 function clearClaudeResults() {
-  state.iosSubmitAnswers = makeBlankIOSAnswers();
-  state.iosAnswerMeta    = {};
-  state.claudeUI         = {};
-  reRenderIOSSubmitModal();
+  state.iosSubmitAnswers        = makeBlankIOSAnswers();
+  state.iosAnswerMeta           = {};
+  state.claudeCache             = null;
+  state.iosStorePreviewSeen     = false;
+  state.stepModal.inferenceStatus = null;
+  state.stepModal.inferenceError  = null;
+  reRenderStepModal();
+  updateIOSCard();
 }
 
 
@@ -536,7 +613,7 @@ function setDistPreset(preset) {
   }
   // 'custom' → keep current selection as-is
 
-  reRenderIOSSubmitModal();
+  reRenderStepModal();
   requestAnimationFrame(() => initDistributionMap());
 }
 

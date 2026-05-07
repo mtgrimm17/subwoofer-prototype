@@ -465,12 +465,13 @@ function renderDashboard() {
 }
 
 function buildActiveCard(pid) {
+  if (pid === 'ios') return buildIOSActiveCard(pid);
+
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
   const submitDone = counts.submitDone;
 
-  // Only non-submit steps in the task list
   const steps = p.steps.filter(s => !s.isSubmit).map(step => {
     const done = state.platformStepStatus[pid][step.id] === 'complete';
     return `
@@ -481,14 +482,11 @@ function buildActiveCard(pid) {
       </div>`;
   }).join('');
 
-  // Bar starts at 0% — renderDashboard() animates it to actual width via rAF
   return `
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head">
         <div class="active-card-platform">
-          <div class="active-card-icon">
-            ${platformIcon(pid, 18)}
-          </div>
+          <div class="active-card-icon">${platformIcon(pid, 18)}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
@@ -509,6 +507,66 @@ function buildActiveCard(pid) {
         </button>
       </div>
       <div class="card-tasks">${steps}</div>
+    </div>`;
+}
+
+function buildIOSActiveCard(pid) {
+  const p      = PLATFORMS[pid];
+  const counts = platformStepCount(pid);
+  const locked = !counts.allRequired;
+
+  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  const stepCards = p.steps.map((step, i) => {
+    const done = isIOSSectionComplete(step.id);
+    const risk = computeIOSSectionRisk(step.id);
+    let statusText = 'Not started';
+    if (done)               statusText = 'Complete';
+    else if (risk === 'HIGH')    statusText = 'Needs attention';
+    else if (risk === 'MEDIUM')  statusText = 'Needs review';
+
+    const riskDot = !done && risk !== 'NONE'
+      ? `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`
+      : '';
+
+    return `
+      <div class="ios-step-card ${done ? 'is-complete' : ''}" id="ios-step-card-${step.id}"
+           onclick="openStepModal('${pid}','${step.id}')">
+        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
+        <div class="ios-step-info">
+          <div class="ios-step-name">${step.label}</div>
+          <div class="ios-step-status">${statusText}</div>
+        </div>
+        ${riskDot}
+        <span class="ios-step-arrow">›</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="active-card" id="active-card-${pid}">
+      <div class="active-card-head">
+        <div class="active-card-platform">
+          <div class="active-card-icon">${platformIcon(pid, 18)}</div>
+          <div>
+            <div class="active-card-name">${p.label}</div>
+            <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
+          </div>
+        </div>
+        <button class="platform-toggle is-on" onclick="deactivatePlatform('${pid}')" title="Deactivate platform" aria-label="Toggle off"></button>
+      </div>
+      <div class="card-bar-wrap">
+        <div class="card-bar">
+          <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
+        </div>
+        <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
+                id="submit-btn-${pid}"
+                onclick="${locked ? '' : `finalSubmit('${pid}')`}"
+                title="${locked ? 'Complete all steps first' : 'Submit to App Store'}"
+                ${locked ? 'disabled' : ''}>
+          Submit
+        </button>
+      </div>
+      <div class="ios-step-cards">${stepCards}</div>
     </div>`;
 }
 
@@ -613,18 +671,114 @@ function buildTaskContent(platformId, stepId, done) {
     <p class="task-stub-note">Full task UI coming in the next iteration. Mark complete to continue.</p>`;
 }
 
-/* ── Submit Modal ────────────────────────────────────── */
+/* ── Step Modal (iOS per-step) ───────────────────────── */
+
+function renderStepModal() {
+  const modal = document.getElementById('submit-modal');
+  if (!modal) return;
+  const { platformId, stepId, inferenceStatus, inferenceError } = state.stepModal || {};
+  if (!platformId || !stepId) return;
+
+  const p    = PLATFORMS[platformId];
+  const step = p.steps.find(s => s.id === stepId);
+
+  // Inference banner (only for steps with hasInference)
+  let inferenceBanner = '';
+  if (step?.hasInference) {
+    if (inferenceStatus === 'loading') {
+      inferenceBanner = `
+        <div class="ai-banner ai-banner-loading">
+          <span class="ai-spinner"></span>
+          <span>Subwoofer is preparing your answers…</span>
+        </div>`;
+    } else if (state.claudeCache && inferenceStatus !== 'error') {
+      inferenceBanner = `
+        <div class="ai-banner ai-banner-done">
+          <span class="ai-banner-icon">✦</span>
+          <div class="ai-banner-text">Answers marked ✦ were suggested by Subwoofer — review and confirm each one.</div>
+          <button class="ai-clear-btn" onclick="clearClaudeResults()" title="Reset to blank">Reset</button>
+        </div>`;
+    } else if (inferenceStatus === 'error') {
+      inferenceBanner = `
+        <div class="ai-banner ai-banner-error">
+          <span class="ai-banner-icon">⚠</span>
+          <div class="ai-banner-text"><strong>Analysis failed:</strong> ${inferenceError || 'Unknown error'}</div>
+          <button class="ai-autofill-btn" onclick="_runClaudeAnalysis()">Retry</button>
+        </div>`;
+    }
+  }
+
+  // Step body
+  let body = '';
+  if (inferenceStatus === 'loading') {
+    body = `<div class="step-loading-placeholder"><div class="step-loading-shimmer"></div><div class="step-loading-shimmer"></div><div class="step-loading-shimmer short"></div></div>`;
+  } else if (stepId === 'privacy')        body = buildPrivacySection();
+  else if (stepId === 'contentRating')    body = buildContentRatingSection();
+  else if (stepId === 'business')         body = buildBusinessSection() + buildExportComplianceSection();
+  else if (stepId === 'distribution')     body = buildDistributionSection();
+  else if (stepId === 'storePreview')     body = buildStorePreviewSection();
+
+  const complete = isIOSSectionComplete(stepId);
+
+  modal.innerHTML = `
+    <div class="submit-modal-header" style="border-top-color:${p.color};">
+      <div class="submit-modal-title-row">
+        <div class="submit-modal-hicon" style="color:${p.color};">${platformIcon(platformId, 22)}</div>
+        <div>
+          <div class="submit-modal-title">${step?.label || ''}</div>
+          <div class="submit-modal-subtitle">${p.label}</div>
+        </div>
+      </div>
+      <button class="task-modal-close" onclick="closeStepModal()">×</button>
+    </div>
+    <div class="submit-modal-scroll" id="step-modal-body">
+      ${inferenceBanner}
+      <div class="ios-step-body-content">
+        ${body}
+      </div>
+    </div>
+    <div class="submit-modal-footer">
+      <button class="btn btn-ghost" onclick="closeStepModal()">Close</button>
+      <button class="btn btn-primary" onclick="closeStepModal()">
+        ${complete ? 'Done ✓' : 'Save & Close'}
+      </button>
+    </div>`;
+
+  // Init distribution map after render if this is the distribution step
+  if (stepId === 'distribution') requestAnimationFrame(() => initDistributionMap());
+}
+
+function buildStorePreviewSection() {
+  const fd   = state.formData;
+  const ups  = state.uploads;
+  const icon = ups.appIcon;
+  const shots = ups.screenshots || [];
+
+  return `
+    <div class="store-preview-wrap">
+      <div class="store-preview-app-row">
+        ${icon
+          ? `<img src="${icon.dataUrl}" class="store-preview-icon" alt="App icon">`
+          : `<div class="store-preview-icon store-preview-icon-empty"></div>`}
+        <div class="store-preview-app-meta">
+          <div class="store-preview-title">${fd.title || 'App Name'}</div>
+          <div class="store-preview-sub">${fd.description ? fd.description.slice(0, 90) + (fd.description.length > 90 ? '…' : '') : 'Short description'}</div>
+          <div class="store-preview-price">${fd.price && fd.price !== '0' ? `$${fd.price}` : 'Free'}</div>
+        </div>
+      </div>
+      ${shots.length > 0
+        ? `<div class="store-preview-shots">${shots.slice(0, 3).map(s => `<img src="${s.dataUrl}" class="store-preview-shot" alt="">`).join('')}</div>`
+        : `<div class="store-preview-shots-empty">No screenshots uploaded yet</div>`}
+      <div class="store-preview-note">Full App Store visual preview — privacy nutrition labels, age rating badge, and all submission data — coming soon.</div>
+    </div>`;
+}
+
+/* ── Submit Modal (non-iOS legacy) ──────────────────── */
 
 function renderSubmitModal() {
   const modal = document.getElementById('submit-modal');
   if (!modal) return;
-  const { platformId } = state.submitModal;
-  if (platformId === 'ios') {
-    renderIOSSubmitModal(modal);
-  } else {
-    renderGenericSubmitModal(modal);
-  }
-  // (global tooltip uses delegated events — no positioning call needed)
+  renderGenericSubmitModal(modal);
 }
 
 /* Generic (non-iOS) content-review modal — existing risk-summary approach */
@@ -675,113 +829,6 @@ function renderGenericSubmitModal(modal) {
     </div>`;
 }
 
-/* iOS questionnaire submit modal */
-function renderIOSSubmitModal(modal) {
-  const p = PLATFORMS['ios'];
-  const incomplete = IOS_SECTIONS.filter(s => !isIOSSectionComplete(s.id));
-  const allComplete = incomplete.length === 0;
-
-  modal.innerHTML = `
-    <div class="submit-modal-header" style="border-top-color:${p.color};">
-      <div class="submit-modal-title-row">
-        <div class="submit-modal-hicon" style="color:${p.color};">${platformIcon('ios', 22)}</div>
-        <div>
-          <div class="submit-modal-title">Submit to App Store</div>
-          <div class="submit-modal-subtitle">iOS App Store · Build 1.0.0 (1)</div>
-        </div>
-      </div>
-      <button class="task-modal-close" onclick="closeSubmitModal()">×</button>
-    </div>
-
-    <div class="submit-modal-scroll" id="ios-submit-scroll">
-      ${buildIOSScrollContent()}
-    </div>
-
-    <div class="submit-modal-footer">
-      <button class="btn btn-ghost" onclick="closeSubmitModal()">Save Draft</button>
-      <button class="btn submit-confirm-btn ${allComplete ? '' : 'is-ios-incomplete'}"
-              onclick="${allComplete ? "confirmAndSubmit('ios')" : ''}"
-              title="${allComplete ? 'Submit to App Store' : 'Complete all sections first'}">
-        ${allComplete ? 'Confirm & Submit →' : `${incomplete.length} section${incomplete.length > 1 ? 's' : ''} incomplete`}
-      </button>
-    </div>`;
-}
-
-function buildIOSScrollContent() {
-  const ai = state.claudeUI || {};
-
-  // AI banner: hidden when idle, visible while loading or after completion
-  let aiBanner = '';
-  if (ai.status === 'loading') {
-    aiBanner = `
-      <div class="ai-banner ai-banner-loading">
-        <span class="ai-spinner"></span>
-        <span>Analyzing your game…</span>
-      </div>`;
-  } else if (ai.status === 'done') {
-    aiBanner = `
-      <div class="ai-banner ai-banner-done">
-        <span class="ai-banner-icon">✦</span>
-        <div class="ai-banner-text">
-          Based on the information you provided, Subwoofer pre-populated <strong>${ai.pct}%</strong> of the App Store submission. Please review these responses before submitting.
-        </div>
-        <button class="ai-clear-btn" onclick="clearClaudeResults()" title="Reset to blank">Reset</button>
-      </div>`;
-  } else if (ai.status === 'error') {
-    aiBanner = `
-      <div class="ai-banner ai-banner-error">
-        <span class="ai-banner-icon">⚠</span>
-        <div class="ai-banner-text"><strong>AI analysis failed:</strong> ${ai.error}</div>
-        <button class="ai-autofill-btn" onclick="_runClaudeAnalysis()">Retry</button>
-      </div>`;
-  }
-
-  return `
-    ${aiBanner}
-    <div class="ios-sections">
-      ${IOS_SECTIONS.map(section => buildIOSSectionRow(section)).join('')}
-    </div>`;
-}
-
-function buildIOSSectionRow(section) {
-  const expanded = state.submitModal.expanded.includes(section.id);
-  const complete  = isIOSSectionComplete(section.id);
-  const risk      = computeIOSSectionRisk(section.id);
-
-  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
-  return `
-    <div class="ios-section ${expanded ? 'is-expanded' : ''} ${complete ? 'is-complete' : ''}" id="ios-sec-${section.id}">
-      <div class="ios-section-head" onclick="toggleIOSSection('${section.id}')">
-        <div class="ios-section-left">
-          <div class="ios-section-num ${complete ? 'is-done' : ''}">
-            ${complete ? checkSVG : section.num}
-          </div>
-          <span class="ios-section-label">${section.label}</span>
-        </div>
-        <div class="ios-section-right">
-          ${!complete
-            ? '<span class="ios-section-incomplete">Incomplete</span>'
-            : (risk !== 'NONE' ? `<span class="risk-badge risk-badge-${risk}">${risk}</span>` : '')}
-          <span class="ios-section-chevron">›</span>
-        </div>
-      </div>
-      <div class="ios-section-body">
-        <div class="ios-section-content">
-          ${buildIOSSectionBody(section.id)}
-        </div>
-      </div>
-    </div>`;
-}
-
-function buildIOSSectionBody(sectionId) {
-  if (sectionId === 'ios-privacy')      return buildPrivacySection();
-  if (sectionId === 'ios-content')      return buildContentRatingSection();
-  if (sectionId === 'ios-compliance')   return buildExportComplianceSection();
-  if (sectionId === 'ios-business')     return buildBusinessSection();
-  if (sectionId === 'ios-distribution') return buildDistributionSection();
-  return '';
-}
 
 /* ── AI inference badge helper ───────────────────────── */
 function aiInferenceClass(fieldId, value) {
