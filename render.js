@@ -692,7 +692,7 @@ function renderStepModal() {
       inferenceBanner = `
         <div class="ai-banner ai-banner-done">
           <span class="ai-banner-icon">✦</span>
-          <div class="ai-banner-text">Based on your game info, Subwoofer has pre-populated the answers below. Review each one and tap to confirm.</div>
+          <div class="ai-banner-text">Subwoofer pre-populated answers based on the information you provided. Please review these answers before saving.</div>
         </div>`;
     } else if (inferenceStatus === 'error') {
       inferenceBanner = `
@@ -904,7 +904,7 @@ function buildPrivacySection() {
       <input class="form-input" type="url" value="${a.privacyPolicyUrl}"
              placeholder="https://yourgame.com/privacy"
              oninput="updateIOSTextField('privacyPolicyUrl', this.value)"
-             onblur="reRenderIOSSubmitModal()">
+             onblur="reRenderStepModal()">
       ${noUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL is an automatic App Review rejection.</div>' : ''}
     </div>
     ${iosYNRow('Does your app collect any data from users?', 'collectsData',
@@ -1107,7 +1107,7 @@ function buildContentRatingSection() {
       <input class="form-input" type="url" value="${a.ageSuitabilityUrl}"
              placeholder="https://yourgame.com/age-suitability"
              oninput="updateIOSTextField('ageSuitabilityUrl', this.value)"
-             onblur="reRenderIOSSubmitModal()">
+             onblur="reRenderStepModal()">
     </div>`;
 }
 
@@ -1152,7 +1152,7 @@ function buildExportComplianceSection() {
               <label class="form-label">ERN Number</label>
               <input class="form-input" type="text" value="${a.ernNumber}" placeholder="ENC-XXXXXXXX"
                      oninput="updateIOSTextField('ernNumber', this.value)"
-                     onblur="reRenderIOSSubmitModal()">
+                     onblur="reRenderStepModal()">
             </div>` : ''}
           ${a.hasERN === 'no' ? '<div class="ios-risk-note risk-HIGH">An ERN is required before submitting apps with non-exempt encryption. Apply at bis.doc.gov.</div>' : ''}
         </div>` : ''}
