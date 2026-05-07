@@ -686,14 +686,13 @@ function renderStepModal() {
       inferenceBanner = `
         <div class="ai-banner ai-banner-loading">
           <span class="ai-spinner"></span>
-          <span>Subwoofer is preparing your answers…</span>
+          <span>Subwoofer is pre-populating responses based on the information you provided…</span>
         </div>`;
     } else if (state.claudeCache && inferenceStatus !== 'error') {
       inferenceBanner = `
         <div class="ai-banner ai-banner-done">
           <span class="ai-banner-icon">✦</span>
-          <div class="ai-banner-text">Answers marked ✦ were suggested by Subwoofer — review and confirm each one.</div>
-          <button class="ai-clear-btn" onclick="clearClaudeResults()" title="Reset to blank">Reset</button>
+          <div class="ai-banner-text">Based on your game info, Subwoofer has pre-populated the answers below. Review each one and tap to confirm.</div>
         </div>`;
     } else if (inferenceStatus === 'error') {
       inferenceBanner = `

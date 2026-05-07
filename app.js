@@ -447,7 +447,7 @@ function answerIOSField(field, value) {
   // Always upsert meta with humanConfirmed — protects this answer from any
   // future AI overwrite, whether or not AI meta existed before the click
   state.iosAnswerMeta[field] = { ...(state.iosAnswerMeta[field] || {}), humanConfirmed: true };
-  reRenderIOSSubmitModal();
+  reRenderStepModal();
 }
 
 // Called by text oninput — updates state only, no re-render (prevents cursor jumping)
@@ -465,7 +465,7 @@ function togglePrivacyDataType(typeId) {
   } else {
     perType[typeId] = { purposes: [], identity: null, tracking: null };
   }
-  reRenderIOSSubmitModal();
+  reRenderStepModal();
 }
 
 function togglePrivacyPurpose(typeId, purposeId, checked) {
@@ -490,7 +490,7 @@ function toggleIOSIAPType(typeId) {
   const types = state.iosSubmitAnswers.iapTypes;
   const idx = types.indexOf(typeId);
   if (idx === -1) types.push(typeId); else types.splice(idx, 1);
-  reRenderIOSSubmitModal();
+  reRenderStepModal();
 }
 
 /* ── Distribution map ────────────────────────────────── */

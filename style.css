@@ -2014,12 +2014,10 @@ select.form-input {
 
 /* Content Rating step headers */
 .ios-content-step-label {
-  font-size: 12px; font-weight: 700; color: var(--text);
-  letter-spacing: 0.01em;
-  margin: 20px 0 10px; padding: 8px 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  font-size: 11px; font-weight: 700; color: var(--text);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin: 20px 0 8px; padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
 }
 .ios-content-step-label:first-child { margin-top: 0; }
 .ios-content-step-sub {
