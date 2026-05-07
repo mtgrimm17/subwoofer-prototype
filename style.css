@@ -972,6 +972,27 @@ body {
 }
 
 .inactive-card:hover { border-color: var(--border-hover); opacity: 0.65; }
+.inactive-card.is-coming-soon { opacity: 0.5; }
+.inactive-card.is-coming-soon:hover { opacity: 0.5; border-color: var(--border); }
+
+.coming-soon-badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 5px;
+  flex-shrink: 0;
+}
+@keyframes cs-blink {
+  0%   { opacity: 0.5; }
+  30%  { opacity: 1;   color: var(--text); border-color: var(--text-faint); }
+  70%  { opacity: 1;   color: var(--text); border-color: var(--text-faint); }
+  100% { opacity: 0.5; }
+}
+.coming-soon-badge.is-blinking { animation: cs-blink 0.7s ease; }
 
 .inactive-card-head {
   display: flex;

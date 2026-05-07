@@ -563,19 +563,25 @@ function buildIOSActiveCard(pid) {
     </div>`;
 }
 
+const COMING_SOON_PLATFORMS = new Set(['steam', 'egs', 'psn', 'xbox', 'nintendo']);
+
 function buildInactiveCard(pid) {
-  const p      = PLATFORMS[pid];
-  const counts = platformStepCount(pid);
-  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
-  const label  = counts.complete > 0 ? `${counts.complete} / ${counts.total} steps` : 'Inactive';
+  const p          = PLATFORMS[pid];
+  const counts     = platformStepCount(pid);
+  const pct        = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+  const label      = counts.complete > 0 ? `${counts.complete} / ${counts.total} steps` : 'Inactive';
+  const isCS       = COMING_SOON_PLATFORMS.has(pid);
+  const clickAttr  = isCS
+    ? `onclick="blinkComingSoon('${pid}')" title="${p.label} — coming soon"`
+    : `onclick="activatePlatform('${pid}')" role="button" tabindex="0" title="Click to activate ${p.label}"`;
   return `
-    <div class="inactive-card" onclick="activatePlatform('${pid}')" role="button" tabindex="0"
-         title="Click to activate ${p.label}" style="cursor:pointer;">
+    <div class="inactive-card ${isCS ? 'is-coming-soon' : ''}" ${clickAttr} style="cursor:${isCS ? 'default' : 'pointer'};">
       <div class="inactive-card-head">
         <div class="inactive-card-platform">
           <div class="inactive-card-icon">${platformIcon(pid, 16)}</div>
           <span class="inactive-card-name">${p.label}</span>
         </div>
+        ${isCS ? `<span class="coming-soon-badge" id="cs-badge-${pid}">Coming Soon</span>` : ''}
       </div>
       <div class="inactive-bar-wrap">
         <div class="inactive-bar">
@@ -729,7 +735,6 @@ function renderStepModal() {
       </div>
     </div>
     <div class="submit-modal-footer">
-      <button class="btn btn-ghost" onclick="closeStepModal()">Close</button>
       <button class="btn btn-primary" onclick="closeStepModal()">
         ${complete ? 'Done ✓' : 'Save & Close'}
       </button>

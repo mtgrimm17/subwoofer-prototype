@@ -642,6 +642,13 @@ function finalSubmit(platformId) {
 
 /* ── Platform activate / deactivate ──────────────────── */
 
+function blinkComingSoon(pid) {
+  const badge = document.getElementById(`cs-badge-${pid}`);
+  if (!badge || badge.classList.contains('is-blinking')) return;
+  badge.classList.add('is-blinking');
+  setTimeout(() => badge.classList.remove('is-blinking'), 700);
+}
+
 function activatePlatform(platformId) {
   state.activePlatforms.add(platformId);
   renderDashboard();
