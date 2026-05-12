@@ -416,6 +416,42 @@ function renderProjectBar() {
 
 /* ── Dashboard ───────────────────────────────────────── */
 
+function buildConsolidatedBanner() {
+  const hasActive = state.activePlatforms.size > 0;
+  const { total, answered } = cqProgress();
+  const pct = total ? Math.round(answered / total * 100) : 0;
+  const done = answered === total && total > 0;
+
+  if (!hasActive) {
+    return `
+      <div class="cq-banner cq-banner-empty">
+        <div class="cq-banner-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="cq-banner-content">
+          <div class="cq-banner-title">Consolidated Questionnaire</div>
+          <div class="cq-banner-sub">Please select platforms to continue.</div>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="cq-banner ${done ? 'cq-banner-done' : ''}" onclick="openCQModal()">
+      <div class="cq-banner-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div class="cq-banner-content">
+        <div class="cq-banner-title">Consolidated Questionnaire</div>
+        <div class="cq-banner-sub">${answered} of ${total} questions answered across all platforms</div>
+      </div>
+      <div class="cq-banner-right">
+        <div class="cq-banner-pct">${pct}%</div>
+        <div class="cq-banner-bar"><div class="cq-banner-bar-fill" style="width:${pct}%"></div></div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>`;
+}
+
 function renderDashboard() {
   const el = document.getElementById('dashboard');
   if (!el) return;
@@ -425,7 +461,7 @@ function renderDashboard() {
   const active   = [...state.activePlatforms];
   const inactive = Object.keys(PLATFORMS).filter(pid => !state.activePlatforms.has(pid));
 
-  let h = '';
+  let h = buildConsolidatedBanner();
 
   if (active.length === 0) {
     h += `
@@ -1304,6 +1340,127 @@ function buildRiskCategoryRow(cat, data) {
         ${signalsHTML}
         <p class="risk-justification">${justification}</p>
       </div>
+    </div>`;
+}
+
+/* ── Consolidated Questionnaire Modal ────────────────── */
+
+function buildCQQuestion(q) {
+  const answer     = state.cqAnswers[q.id];
+  const activePlats = q.platforms.filter(p => state.activePlatforms.has(p));
+  const platColors  = { ios:'#007AFF', android:'#34A853', egs:'#888', steam:'#4c6b8a' };
+  const platLabels  = { ios:'iOS', android:'Android', egs:'EGS', steam:'Steam' };
+
+  const badges = activePlats.map(p =>
+    `<span class="cq-plat-badge" style="color:${platColors[p]};border-color:${platColors[p]}40;background:${platColors[p]}12;">${platLabels[p]}</span>`
+  ).join('');
+
+  const indentStyle = q.indent
+    ? `margin-left:${q.indent * 22}px;padding-left:12px;border-left:2px solid var(--border);`
+    : '';
+
+  let inputHTML = '';
+
+  if (q.type === 'yn') {
+    inputHTML = `
+      <div class="cq-yn">
+        <button class="cq-yn-btn ${answer === 'yes' ? 'is-active' : ''}" onclick="setCQAnswer('${q.id}','yes')">Yes</button>
+        <button class="cq-yn-btn ${answer === 'no'  ? 'is-active' : ''}" onclick="setCQAnswer('${q.id}','no')">No</button>
+      </div>`;
+
+  } else if (q.type === 'single') {
+    inputHTML = `<div class="cq-single">` +
+      (q.options || []).map((opt, i) => `
+        <button class="cq-single-btn ${answer === opt ? 'is-active' : ''}"
+                data-qid="${q.id}" data-oidx="${i}"
+                onclick="setCQSingle('${q.id}',${i})">${opt}</button>`
+      ).join('') +
+      `</div>`;
+
+  } else if (q.type === 'multi') {
+    const arr = Array.isArray(answer) ? answer : [];
+    inputHTML = `<div class="cq-checkboxes">` +
+      (q.options || []).map((opt, i) => `
+        <label class="cq-check-row">
+          <input type="checkbox" ${arr.includes(opt) ? 'checked' : ''}
+                 data-qid="${q.id}" data-oidx="${i}"
+                 onchange="handleCQMulti(this)">
+          <span>${opt}</span>
+        </label>`
+      ).join('') +
+      `</div>`;
+
+  } else if (q.type === 'text') {
+    const val = typeof answer === 'string' ? answer : '';
+    inputHTML = `<textarea class="cq-textarea" rows="3"
+                  placeholder="${(q.placeholder || '').replace(/"/g,'&quot;')}"
+                  onblur="setCQAnswer('${q.id}',this.value)">${val}</textarea>`;
+  }
+
+  return `
+    <div class="cq-question" style="${indentStyle}">
+      <div class="cq-plat-badges">${badges}</div>
+      <div class="cq-q-text">${q.text}</div>
+      ${inputHTML}
+    </div>`;
+}
+
+function renderCQModal() {
+  const modal = document.getElementById('cq-modal');
+  if (!modal) return;
+
+  const { total, answered } = cqProgress();
+  const pct = total ? Math.round(answered / total * 100) : 0;
+
+  // Gather visible questions preserving definition order
+  const sectionOrder = [];
+  const sectionMap   = {};
+  for (const q of CQ_QUESTIONS) {
+    if (!cqIsVisible(q)) continue;
+    if (!sectionMap[q.section]) {
+      sectionMap[q.section] = [];
+      sectionOrder.push(q.section);
+    }
+    sectionMap[q.section].push(q);
+  }
+
+  // Active platform names for subtitle
+  const platNames = [...state.activePlatforms].map(p => PLATFORMS[p]?.label).join(' · ');
+
+  let body = '';
+  if (sectionOrder.length === 0) {
+    body = `<div class="cq-empty">Please select platforms to continue.</div>`;
+  } else {
+    for (const sec of sectionOrder) {
+      body += `<div class="cq-section-header">${sec}</div>`;
+      let lastSub = null;
+      for (const q of sectionMap[sec]) {
+        if (q.subsection && q.subsection !== lastSub) {
+          body += `<div class="cq-subsection-label">${q.subsection}</div>`;
+          lastSub = q.subsection;
+        } else if (!q.subsection) {
+          lastSub = null;
+        }
+        body += buildCQQuestion(q);
+      }
+    }
+  }
+
+  modal.innerHTML = `
+    <div class="cq-modal-header">
+      <div>
+        <div class="cq-modal-title">Consolidated Questionnaire</div>
+        <div class="cq-modal-subtitle">${platNames || 'No platforms selected'}</div>
+      </div>
+      <button class="task-modal-close" onclick="closeCQModal()">×</button>
+    </div>
+    <div class="cq-modal-progress-bar">
+      <div class="cq-modal-progress-fill" style="width:${pct}%"></div>
+    </div>
+    <div class="cq-modal-body" id="cq-modal-body">${body}</div>
+    <div class="cq-modal-footer">
+      <span class="cq-footer-count">${answered} of ${total} answered</span>
+      <button class="btn btn-primary" onclick="closeCQModal()">Save &amp; Close</button>
     </div>`;
 }
 

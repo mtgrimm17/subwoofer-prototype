@@ -76,6 +76,15 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════
+       CONSOLIDATED QUESTIONNAIRE MODAL
+  ═══════════════════════════════════════════════════ -->
+  <div id="cq-overlay" class="overlay-bg hidden" onclick="cqOverlayClick(event)">
+    <div class="cq-modal" id="cq-modal">
+      <!-- Rendered by renderCQModal() -->
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
        TOPBAR — always visible (sits above onboarding overlay)
   ═══════════════════════════════════════════════════ -->
   <header class="topbar" id="topbar">
@@ -181,7 +190,7 @@
   <div id="g-tip" class="g-tip"></div>
 
   <!-- Version badge -->
-  <div class="build-badge">v0.41</div>
+  <div class="build-badge">v0.42</div>
 
   <script src="state.js"></script>
   <script>

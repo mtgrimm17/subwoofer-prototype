@@ -65,6 +65,545 @@ const QUESTIONS = [
   },
 ];
 
+/* ── Consolidated Questionnaire Questions ────────────── */
+// Platform tags: ios=[Apple], android+egs=[IARC], steam=[Steam]
+// Each question: { id, section, text, platforms[], type, options[], parent, parentIs, parentHas, indent, subsection, placeholder }
+
+const CQ_QUESTIONS = [
+
+  // ── Blood, Violence, or Gory Images ──────────────────
+  { id:'cq_violence', section:'Blood, Violence, or Gory Images',
+    text:'Does the game contain inferences of, references to, or depictions of violence, blood, or gory images? This includes violence directed at the players\' character. (Does not refer to user-generated content.)',
+    platforms:['ios','android','egs','steam'], type:'yn' },
+
+  { id:'cq_violence_types', section:'Blood, Violence, or Gory Images',
+    text:'Please select all that the game includes:',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Violence or implied violence against humans',
+             'Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)',
+             'Disturbing or gory images','Blood'],
+    parent:'cq_violence', parentIs:'yes' },
+
+  { id:'cq_violence_setting', section:'Blood, Violence, or Gory Images',
+    text:'In what kind of setting (context, storyline) does the violence occur?',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Fantastical','Realistic'],
+    parent:'cq_violence_types',
+    parentHas:['Violence or implied violence against humans',
+               'Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)'],
+    indent:1 },
+
+  { id:'cq_violence_pixelated', section:'Blood, Violence, or Gory Images',
+    text:'Does the game have a pixelated or childlike style?',
+    platforms:['android','egs'], type:'single',
+    options:['Yes, it has a childlike style (e.g., likely to appeal to younger children)',
+             'Yes, it has a pixelated style','No'],
+    parent:'cq_violence_types',
+    parentHas:['Violence or implied violence against humans',
+               'Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)'],
+    indent:1 },
+
+  { id:'cq_violence_steam_types', section:'Blood, Violence, or Gory Images',
+    text:'Select all that apply:',
+    platforms:['steam'], type:'multi',
+    options:['The display of weapons, bones/skeletons, or anguish',
+             'Accidental death, bodily injury, corpses, or violence description',
+             'Killing','Glamorization of or incitement to violence','Suicide'],
+    parent:'cq_violence_types',
+    parentHas:['Violence or implied violence against humans',
+               'Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)'],
+    indent:1 },
+
+  // Violence Against Humans
+  { id:'cq_vh_reactions', section:'Blood, Violence, or Gory Images',
+    text:'How would you describe the reactions to violence?',
+    platforms:['ios','android','egs'], type:'multi',
+    options:['Unrealistic','Realistic'],
+    parent:'cq_violence_types', parentHas:['Violence or implied violence against humans'],
+    indent:1, subsection:'Violence Against Humans' },
+
+  { id:'cq_vh_presentation', section:'Blood, Violence, or Gory Images',
+    text:'How is this violence presented in the game?',
+    platforms:['android','egs'], type:'single',
+    options:['Referred to','Implied but not seen',
+             'Rarely depicted from a distant perspective','Often depicted from a distant perspective',
+             'Rarely depicted from a close-up perspective','Often depicted from a close-up perspective'],
+    parent:'cq_violence_types', parentHas:['Violence or implied violence against humans'],
+    indent:1, subsection:'Violence Against Humans' },
+
+  { id:'cq_vh_gore_level', section:'Blood, Violence, or Gory Images',
+    text:'What is the level of blood and/or gore associated with this violence?',
+    platforms:['ios','android','egs','steam'], type:'single',
+    options:['None','Mild/Limited','Moderate','High'],
+    parent:'cq_violence_types', parentHas:['Violence or implied violence against humans'],
+    indent:1, subsection:'Violence Against Humans' },
+
+  { id:'cq_vh_war', section:'Blood, Violence, or Gory Images',
+    text:'Does the game take place in a realistic or historical war setting?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_violence_types', parentHas:['Violence or implied violence against humans'],
+    indent:1, subsection:'Violence Against Humans' },
+
+  { id:'cq_vh_innocents', section:'Blood, Violence, or Gory Images',
+    text:'Can innocent or defenseless characters be seriously injured or killed?',
+    platforms:['android','egs'], type:'single',
+    options:['No','Yes, with penalties','Yes, without penalties'],
+    parent:'cq_violence_types', parentHas:['Violence or implied violence against humans'],
+    indent:1, subsection:'Violence Against Humans' },
+
+  { id:'cq_vh_minorities', section:'Blood, Violence, or Gory Images',
+    text:'Does the game involve violence against minorities or vulnerable groups?',
+    platforms:['steam'], type:'yn',
+    parent:'cq_violence_types', parentHas:['Violence or implied violence against humans'],
+    indent:1, subsection:'Violence Against Humans' },
+
+  { id:'cq_vh_fierce', section:'Blood, Violence, or Gory Images',
+    text:'Are there any fierce sounds, sinister or intimidating characters, or dark overtones associated with this violence?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_violence_types', parentHas:['Violence or implied violence against humans'],
+    indent:1, subsection:'Violence Against Humans' },
+
+  // Violence Against Non-Humans
+  { id:'cq_vnh_reactions', section:'Blood, Violence, or Gory Images',
+    text:'How would you describe the reactions to violence?',
+    platforms:['ios','android','egs'], type:'multi',
+    options:['Unrealistic','Realistic'],
+    parent:'cq_violence_types',
+    parentHas:['Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)'],
+    indent:1, subsection:'Violence Against Non-Humans' },
+
+  { id:'cq_vnh_gore_level', section:'Blood, Violence, or Gory Images',
+    text:'What is the level of blood and/or gore associated with this violence?',
+    platforms:['ios','android','egs','steam'], type:'single',
+    options:['None','Mild/Limited','Moderate','High'],
+    parent:'cq_violence_types',
+    parentHas:['Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)'],
+    indent:1, subsection:'Violence Against Non-Humans' },
+
+  { id:'cq_vnh_human_like', section:'Blood, Violence, or Gory Images',
+    text:'Do any of these creatures behave or respond like humans?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_violence_types',
+    parentHas:['Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)'],
+    indent:1, subsection:'Violence Against Non-Humans' },
+
+  { id:'cq_vnh_real_animals', section:'Blood, Violence, or Gory Images',
+    text:'Is any of this violence against real-world animals?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_violence_types',
+    parentHas:['Violence against anything other than humans (e.g., animals, fantasy creatures, robots, vehicles)'],
+    indent:1, subsection:'Violence Against Non-Humans' },
+
+  // Disturbing or Gory Images
+  { id:'cq_gore_assoc', section:'Blood, Violence, or Gory Images',
+    text:'Are these disturbing or gory images associated with a violent act that is shown?',
+    platforms:['ios','android','egs','steam'], type:'yn',
+    parent:'cq_violence_types', parentHas:['Disturbing or gory images'],
+    indent:1, subsection:'Disturbing or Gory Images' },
+
+  { id:'cq_gore_explicitness', section:'Blood, Violence, or Gory Images',
+    text:'How explicitly depicted are these disturbing or gory images?',
+    platforms:['ios','android','egs','steam'], type:'single',
+    options:['Limited detail','Moderate detail','Graphic detail'],
+    parent:'cq_violence_types', parentHas:['Disturbing or gory images'],
+    indent:1, subsection:'Disturbing or Gory Images' },
+
+  // Blood
+  { id:'cq_blood_color', section:'Blood, Violence, or Gory Images',
+    text:'Is the color of the blood realistic?',
+    platforms:['steam'], type:'yn',
+    parent:'cq_violence_types', parentHas:['Blood'],
+    indent:1, subsection:'Blood' },
+
+  { id:'cq_blood_violent', section:'Blood, Violence, or Gory Images',
+    text:'Is the blood related to violent acts?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_violence_types', parentHas:['Blood'],
+    indent:1, subsection:'Blood' },
+
+  { id:'cq_blood_amount', section:'Blood, Violence, or Gory Images',
+    text:'What best describes this type of blood in the game?',
+    platforms:['android','egs'], type:'single',
+    options:['Small and infrequent','Large or frequent'],
+    parent:'cq_violence_types', parentHas:['Blood'],
+    indent:1, subsection:'Blood' },
+
+  // ── Fear ─────────────────────────────────────────────
+  { id:'cq_fear', section:'Fear',
+    text:'Does the game contain pictures or sounds likely to be scary, horrifying, or disturbing? (Does not refer to user-generated content.)',
+    platforms:['ios','android','egs','steam'], type:'yn' },
+
+  { id:'cq_fear_types', section:'Fear',
+    text:'Please select all that the game includes:',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Scary elements','Horrifying elements'],
+    parent:'cq_fear', parentIs:'yes' },
+
+  { id:'cq_fear_scary_freq', section:'Fear',
+    text:'How frequent are the scary elements?',
+    platforms:['ios','android','egs'], type:'single',
+    options:['Rare','Often'],
+    parent:'cq_fear_types', parentHas:['Scary elements'], indent:1 },
+
+  { id:'cq_fear_horror_freq', section:'Fear',
+    text:'How frequent are the horrifying elements?',
+    platforms:['ios','android','egs'], type:'single',
+    options:['Rare','Often'],
+    parent:'cq_fear_types', parentHas:['Horrifying elements'], indent:1 },
+
+  { id:'cq_fear_imminent', section:'Fear',
+    text:'Is there an intense and unrelenting sense of imminent threat?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_fear_horror_freq', parentIs:'Often', indent:2 },
+
+  // ── Language ──────────────────────────────────────────
+  { id:'cq_language', section:'Language',
+    text:'Does the game contain any potentially offensive language? (Does not refer to user-generated content.)',
+    platforms:['ios','android','egs','steam'], type:'yn' },
+
+  { id:'cq_language_types', section:'Language',
+    text:'Please select all that the game includes:',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Minor profanities (e.g., "go to hell")',
+             'Moderate swearing or other language or gestures that could be considered moderately or significantly offensive',
+             'Discriminatory language (against race, religion, sex, etc.)','Sexual expletives'],
+    parent:'cq_language', parentIs:'yes' },
+
+  { id:'cq_lang_minor_freq', section:'Language',
+    text:'How frequently do minor profanities occur?',
+    platforms:['ios','android','egs'], type:'single', options:['Rarely','Often'],
+    parent:'cq_language_types', parentHas:['Minor profanities (e.g., "go to hell")'], indent:1 },
+
+  { id:'cq_lang_moderate_freq', section:'Language',
+    text:'How frequently does moderate swearing occur?',
+    platforms:['ios','android','egs'], type:'single', options:['Rarely','Often'],
+    parent:'cq_language_types',
+    parentHas:['Moderate swearing or other language or gestures that could be considered moderately or significantly offensive'],
+    indent:1 },
+
+  { id:'cq_lang_discrim_freq', section:'Language',
+    text:'How frequently does discriminatory language occur?',
+    platforms:['ios','android','egs'], type:'single', options:['Rarely','Often'],
+    parent:'cq_language_types', parentHas:['Discriminatory language (against race, religion, sex, etc.)'], indent:1 },
+
+  { id:'cq_lang_sexual_freq', section:'Language',
+    text:'How frequently do sexual expletives occur?',
+    platforms:['ios','android','egs'], type:'single', options:['Rarely','Often'],
+    parent:'cq_language_types', parentHas:['Sexual expletives'], indent:1 },
+
+  // ── Crude Humor ───────────────────────────────────────
+  { id:'cq_crude', section:'Crude Humor',
+    text:'Please select all crude humor that the game includes:',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Adult humor: Comedic references to death, killing, crime, mental health, substance abuse, social and/or political issues including racial and personal beliefs',
+             'Adult humor with sexual connotations',
+             'Bodily functions (e.g., belching, flatulence, or vomiting) for humorous purposes',
+             'None'] },
+
+  { id:'cq_crude_bodily', section:'Crude Humor',
+    text:'What bodily functions are used for humorous purposes in the game? Please check all that apply.',
+    platforms:['android','egs'], type:'multi',
+    options:['Mucus, belching, flatulence sounds',
+             'Flatulence (with depiction of "flatulence cloud"), whimsical depictions of feces ("poo coils"), vomiting',
+             'Urination, urine, realistically depicted feces',
+             'Act of human defecation visually depicted'],
+    parent:'cq_crude',
+    parentHas:['Bodily functions (e.g., belching, flatulence, or vomiting) for humorous purposes'],
+    indent:1 },
+
+  // ── Nudity or Sexual Content ──────────────────────────
+  { id:'cq_sexual', section:'Nudity or Sexual Content',
+    text:'Does the game contain inferences of, references to, or depictions of sexuality, sexual violence, suggestiveness, dating games, revealing attire, or nudity? (Does not refer to user-generated content.)',
+    platforms:['ios','android','egs','steam'], type:'yn' },
+
+  { id:'cq_sexual_types', section:'Nudity or Sexual Content',
+    text:'Please select all that the game includes:',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Sexual activity (including both moving and still images of sexual activity)',
+             'Suggestive/sexual themes or references',
+             'Dating games (interactive dating, marriage, or other romantic relationships between game characters)',
+             'Nudity or revealing outfits',
+             'Depictions of or references to sexual violence'],
+    parent:'cq_sexual', parentIs:'yes' },
+
+  { id:'cq_sex_act_freq', section:'Nudity or Sexual Content',
+    text:'How often do sexual acts occur?',
+    platforms:['ios','android','egs'], type:'single', options:['Rarely','Often'],
+    parent:'cq_sexual_types',
+    parentHas:['Sexual activity (including both moving and still images of sexual activity)'],
+    indent:1, subsection:'Sexual Activity' },
+
+  { id:'cq_sex_act_depiction', section:'Nudity or Sexual Content',
+    text:'How would you describe the depiction of these scenes? Please check all that apply.',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Obscured/innuendo: Sex act is entirely off-camera or completely blocked from view',
+             'Shown with no nudity: Characters are depicted in a sexual act but no nudity is shown',
+             'Shown with partial nudity: Breasts, buttocks',
+             'Shown with full frontal nudity'],
+    parent:'cq_sexual_types',
+    parentHas:['Sexual activity (including both moving and still images of sexual activity)'],
+    indent:1, subsection:'Sexual Activity' },
+
+  { id:'cq_sex_act_minors', section:'Nudity or Sexual Content',
+    text:'Do any of these sex acts feature characters that appear to be younger than 18?',
+    platforms:['android','egs','steam'], type:'yn',
+    parent:'cq_sexual_types',
+    parentHas:['Sexual activity (including both moving and still images of sexual activity)'],
+    indent:1, subsection:'Sexual Activity' },
+
+  { id:'cq_sex_suggestive_desc', section:'Nudity or Sexual Content',
+    text:'How would you describe the suggestive/sexual themes contained in the game? Please check all that apply.',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Suggestive references and innuendo in text, dialogue, or heard',
+             'Overtly sexual situations or visually depicted innuendo',
+             'References to sexual activity without descriptive detail',
+             'References to sexual activity with descriptive detail',
+             'Suggestion of minors involved in a sexual context',
+             'Depictions of minors in sexually arousing poses, including where clothed'],
+    parent:'cq_sexual_types', parentHas:['Suggestive/sexual themes or references'],
+    indent:1, subsection:'Suggestive/Sexual Themes' },
+
+  { id:'cq_sex_dating_focus', section:'Nudity or Sexual Content',
+    text:'Are these games prominently featured or a strong focus of the product?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_sexual_types',
+    parentHas:['Dating games (interactive dating, marriage, or other romantic relationships between game characters)'],
+    indent:1, subsection:'Dating Games' },
+
+  { id:'cq_sex_nudity_types', section:'Nudity or Sexual Content',
+    text:'Please select all that the game includes:',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Revealing outfits','Nudity'],
+    parent:'cq_sexual_types', parentHas:['Nudity or revealing outfits'],
+    indent:1, subsection:'Nudity or Revealing Outfits' },
+
+  { id:'cq_sex_violence_pres', section:'Nudity or Sexual Content',
+    text:'How is the sexual violence in the game presented?',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Visually depicted','Referred to only'],
+    parent:'cq_sexual_types', parentHas:['Depictions of or references to sexual violence'],
+    indent:1, subsection:'Sexual Violence' },
+
+  // ── Controlled Substances ─────────────────────────────
+  { id:'cq_substances', section:'Controlled Substances',
+    text:'Does the game contain any reference to or use of drugs, alcohol, or tobacco? (Does not refer to user-generated content.)',
+    platforms:['ios','android','egs','steam'], type:'yn' },
+
+  { id:'cq_sub_types', section:'Controlled Substances',
+    text:'Please select all that the game includes:',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Illegal or recreational drugs','Fantasy drugs','Medical drugs','Alcohol','Tobacco'],
+    parent:'cq_substances', parentIs:'yes' },
+
+  { id:'cq_sub_drugs', section:'Controlled Substances',
+    text:'How are illegal or recreational drugs present in the game?',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Reference','Use','Encourages/glamorizes','Detailed instruction for use'],
+    parent:'cq_sub_types', parentHas:['Illegal or recreational drugs'], indent:1 },
+
+  { id:'cq_sub_fantasy', section:'Controlled Substances',
+    text:'How are fantasy drugs present in the game?',
+    platforms:['ios','android','egs'], type:'multi',
+    options:['Reference','Use','Encourages/glamorizes'],
+    parent:'cq_sub_types', parentHas:['Fantasy drugs'], indent:1 },
+
+  { id:'cq_sub_medical', section:'Controlled Substances',
+    text:'How are medical drugs present in the game?',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Reference','Use','Encourages/glamorizes'],
+    parent:'cq_sub_types', parentHas:['Medical drugs'], indent:1 },
+
+  { id:'cq_sub_alcohol', section:'Controlled Substances',
+    text:'How is alcohol present in the game?',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Reference','Use','Encourages/glamorizes'],
+    parent:'cq_sub_types', parentHas:['Alcohol'], indent:1 },
+
+  { id:'cq_sub_tobacco', section:'Controlled Substances',
+    text:'How is tobacco present in the game?',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Reference','Use','Encourages/glamorizes'],
+    parent:'cq_sub_types', parentHas:['Tobacco'], indent:1 },
+
+  // ── Gambling & Speculative Acts ───────────────────────
+  { id:'cq_gambling', section:'Gambling & Speculative Acts',
+    text:'Does the game contain gambling, simulations of casino gambling/bingo, or gambling themes? (Does not refer to user-generated content.)',
+    platforms:['ios','android','egs','steam'], type:'yn' },
+
+  { id:'cq_gamb_types', section:'Gambling & Speculative Acts',
+    text:'Please select all that the game includes:',
+    platforms:['ios','android','egs','steam'], type:'multi',
+    options:['Gambling themes','Playable bingo games',
+             'Playable casino games, lotteries, or racetrack betting',
+             'Any other games that use in-game currency/tokens to play and can reward the same currency through gameplay'],
+    parent:'cq_gambling', parentIs:'yes' },
+
+  { id:'cq_gamb_themes_focus', section:'Gambling & Speculative Acts',
+    text:'Are these gambling themes prominently featured or a strong focus of the product?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_gamb_types', parentHas:['Gambling themes'], indent:1 },
+
+  { id:'cq_gamb_steam_refs', section:'Gambling & Speculative Acts',
+    text:'Does the game include references to real-world gambling games or environments, not visible on screen?',
+    platforms:['steam'], type:'yn',
+    parent:'cq_gamb_types', parentHas:['Gambling themes'], indent:1 },
+
+  { id:'cq_gamb_steam_env', section:'Gambling & Speculative Acts',
+    text:'Does the game include depiction of an environment that resembles a real-world, age-restricted betting or gambling service?',
+    platforms:['steam'], type:'yn',
+    parent:'cq_gamb_types', parentHas:['Gambling themes'], indent:1 },
+
+  { id:'cq_gamb_bingo_cash', section:'Gambling & Speculative Acts',
+    text:'Can playing these bingo games reward cash payouts or rewards of significant monetary value?',
+    platforms:['ios','android','egs','steam'], type:'yn',
+    parent:'cq_gamb_types', parentHas:['Playable bingo games'], indent:1 },
+
+  { id:'cq_gamb_casino_cash', section:'Gambling & Speculative Acts',
+    text:'Can playing these casino games, lotteries, or racetrack betting games reward cash payouts or rewards of significant monetary value?',
+    platforms:['ios','android','egs','steam'], type:'yn',
+    parent:'cq_gamb_types', parentHas:['Playable casino games, lotteries, or racetrack betting'], indent:1 },
+
+  // ── Digital Purchases, Cash Convertible Rewards, or NFTs ──
+  { id:'cq_digital', section:'Digital Purchases, Cash Convertible Rewards, or NFTs',
+    text:'Does the game include the purchase or sale of digital goods, cash rewards, gift cards, play-to-earn features, convertible cryptocurrency rewards, or the issuance of transferable digital assets (e.g., NFTs)?',
+    platforms:['android','egs'], type:'yn' },
+
+  { id:'cq_digital_types', section:'Digital Purchases, Cash Convertible Rewards, or NFTs',
+    text:'Please select all that the game includes:',
+    platforms:['android','egs'], type:'multi',
+    options:['Purchases of digital goods',
+             'Cash convertible rewards (e.g., cash rewards, real-world items of monetary value, convertible cryptocurrency rewards, or other play-to-earn mechanics)',
+             'Issuance (e.g., minting) of transferable digital assets (e.g., NFTs)'],
+    parent:'cq_digital', parentIs:'yes' },
+
+  { id:'cq_digital_lootbox', section:'Digital Purchases, Cash Convertible Rewards, or NFTs',
+    text:'Can these purchases include random items where the purchaser doesn\'t know what specific items or features they will receive (e.g., loot boxes), or any other chance-based purchases?',
+    platforms:['android','egs'], type:'yn',
+    parent:'cq_digital_types', parentHas:['Purchases of digital goods'], indent:1 },
+
+  // ── Mature Content (Steam only) ───────────────────────
+  { id:'cq_mature', section:'Mature Content',
+    text:'Please indicate if your game has content included in the major categories of mature content:',
+    platforms:['steam'], type:'multi',
+    options:['General mature content: Content that deals with mature topics and may not be appropriate for all audiences',
+             'Frequent violence or gore: Contains extremely violent or gory content',
+             'Some nudity or sexual content: Contains occasional nudity or sexual content',
+             'Frequent nudity or sexual content: Primarily about explicit or frequent nudity or sexual content',
+             'Adult only sexual content: Contains sexual content that is explicit or graphic and intended for adults only'] },
+
+  { id:'cq_mature_desc', section:'Mature Content',
+    text:'What should customers know about any mature content in your game? (Visible on store page.)',
+    platforms:['steam'], type:'text',
+    placeholder:'Describe the mature content in your game — depictions of violence, sexual acts, or other topics players should know about…',
+    parent:'cq_mature',
+    parentHas:['General mature content: Content that deals with mature topics and may not be appropriate for all audiences'],
+    indent:1 },
+
+  { id:'cq_mature_access', section:'Mature Content',
+    text:'How do we access the mature content in your game? (For review only, not visible to customers.)',
+    platforms:['steam'], type:'text',
+    placeholder:'Is the content only on a certain map or scene? Does the player need to reach a certain level?',
+    parent:'cq_mature',
+    parentHas:['General mature content: Content that deals with mature topics and may not be appropriate for all audiences'],
+    indent:1 },
+
+  // ── Generative Artificial Intelligence (Steam only) ───
+  { id:'cq_ai', section:'Generative Artificial Intelligence',
+    text:'Does this game use generative artificial intelligence to generate content for the game, either pre-rendered or live-generated? This includes the game itself, the store page, and any Steam community assets or marketing materials.',
+    platforms:['steam'], type:'yn' },
+
+  { id:'cq_ai_desc', section:'Generative Artificial Intelligence',
+    text:'Please enter a message to players describing how this game uses generative artificial intelligence.',
+    platforms:['steam'], type:'text',
+    placeholder:'Describe how AI is used in your game…',
+    parent:'cq_ai', parentIs:'yes' },
+
+  { id:'cq_ai_live', section:'Generative Artificial Intelligence',
+    text:'Does this game use artificial intelligence to generate content or code during gameplay?',
+    platforms:['steam'], type:'yn',
+    parent:'cq_ai', parentIs:'yes' },
+
+  { id:'cq_ai_third_party', section:'Generative Artificial Intelligence',
+    text:'Does this game connect to an external, third party AI service during gameplay?',
+    platforms:['steam'], type:'yn',
+    parent:'cq_ai', parentIs:'yes' },
+
+  { id:'cq_ai_live_types', section:'Generative Artificial Intelligence',
+    text:'Please tell us about the types of live-generated content created by AI:',
+    platforms:['steam'], type:'multi',
+    options:['Code','Text','Textures','3D Models','Sound Effects','Music','Voice','Other'],
+    parent:'cq_ai_live', parentIs:'yes', indent:1 },
+
+  { id:'cq_ai_code_desc', section:'Generative Artificial Intelligence',
+    text:'Please tell us about the code generated in your game. What type of code? How are you using it? What guard rails are in place to prevent malicious or illegal use?',
+    platforms:['steam'], type:'text',
+    placeholder:'Describe the code generation and safeguards…',
+    parent:'cq_ai_live', parentIs:'yes', indent:1 },
+
+  // ── Interactive Elements ───────────────────────────────
+  { id:'cq_location', section:'Interactive Elements',
+    text:'Does the game share the user\'s current and precise physical location with other users?',
+    platforms:['android','egs'], type:'yn' },
+
+  { id:'cq_user_interact', section:'Interactive Elements',
+    text:'Does the game natively allow users to interact or exchange content with other users through voice communication, text, or sharing images or audio?',
+    platforms:['ios','android','egs','steam'], type:'yn' },
+
+  { id:'cq_interact_types', section:'Interactive Elements',
+    text:'Select all that the game includes:',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['The ability to block users or user-generated content',
+             'The ability to report users or user-generated content',
+             'Chat moderation',
+             'A system to filter in-game text chat (e.g., curse words, slurs, and sexual terms for the languages supported by the game)',
+             'The ability to limit interactions to invited friends only'],
+    parent:'cq_user_interact', parentIs:'yes' },
+
+  // ── Elements of Extremism ─────────────────────────────
+  { id:'cq_extremism', section:'Elements of Extremism',
+    text:'Select all that the game contains:',
+    platforms:['android','egs','steam'], type:'multi',
+    options:['Any swastikas, other Nazi symbols, or propaganda deemed unconstitutional in Germany',
+             'Any glorification, denial, or gross trivialization of the Holocaust or other events of genocide',
+             'Any content that can substantially erode the national identity of the Republic of Korea by describing anti-national acts or distorting historical facts',
+             'Disparaging or hateful messages directed at certain population groups',
+             'Advocacy for committing acts of terrorism',
+             'None of the above'] },
+];
+
+/* ── CQ helper functions ─────────────────────────────── */
+
+function cqIsVisible(q) {
+  // Platform check — at least one of question's platforms must be activated
+  if (!q.platforms.some(p => state.activePlatforms.has(p))) return false;
+  // No parent = always visible
+  if (!q.parent) return true;
+  // Find parent
+  const parentQ = CQ_QUESTIONS.find(x => x.id === q.parent);
+  if (!parentQ) return false;
+  // Parent must itself be visible
+  if (!cqIsVisible(parentQ)) return false;
+  const parentAns = state.cqAnswers[q.parent];
+  if (q.parentIs !== undefined) return parentAns === q.parentIs;
+  if (q.parentHas !== undefined) {
+    if (!Array.isArray(parentAns)) return false;
+    return q.parentHas.some(v => parentAns.includes(v));
+  }
+  return true;
+}
+
+function cqProgress() {
+  const visible  = CQ_QUESTIONS.filter(q => cqIsVisible(q));
+  const answered = visible.filter(q => {
+    const a = state.cqAnswers[q.id];
+    if (q.type === 'yn' || q.type === 'single') return a != null && a !== '';
+    if (q.type === 'multi')  return Array.isArray(a) && a.length > 0;
+    if (q.type === 'text')   return typeof a === 'string' && a.trim() !== '';
+    return false;
+  });
+  return { total: visible.length, answered: answered.length };
+}
+
 /* ── Platform Icons (SVG paths, viewBox="0 0 24 24") ─── */
 
 const PLATFORM_ICONS = {
@@ -924,4 +1463,8 @@ const state = {
 
   // Claude AI UI state (not persisted)
   claudeUI: {},
+
+  // Consolidated Questionnaire answers: { [questionId]: yn | option | option[] | string }
+  cqAnswers: {},
+  cqSeen: false,
 };

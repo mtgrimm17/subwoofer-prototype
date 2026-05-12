@@ -1249,3 +1249,76 @@ function changeInferredAnswer(key) {
     hydrateComplianceTab();
   }
 }
+
+/* ── Consolidated Questionnaire Modal ────────────────── */
+
+function openCQModal() {
+  if (state.activePlatforms.size === 0) return;
+  state.cqSeen = true;
+  renderCQModal();
+  document.getElementById('cq-overlay').classList.remove('hidden');
+}
+
+function closeCQModal() {
+  document.getElementById('cq-overlay').classList.add('hidden');
+  renderDashboard(); // refresh banner progress
+}
+
+function cqOverlayClick(e) {
+  if (e.target === document.getElementById('cq-overlay')) closeCQModal();
+}
+
+// Yes/No and text answers
+function setCQAnswer(qid, value) {
+  state.cqAnswers[qid] = value;
+  const scroll = document.getElementById('cq-modal-body')?.scrollTop || 0;
+  renderCQModal();
+  requestAnimationFrame(() => {
+    const body = document.getElementById('cq-modal-body');
+    if (body) body.scrollTop = scroll;
+  });
+}
+
+// Single-select (option by index to avoid escaping issues)
+function setCQSingle(qid, optIdx) {
+  const q = CQ_QUESTIONS.find(x => x.id === qid);
+  if (!q) return;
+  const opt = q.options[optIdx];
+  state.cqAnswers[qid] = opt;
+  const scroll = document.getElementById('cq-modal-body')?.scrollTop || 0;
+  renderCQModal();
+  requestAnimationFrame(() => {
+    const body = document.getElementById('cq-modal-body');
+    if (body) body.scrollTop = scroll;
+  });
+}
+
+// Multi-select checkbox toggle
+function handleCQMulti(el) {
+  const qid  = el.dataset.qid;
+  const idx  = parseInt(el.dataset.oidx);
+  const q    = CQ_QUESTIONS.find(x => x.id === qid);
+  if (!q) return;
+  const opt     = q.options[idx];
+  const NONE_RE = /^none/i;
+  const current = Array.isArray(state.cqAnswers[qid]) ? [...state.cqAnswers[qid]] : [];
+
+  if (el.checked) {
+    if (NONE_RE.test(opt)) {
+      state.cqAnswers[qid] = [opt]; // selecting "None" clears everything else
+    } else {
+      const filtered = current.filter(v => !NONE_RE.test(v));
+      if (!filtered.includes(opt)) filtered.push(opt);
+      state.cqAnswers[qid] = filtered;
+    }
+  } else {
+    state.cqAnswers[qid] = current.filter(v => v !== opt);
+  }
+
+  const scroll = document.getElementById('cq-modal-body')?.scrollTop || 0;
+  renderCQModal();
+  requestAnimationFrame(() => {
+    const body = document.getElementById('cq-modal-body');
+    if (body) body.scrollTop = scroll;
+  });
+}
