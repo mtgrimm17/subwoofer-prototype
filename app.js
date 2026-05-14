@@ -725,6 +725,78 @@ function toggleLang(el, code) {
   updateWorldMap();
 }
 
+/* ── Onboarding Distribution Map & Localization ──────── */
+
+// Countries requiring extra regulatory steps beyond standard IARC
+const OB_REGULATORY_EXCLUSIONS = ['CN', 'KR', 'JP', 'DE', 'BE', 'VN', 'ZA'];
+
+function _obCountriesForPreset(preset) {
+  switch (preset) {
+    case 'everywhere':    return IOS_COUNTRIES.map(c => c.code);
+    case 'no_regulatory': return IOS_COUNTRIES.filter(c => !OB_REGULATORY_EXCLUSIONS.includes(c.code)).map(c => c.code);
+    case 'english_only':  return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
+    case 'exclude_china': return IOS_COUNTRIES.filter(c => c.code !== 'CN').map(c => c.code);
+    case 'custom':        return state.formData.selectedCountries; // keep as-is
+    default:              return IOS_COUNTRIES.map(c => c.code);
+  }
+}
+
+function setObDistPreset(preset) {
+  state.formData.distributionPreset = preset;
+  state.formData.selectedCountries  = _obCountriesForPreset(preset);
+
+  // Update preset button active states without full re-render
+  document.querySelectorAll('.ob-dist-preset-btn').forEach(btn => {
+    const labels = { everywhere:'Globally', no_regulatory:'No additional regulatory steps',
+      english_only:'English-speaking only', exclude_china:'Exclude China', custom:'Custom' };
+    btn.classList.toggle('is-active', btn.textContent.trim() === labels[preset]);
+  });
+
+  renderObDistMap();
+  updateObLangRecs();
+}
+
+async function initObDistMap() {
+  // Ensure selectedCountries is populated on first load
+  if (!state.formData.selectedCountries?.length) {
+    state.formData.selectedCountries = _obCountriesForPreset(state.formData.distributionPreset || 'everywhere');
+    updateObLangRecs();
+  }
+
+  const container = document.getElementById('ob-dist-map-container');
+  if (!container) return;
+
+  if (!_worldTopology) {
+    container.innerHTML = '<div class="world-map-loading">Loading map…</div>';
+    try {
+      const res = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+      _worldTopology = await res.json();
+    } catch (e) {
+      container.innerHTML = '<div class="world-map-loading">Map unavailable offline</div>';
+      return;
+    }
+  }
+  renderObDistMap();
+}
+
+function renderObDistMap() {
+  const container = document.getElementById('ob-dist-map-container');
+  if (!container || !_worldTopology) return;
+
+  const W = container.offsetWidth || 480;
+  const selected = new Set(
+    (state.formData.selectedCountries || [])
+      .map(code => (IOS_COUNTRIES.find(c => c.code === code) || {}).num)
+      .filter(Boolean)
+  );
+  _drawMap(container, W, selected, new Set());
+}
+
+function updateObLangRecs() {
+  const el = document.getElementById('ob-lang-recs');
+  if (el) el.innerHTML = buildObLangRecs();
+}
+
 /* ── World Map ───────────────────────────────────────── */
 
 let _worldTopology = null;  // cached fetch

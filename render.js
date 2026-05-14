@@ -30,7 +30,7 @@ function renderOnboardingTabs() {
 function renderOnboardingBody() {
   const el = document.getElementById('ob-body');
   if (!el) return;
-  if (state.onboardingTab === 0) { el.innerHTML = buildGameDetailsTab(); requestAnimationFrame(() => initWorldMap()); }
+  if (state.onboardingTab === 0) { el.innerHTML = buildGameDetailsTab(); requestAnimationFrame(() => initObDistMap()); }
   if (state.onboardingTab === 1) el.innerHTML = buildUploadAssetsTab();
   if (state.onboardingTab === 2) el.innerHTML = buildComplianceTab();
   if (state.onboardingTab === 3) el.innerHTML = buildPlatformSelectTab();
@@ -83,25 +83,14 @@ function buildGameDetailsTab() {
         <div class="char-count" id="ob-desc-count">0 / 4000</div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="ob-price">
-          Price (USD)
-          <span class="tooltip-anchor">
-            <span class="tooltip-icon">?</span>
-            <span class="tooltip-body">Set your base price once. Subwoofer will automatically convert and localize it across every platform and region where you launch — no per-store pricing setup required.</span>
-          </span>
-        </label>
-        <input class="form-input" id="ob-price" type="text" placeholder="4.99 (or 0 for free)"
-               oninput="syncField('price', this.value)"
-               onblur="roundPrice(this)">
+      <div class="ob-section-label" style="margin-top:20px;">Target Markets</div>
+      <div class="asset-guidance" style="margin-bottom:12px;">
+        Choose where you plan to sell. This informs localization recommendations and content compliance checks.
       </div>
 
-      <div class="ob-section-label" style="margin-top:20px;">Localization</div>
-      <div class="world-map-desc">This map shows the global coverage of your supported languages.</div>
-      <div id="world-map-container" class="world-map-container"></div>
-      <div class="form-group" style="margin-top:12px;">
-        <label class="form-label" for="ob-lang">Primary Language</label>
-        <select class="form-input" id="ob-lang" onchange="syncField('primaryLanguage', this.value); updateWorldMap()">
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label" for="ob-lang">Game's primary language</label>
+        <select class="form-input" id="ob-lang" onchange="syncField('primaryLanguage', this.value); updateObLangRecs()">
           <option value="en">English</option>
           <option value="fr">French</option>
           <option value="de">German</option>
@@ -115,19 +104,24 @@ function buildGameDetailsTab() {
           <option value="ar">Arabic</option>
         </select>
       </div>
-      <div class="form-label" style="margin-bottom:8px;">Additional languages</div>
-      <div class="lang-chips" id="ob-lang-chips">
-        <button class="lang-chip" onclick="toggleLang(this,'fr')">French</button>
-        <button class="lang-chip" onclick="toggleLang(this,'de')">German</button>
-        <button class="lang-chip" onclick="toggleLang(this,'es')">Spanish</button>
-        <button class="lang-chip" onclick="toggleLang(this,'pt')">Portuguese</button>
-        <button class="lang-chip" onclick="toggleLang(this,'it')">Italian</button>
-        <button class="lang-chip" onclick="toggleLang(this,'ja')">Japanese</button>
-        <button class="lang-chip" onclick="toggleLang(this,'zh')">Chinese (Simplified)</button>
-        <button class="lang-chip" onclick="toggleLang(this,'ko')">Korean</button>
-        <button class="lang-chip" onclick="toggleLang(this,'ru')">Russian</button>
-        <button class="lang-chip" onclick="toggleLang(this,'ar')">Arabic</button>
+
+      <div class="ob-dist-presets">
+        ${['everywhere','no_regulatory','english_only','exclude_china','custom'].map(p => {
+          const labels = {
+            everywhere:     'Globally',
+            no_regulatory:  'No additional regulatory steps',
+            english_only:   'English-speaking only',
+            exclude_china:  'Exclude China',
+            custom:         'Custom',
+          };
+          const active = (state.formData.distributionPreset || 'everywhere') === p;
+          return `<button class="ob-dist-preset-btn ${active ? 'is-active' : ''}" onclick="setObDistPreset('${p}')">${labels[p]}</button>`;
+        }).join('')}
       </div>
+
+      <div id="ob-dist-map-container" class="world-map-container" style="margin:12px 0 8px;"></div>
+
+      <div id="ob-lang-recs">${buildObLangRecs()}</div>
 
       <div class="ob-section-label" style="margin-top:20px;">Release Timing</div>
       <div class="option-cards" id="ob-release-timing">
@@ -158,6 +152,68 @@ function buildGameDetailsTab() {
         <input class="form-input" id="ob-date" type="date" oninput="syncField('releaseDate', this.value)">
       </div>
     </div>`;
+}
+
+/* Language recommendation + table — rendered inside #ob-lang-recs */
+const OB_LANG_NAMES = {
+  en:'English', zh:'Chinese (Simplified)', ja:'Japanese', ko:'Korean',
+  pt:'Portuguese', es:'Spanish', de:'German', fr:'French',
+  ru:'Russian', ar:'Arabic', tr:'Turkish', id:'Indonesian',
+  th:'Thai', nl:'Dutch', pl:'Polish', it:'Italian', sv:'Swedish',
+  nb:'Norwegian', da:'Danish', fi:'Finnish', cs:'Czech',
+  hu:'Hungarian', ro:'Romanian', uk:'Ukrainian', vi:'Vietnamese',
+  ms:'Malay', he:'Hebrew', el:'Greek',
+};
+
+function buildObLangRecs() {
+  const fd = state.formData;
+  const countries = fd.selectedCountries || [];
+  const primary   = fd.primaryLanguage  || 'en';
+
+  if (countries.length === 0) return '';
+
+  // Aggregate iOS gamers per non-primary language from selected countries
+  const langTotals = {};
+  IOS_COUNTRIES.forEach(c => {
+    if (!countries.includes(c.code)) return;
+    if (c.lang === primary) return;
+    langTotals[c.lang] = (langTotals[c.lang] || 0) + (c.iosGamers || 0);
+  });
+
+  const ranked = Object.entries(langTotals)
+    .sort(([,a],[,b]) => b - a)
+    .filter(([,g]) => g >= 1);
+
+  if (ranked.length === 0) return '';
+
+  const top3     = ranked.slice(0, 3);
+  const top3Names = top3.map(([l]) => OB_LANG_NAMES[l] || l);
+  const top3Total = top3.reduce((s,[,g]) => s + g, 0);
+
+  const preset = fd.distributionPreset || 'everywhere';
+  const presetLabel = {
+    everywhere:'global', no_regulatory:'regulatory-light',
+    english_only:'English-speaking', exclude_china:'non-China', custom:'custom',
+  }[preset] || 'selected';
+
+  const recText = top3Names.length
+    ? `Based on your ${presetLabel} distribution, we suggest localizing into <strong>${top3Names.join(', ')}</strong> to reach an estimated <strong>${top3Total}M</strong> additional iOS gamers in their native language.`
+    : '';
+
+  const rows = ranked.map(([lang, gamers], i) => {
+    const isRec = i < 3;
+    return `
+      <div class="ob-lang-row ${isRec ? 'is-recommended' : ''}">
+        <span class="ob-lang-name">${OB_LANG_NAMES[lang] || lang}${isRec ? ' <span class="ob-lang-rec-dot">●</span>' : ''}</span>
+        <span class="ob-lang-audience">${gamers >= 10 ? `${gamers}M` : `<${Math.max(1,gamers)}M`} iOS gamers</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="ob-lang-rec">
+      <div class="ob-lang-rec-text">${recText}</div>
+    </div>
+    <div class="ob-lang-table">${rows}</div>`;
 }
 
 /* Tab 2: Upload Assets */
@@ -294,19 +350,10 @@ function hydrateGameDetailsTab() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   set('ob-title', fd.title);
   set('ob-desc',  fd.description);
-  set('ob-price', fd.price);
   set('ob-lang',  fd.primaryLanguage);
   set('ob-date',  fd.releaseDate);
   if (fd.title)       charCount('ob-title-count', fd.title,       30);
   if (fd.description) charCount('ob-desc-count',  fd.description, 4000);
-
-  // Restore language chips from state
-  if (fd.localizations.length) {
-    document.querySelectorAll('#ob-lang-chips .lang-chip').forEach(btn => {
-      const code = btn.getAttribute('onclick')?.match(/'([^']+)'\)$/)?.[1];
-      if (code && fd.localizations.includes(code)) btn.classList.add('is-on');
-    });
-  }
 
   // Release timing
   const radios = document.querySelectorAll('input[name="ob-release"]');
@@ -1288,7 +1335,22 @@ function buildBusinessSection() {
       </div>
     </div>` : '';
 
+  const fd = state.formData;
+  const priceVal = fd.price || '';
+
   return `
+    <div class="form-group">
+      <label class="form-label">Price (USD)
+        <span class="tooltip-anchor">
+          <span class="tooltip-icon">?</span>
+          <span class="tooltip-body">Your base price for iOS. Leave blank or enter 0 for free. Subwoofer will convert to local currencies across all regions.</span>
+        </span>
+      </label>
+      <input class="form-input" id="ios-price" type="text" placeholder="4.99 (or 0 for free)"
+             value="${priceVal}"
+             oninput="syncField('price', this.value)"
+             onblur="roundPrice(this)">
+    </div>
     ${iosYNRow('Does your app include in-app purchases?', 'hasIAP',
       'Includes any paid upgrades, cosmetics, virtual currency, or subscriptions.')}
     ${iapFollowUp}

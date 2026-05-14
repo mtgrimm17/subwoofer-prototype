@@ -1334,17 +1334,19 @@ function generateId(prefix) {
 
 function makeBlankFormData() {
   return {
-    title:            '',
-    description:      '',
-    price:            '',
-    supportUrl:       '',
-    privacyUrl:       '',
-    primaryLanguage:  'en',
-    localized:        false,
-    localizations:    [],
-    releaseTiming:    'manual',
-    releaseDate:      '',
-    trailerUrl:       '',
+    title:                '',
+    description:          '',
+    price:                '',   // collected per-platform (iOS Business), kept here for store preview
+    supportUrl:           '',
+    privacyUrl:           '',
+    primaryLanguage:      'en',
+    localized:            false,
+    localizations:        [],   // languages the developer plans to localize into
+    distributionPreset:   'everywhere',
+    selectedCountries:    [],   // project-level market selection (initialized from preset on first use)
+    releaseTiming:        'manual',
+    releaseDate:          '',
+    trailerUrl:           '',
   };
 }
 
