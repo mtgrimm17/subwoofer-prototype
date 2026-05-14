@@ -43,12 +43,27 @@ function setOnboardingTab(idx) {
 }
 
 function nextOnboardingTab() {
-  if (state.onboardingTab < 2) {
+  if (state.onboardingTab < 3) {
     state.onboardingTab++;
     renderOnboarding();
     const body = document.getElementById('ob-body');
     if (body) body.scrollTop = 0;
   }
+}
+
+function toggleOnboardingPlatform(pid) {
+  if (state.activePlatforms.has(pid)) {
+    state.activePlatforms.delete(pid);
+  } else {
+    state.activePlatforms.add(pid);
+    if (!state.platformStepStatus[pid]) {
+      state.platformStepStatus[pid] = makeEmptyPlatformSteps()[pid] || {};
+    }
+  }
+  // Re-render just the body + footer so selection reflects immediately
+  const el = document.getElementById('ob-body');
+  if (el) el.innerHTML = buildPlatformSelectTab();
+  renderOnboardingFooter();
 }
 
 function prevOnboardingTab() {
@@ -1252,11 +1267,35 @@ function changeInferredAnswer(key) {
 
 /* ── Consolidated Questionnaire Modal ────────────────── */
 
-function openCQModal() {
+async function openCQModal() {
   if (state.activePlatforms.size === 0) return;
   state.cqSeen = true;
+
+  // First-ever open with a key available → run inference before showing modal
+  const hasAnswers = Object.keys(state.cqAnswers).length > 0;
+  const hasKey = typeof CLAUDE_API_KEY !== 'undefined' && CLAUDE_API_KEY;
+  if (!hasAnswers && hasKey && state.cqInferenceStatus === null) {
+    await runCQInference();
+  }
+
   renderCQModal();
   document.getElementById('cq-overlay').classList.remove('hidden');
+}
+
+async function runCQInference() {
+  state.cqInferenceStatus = 'loading';
+  state.cqInferenceError  = null;
+  renderDashboard(); // show loading state in banner
+  try {
+    const result = await analyzeCQWithClaude();
+    applyCQResults(result);
+    state.cqInferenceStatus = 'done';
+  } catch (err) {
+    state.cqInferenceStatus = 'error';
+    state.cqInferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
+    console.warn('[CQ] Inference failed:', err.message);
+  }
+  renderDashboard();
 }
 
 function closeCQModal() {
@@ -1268,9 +1307,15 @@ function cqOverlayClick(e) {
   if (e.target === document.getElementById('cq-overlay')) closeCQModal();
 }
 
+// Mark a CQ answer as human-confirmed (clears AI badge)
+function _confirmCQHuman(qid) {
+  state.cqAnswerMeta[qid] = { ...(state.cqAnswerMeta[qid] || {}), humanConfirmed: true };
+}
+
 // Yes/No and text answers
 function setCQAnswer(qid, value) {
   state.cqAnswers[qid] = value;
+  _confirmCQHuman(qid);
   const scroll = document.getElementById('cq-modal-body')?.scrollTop || 0;
   renderCQModal();
   requestAnimationFrame(() => {
@@ -1285,6 +1330,7 @@ function setCQSingle(qid, optIdx) {
   if (!q) return;
   const opt = q.options[optIdx];
   state.cqAnswers[qid] = opt;
+  _confirmCQHuman(qid);
   const scroll = document.getElementById('cq-modal-body')?.scrollTop || 0;
   renderCQModal();
   requestAnimationFrame(() => {
@@ -1315,6 +1361,7 @@ function handleCQMulti(el) {
     state.cqAnswers[qid] = current.filter(v => v !== opt);
   }
 
+  _confirmCQHuman(qid);
   const scroll = document.getElementById('cq-modal-body')?.scrollTop || 0;
   renderCQModal();
   requestAnimationFrame(() => {

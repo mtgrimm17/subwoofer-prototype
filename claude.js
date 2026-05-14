@@ -220,3 +220,173 @@ function applyClaudeResults(result) {
   console.log(`[Claude] Applied ${filled}/${total} fields (${pct}%)`);
   return { filled, total, pct };
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   CONSOLIDATED QUESTIONNAIRE — AI Inference
+══════════════════════════════════════════════════════════════ */
+
+/* ── Build a summary of any existing human-confirmed iOS answers ── */
+function _summarizeKnownAnswers() {
+  const a    = state.iosSubmitAnswers;
+  const meta = state.iosAnswerMeta;
+  const lines = [];
+
+  // Intensity answers the human has confirmed
+  IOS_INTENSITY_QUESTIONS.forEach(q => {
+    const m = meta[q.id];
+    if (m?.humanConfirmed && a[q.id]) {
+      lines.push(`${q.label}: ${a[q.id]}`);
+    }
+  });
+
+  // Boolean content answers
+  IOS_CONTENT_YN_QUESTIONS.forEach(q => {
+    const m = meta[q.id];
+    if (m?.humanConfirmed && a[q.id]) {
+      lines.push(`${q.label}: ${a[q.id]}`);
+    }
+  });
+
+  // CQ answers already confirmed by human (e.g. from a previous pass)
+  Object.entries(state.cqAnswers).forEach(([qid, ans]) => {
+    const m = state.cqAnswerMeta[qid];
+    if (m?.humanConfirmed) {
+      const q = CQ_QUESTIONS.find(x => x.id === qid);
+      if (q) lines.push(`${q.text}: ${Array.isArray(ans) ? ans.join(', ') : ans}`);
+    }
+  });
+
+  return lines.length ? lines.join('\n') : 'None yet.';
+}
+
+/* ── Build the CQ prompt ─────────────────────────────────────── */
+function buildCQPrompt() {
+  const fd = state.formData;
+
+  // Collect visible question IDs and their text/type for the prompt
+  const visible = CQ_QUESTIONS.filter(q => {
+    // Only include top-level visible questions (skip deep conditionals for brevity)
+    if (!q.platforms.some(p => state.activePlatforms.has(p))) return false;
+    return !q.parent; // top-level only; Claude can infer children via context
+  });
+
+  const questionList = visible.map(q => {
+    const typeHint = q.type === 'yn' ? '"yes" or "no"'
+      : q.type === 'single' ? `one of: ${(q.options || []).map(o => `"${o}"`).join(', ')}`
+      : q.type === 'multi'  ? `array of: ${(q.options || []).map(o => `"${o}"`).join(', ')}`
+      : 'free text string';
+    return `  "${q.id}": { "value": <${typeHint}>, "confidence": 0-100 }`;
+  }).join(',\n');
+
+  return `You are an expert game content classifier. Based on the game data below, answer the consolidated platform content questionnaire used for iOS, Google Play, Steam, and Epic Games Store submissions.
+
+GAME DATA:
+Title: ${fd.title || '(untitled)'}
+Description: ${fd.description || '(none provided)'}
+Price: ${fd.price ? `$${fd.price}` : 'Free'}
+Active platforms: ${[...state.activePlatforms].join(', ')}
+${state.formData.genre ? `Genre: ${state.formData.genre}` : ''}
+
+PREVIOUSLY CONFIRMED ANSWERS (treat these as ground truth — do not contradict them):
+${_summarizeKnownAnswers()}
+
+Return ONLY a valid JSON object — no markdown fences, no explanation. Confidence 0–100:
+- 90–100: Very certain (clear evidence from title/description)
+- 70–89: Reasonably confident (plausible inference)
+- Below 70: Uncertain — still provide your best guess but flag it
+
+SCHEMA (answer every question that appears below; omit unknown questions):
+{
+${questionList}
+}
+
+GUIDELINES:
+- Default to "no" / "none" / "None of the above" for content you cannot confirm
+- Be conservative — only flag content if it is clearly present or strongly implied
+- For multi-select, return an array of the exact option strings
+- For yn questions, return "yes" or "no"`;
+}
+
+/* ── API call ────────────────────────────────────────────────── */
+async function analyzeCQWithClaude() {
+  if (!CLAUDE_API_KEY) throw new Error('NO_KEY');
+  console.log('[Claude CQ] Running CQ inference...');
+
+  const res = await fetch(CLAUDE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'x-api-key':                              CLAUDE_API_KEY,
+      'anthropic-version':                      '2023-06-01',
+      'content-type':                           'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model:      CLAUDE_MODEL,
+      max_tokens: 4000,
+      messages:   [{ role: 'user', content: [{ type: 'text', text: buildCQPrompt() }] }],
+    }),
+  });
+
+  if (!res.ok) {
+    let rawBody = {};
+    try { rawBody = await res.json(); } catch (_) {}
+    console.error('[Claude CQ] HTTP', res.status, JSON.stringify(rawBody, null, 2));
+    const raw = rawBody.error?.message || '';
+    let msg = `Request failed (${res.status})`;
+    if (res.status === 429) msg = 'Rate limit reached — please retry in a moment.';
+    else if (res.status === 401) msg = 'API key rejected — check the key is valid.';
+    else if (res.status === 500 || res.status === 529) msg = 'Claude is temporarily overloaded — please retry.';
+    else msg = raw || msg;
+    throw new Error(msg);
+  }
+
+  const apiData = await res.json();
+  console.log('[Claude CQ] Success — tokens:', apiData.usage?.input_tokens, '+', apiData.usage?.output_tokens);
+
+  const text = apiData.content?.[0]?.text;
+  if (!text) throw new Error('Empty response from Claude');
+
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(cleaned);
+}
+
+/* ── Apply CQ results to state ───────────────────────────────── */
+function applyCQResults(result) {
+  let applied = 0;
+  let skipped = 0;
+
+  CQ_QUESTIONS.forEach(q => {
+    const entry = result[q.id];
+    if (!entry || typeof entry !== 'object') { skipped++; return; }
+
+    const { value, confidence } = entry;
+    if (value === undefined || value === null) { skipped++; return; }
+    if (typeof confidence !== 'number' || confidence < 70) { skipped++; return; }
+
+    // Never overwrite a human-confirmed answer
+    if (state.cqAnswerMeta[q.id]?.humanConfirmed) { applied++; return; }
+
+    // Validate value type
+    if (q.type === 'yn') {
+      if (!['yes', 'no'].includes(value)) { skipped++; return; }
+    } else if (q.type === 'single') {
+      if (!q.options?.includes(value)) { skipped++; return; }
+    } else if (q.type === 'multi') {
+      if (!Array.isArray(value)) { skipped++; return; }
+      const valid = value.filter(v => q.options?.includes(v));
+      if (!valid.length) { skipped++; return; }
+      state.cqAnswers[q.id]   = valid;
+      state.cqAnswerMeta[q.id] = { confidence, humanConfirmed: false };
+      applied++;
+      return;
+    }
+    // yn, single, text
+    state.cqAnswers[q.id]   = value;
+    state.cqAnswerMeta[q.id] = { confidence, humanConfirmed: false };
+    applied++;
+  });
+
+  console.log(`[Claude CQ] Applied ${applied}, skipped ${skipped}`);
+  return { applied, skipped };
+}

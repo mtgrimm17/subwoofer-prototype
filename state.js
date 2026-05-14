@@ -1466,5 +1466,13 @@ const state = {
 
   // Consolidated Questionnaire answers: { [questionId]: yn | option | option[] | string }
   cqAnswers: {},
+
+  // Per-question AI inference metadata: { [questionId]: { confidence: 0-100, humanConfirmed: bool } }
+  cqAnswerMeta: {},
+
+  // CQ inference lifecycle: null | 'loading' | 'done' | 'error'
+  cqInferenceStatus: null,
+  cqInferenceError: null,
+
   cqSeen: false,
 };

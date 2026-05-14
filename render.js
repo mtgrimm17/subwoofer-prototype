@@ -33,6 +33,7 @@ function renderOnboardingBody() {
   if (state.onboardingTab === 0) { el.innerHTML = buildGameDetailsTab(); requestAnimationFrame(() => initWorldMap()); }
   if (state.onboardingTab === 1) el.innerHTML = buildUploadAssetsTab();
   if (state.onboardingTab === 2) el.innerHTML = buildComplianceTab();
+  if (state.onboardingTab === 3) el.innerHTML = buildPlatformSelectTab();
   // After rendering, hydrate form fields from state
   hydrateGameDetailsTab();
   hydrateUploadAssetsTab();
@@ -44,16 +45,18 @@ function renderOnboardingBody() {
 function renderOnboardingFooter() {
   const el = document.getElementById('ob-footer');
   if (!el) return;
-  const isLast  = state.onboardingTab === 2;
+  const isLast  = state.onboardingTab === 3;
   const isFirst = state.onboardingTab === 0;
+  const hasPlat = state.activePlatforms.size > 0;
   el.innerHTML = `
     <div class="ob-footer-inner">
       <button class="btn btn-ghost" onclick="prevOnboardingTab()" ${isFirst ? 'style="visibility:hidden"' : ''}>← Back</button>
       <div class="ob-step-dots">
-        ${[0,1,2].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
+        ${[0,1,2,3].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
       </div>
-      <button class="btn btn-primary" onclick="${isLast ? 'completeOnboarding()' : 'nextOnboardingTab()'}">
-        ${isLast ? 'Select Platforms →' : 'Next →'}
+      <button class="btn btn-primary" onclick="${isLast ? 'completeOnboarding()' : 'nextOnboardingTab()'}"
+        ${isLast && !hasPlat ? 'disabled title="Select at least one platform to continue"' : ''}>
+        ${isLast ? 'Launch Dashboard →' : 'Next →'}
       </button>
     </div>`;
 }
@@ -245,6 +248,46 @@ function buildComplianceTab() {
     </div>`;
 }
 
+/* Tab 4: Platform Selection */
+function buildPlatformSelectTab() {
+  const selectable = ['ios', 'android', 'steam', 'egs'];
+  const tiles = selectable.map(pid => {
+    const p = PLATFORMS[pid];
+    const isOn = state.activePlatforms.has(pid);
+    const icons = {
+      ios:     '🍎',
+      android: '🤖',
+      steam:   '🎮',
+      egs:     '⚡',
+    };
+    return `
+      <button class="ob-plat-tile ${isOn ? 'is-on' : ''}" onclick="toggleOnboardingPlatform('${pid}')"
+              style="--plat-color:${p.color}">
+        <div class="ob-plat-tile-icon">${icons[pid]}</div>
+        <div class="ob-plat-tile-name">${p.label}</div>
+        ${isOn ? '<div class="ob-plat-tile-check">✓</div>' : ''}
+      </button>`;
+  }).join('');
+
+  return `
+    <div class="ob-form">
+      <div class="ob-section-label">Where will you publish?</div>
+      <div class="asset-guidance" style="margin-bottom:20px;">
+        Select all the storefronts you plan to submit to. You can add or remove platforms later from the dashboard.
+      </div>
+      <div class="ob-plat-grid">
+        ${tiles}
+      </div>
+      ${state.activePlatforms.size === 0 ? `
+        <div class="ob-plat-hint">Select at least one platform to continue.</div>
+      ` : `
+        <div class="ob-plat-hint ob-plat-hint-ok">
+          ${state.activePlatforms.size} platform${state.activePlatforms.size > 1 ? 's' : ''} selected — Subwoofer will tailor your submission flow accordingly.
+        </div>
+      `}
+    </div>`;
+}
+
 /* Hydration helpers — fill form fields from state after render */
 function hydrateGameDetailsTab() {
   const fd = state.formData;
@@ -419,15 +462,15 @@ function renderProjectBar() {
 function buildConsolidatedBanner() {
   const hasActive = state.activePlatforms.size > 0;
   const { total, answered } = cqProgress();
-  const pct = total ? Math.round(answered / total * 100) : 0;
+  const pct  = total ? Math.round(answered / total * 100) : 0;
   const done = answered === total && total > 0;
+  const loading = state.cqInferenceStatus === 'loading';
+  const checkSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 
   if (!hasActive) {
     return `
       <div class="cq-banner cq-banner-empty">
-        <div class="cq-banner-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        </div>
+        <div class="cq-banner-icon">${checkSvg}</div>
         <div class="cq-banner-content">
           <div class="cq-banner-title">Consolidated Questionnaire</div>
           <div class="cq-banner-sub">Please select platforms to continue.</div>
@@ -435,19 +478,38 @@ function buildConsolidatedBanner() {
       </div>`;
   }
 
+  if (loading) {
+    return `
+      <div class="cq-banner cq-banner-loading">
+        <div class="cq-banner-icon"><span class="cq-spinner"></span></div>
+        <div class="cq-banner-content">
+          <div class="cq-banner-title">Consolidated Questionnaire</div>
+          <div class="cq-banner-sub">AI is reviewing your game data…</div>
+        </div>
+        <div class="cq-banner-right">
+          <div class="cq-banner-pct" style="color:var(--text-dim)">—</div>
+        </div>
+      </div>`;
+  }
+
+  const aiCount = Object.values(state.cqAnswerMeta).filter(m => !m.humanConfirmed).length;
+  const subLabel = done
+    ? 'All questions answered ✓'
+    : answered > 0
+      ? `${answered} of ${total} answered${aiCount > 0 ? ` · ${aiCount} AI-suggested` : ''}`
+      : `${total} questions · click to begin`;
+
   return `
     <div class="cq-banner ${done ? 'cq-banner-done' : ''}" onclick="openCQModal()">
-      <div class="cq-banner-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      </div>
+      <div class="cq-banner-icon">${checkSvg}</div>
       <div class="cq-banner-content">
         <div class="cq-banner-title">Consolidated Questionnaire</div>
-        <div class="cq-banner-sub">${answered} of ${total} questions answered across all platforms</div>
+        <div class="cq-banner-sub">${subLabel}</div>
       </div>
       <div class="cq-banner-right">
         <div class="cq-banner-pct">${pct}%</div>
         <div class="cq-banner-bar"><div class="cq-banner-bar-fill" style="width:${pct}%"></div></div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;flex-shrink:0;" class="cq-banner-chevron"><path d="M9 18l6-6-6-6"/></svg>
       </div>
     </div>`;
 }
@@ -1346,7 +1408,11 @@ function buildRiskCategoryRow(cat, data) {
 /* ── Consolidated Questionnaire Modal ────────────────── */
 
 function buildCQQuestion(q) {
-  const answer     = state.cqAnswers[q.id];
+  const answer      = state.cqAnswers[q.id];
+  const meta        = state.cqAnswerMeta[q.id];
+  const isAI        = meta && !meta.humanConfirmed;
+  const isAIHigh    = isAI && meta.confidence >= 90;   // auto-confirmed look
+  const isAILow     = isAI && meta.confidence < 90;    // badge + dim
   const activePlats = q.platforms.filter(p => state.activePlatforms.has(p));
   const platColors  = { ios:'#007AFF', android:'#34A853', egs:'#888', steam:'#4c6b8a' };
   const platLabels  = { ios:'iOS', android:'Android', egs:'EGS', steam:'Steam' };
@@ -1355,23 +1421,32 @@ function buildCQQuestion(q) {
     `<span class="cq-plat-badge" style="color:${platColors[p]};border-color:${platColors[p]}40;background:${platColors[p]}12;">${platLabels[p]}</span>`
   ).join('');
 
+  const aiBadge = isAILow
+    ? `<span class="cq-ai-badge" title="AI suggestion — ${meta.confidence}% confidence. Click any answer to confirm.">AI · ${meta.confidence}%</span>`
+    : '';
+
   const indentStyle = q.indent
     ? `margin-left:${q.indent * 22}px;padding-left:12px;border-left:2px solid var(--border);`
     : '';
+
+  // Dim the entire question if AI-suggested at lower confidence
+  const dimClass = isAILow ? 'cq-question-ai-unconfirmed' : '';
 
   let inputHTML = '';
 
   if (q.type === 'yn') {
     inputHTML = `
       <div class="cq-yn">
-        <button class="cq-yn-btn ${answer === 'yes' ? 'is-active' : ''}" onclick="setCQAnswer('${q.id}','yes')">Yes</button>
-        <button class="cq-yn-btn ${answer === 'no'  ? 'is-active' : ''}" onclick="setCQAnswer('${q.id}','no')">No</button>
+        <button class="cq-yn-btn ${answer === 'yes' ? 'is-active' : ''} ${isAIHigh && answer === 'yes' ? 'is-ai-confirmed' : ''}"
+                onclick="setCQAnswer('${q.id}','yes')">Yes</button>
+        <button class="cq-yn-btn ${answer === 'no' ? 'is-active' : ''} ${isAIHigh && answer === 'no' ? 'is-ai-confirmed' : ''}"
+                onclick="setCQAnswer('${q.id}','no')">No</button>
       </div>`;
 
   } else if (q.type === 'single') {
     inputHTML = `<div class="cq-single">` +
       (q.options || []).map((opt, i) => `
-        <button class="cq-single-btn ${answer === opt ? 'is-active' : ''}"
+        <button class="cq-single-btn ${answer === opt ? 'is-active' : ''} ${isAIHigh && answer === opt ? 'is-ai-confirmed' : ''}"
                 data-qid="${q.id}" data-oidx="${i}"
                 onclick="setCQSingle('${q.id}',${i})">${opt}</button>`
       ).join('') +
@@ -1381,7 +1456,7 @@ function buildCQQuestion(q) {
     const arr = Array.isArray(answer) ? answer : [];
     inputHTML = `<div class="cq-checkboxes">` +
       (q.options || []).map((opt, i) => `
-        <label class="cq-check-row">
+        <label class="cq-check-row ${isAI && arr.includes(opt) ? 'is-ai-checked' : ''}">
           <input type="checkbox" ${arr.includes(opt) ? 'checked' : ''}
                  data-qid="${q.id}" data-oidx="${i}"
                  onchange="handleCQMulti(this)">
@@ -1398,9 +1473,12 @@ function buildCQQuestion(q) {
   }
 
   return `
-    <div class="cq-question" style="${indentStyle}">
-      <div class="cq-plat-badges">${badges}</div>
-      <div class="cq-q-text">${q.text}</div>
+    <div class="cq-question ${dimClass}" style="${indentStyle}">
+      <div class="cq-question-top">
+        <div class="cq-plat-badges">${badges}</div>
+        <div class="cq-q-text">${q.text}</div>
+        ${aiBadge}
+      </div>
       ${inputHTML}
     </div>`;
 }
