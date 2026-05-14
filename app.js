@@ -745,7 +745,7 @@ function setObDistPreset(preset) {
   state.formData.distributionPreset = preset;
   state.formData.selectedCountries  = _obCountriesForPreset(preset);
 
-  // Update preset button active states without full re-render
+  // Update preset button active states
   document.querySelectorAll('.ob-dist-preset-btn').forEach(btn => {
     const labels = { everywhere:'Globally', no_regulatory:'No additional regulatory steps',
       english_only:'English-speaking only', exclude_china:'Exclude China', custom:'Custom' };
@@ -753,7 +753,42 @@ function setObDistPreset(preset) {
   });
 
   renderObDistMap();
+  updateObCountryList();
   updateObLangRecs();
+}
+
+function updateObCountryList() {
+  const el = document.getElementById('ob-country-list-wrap');
+  if (el) el.innerHTML = buildObCountryList();
+}
+
+function toggleObCountry(code) {
+  state.formData.distributionPreset = 'custom';
+  const arr = state.formData.selectedCountries;
+  const idx = arr.indexOf(code);
+  if (idx === -1) arr.push(code); else arr.splice(idx, 1);
+  updateObCountryList();
+  updateObLangRecs();
+  renderObDistMap();
+}
+
+function toggleObCountryList(btn) {
+  const list = document.getElementById('ob-country-list');
+  if (!list) return;
+  const expanded = list.classList.toggle('is-expanded');
+  const extra = IOS_COUNTRIES.filter(c => (state.formData.selectedCountries || []).includes(c.code)).length - 10;
+  btn.innerHTML = expanded
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Show fewer markets`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Show ${extra} more markets`;
+}
+
+function toggleObLangList(btn) {
+  const list = document.getElementById('ob-lang-list');
+  if (!list) return;
+  const expanded = list.classList.toggle('is-expanded');
+  btn.innerHTML = expanded
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Show fewer languages`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Show more languages`;
 }
 
 async function initObDistMap() {

@@ -63,6 +63,15 @@ function renderOnboardingFooter() {
 
 /* Tab 1: Game Details */
 function buildGameDetailsTab() {
+  const preset = state.formData.distributionPreset || 'everywhere';
+  const presetLabels = {
+    everywhere:    'Globally',
+    no_regulatory: 'No additional regulatory steps',
+    english_only:  'English-speaking only',
+    exclude_china: 'Exclude China',
+    custom:        'Custom',
+  };
+
   return `
     <div class="ob-form">
       <div class="ob-section-label">About your game</div>
@@ -83,47 +92,26 @@ function buildGameDetailsTab() {
         <div class="char-count" id="ob-desc-count">0 / 4000</div>
       </div>
 
-      <div class="ob-section-label" style="margin-top:20px;">Target Markets</div>
-      <div class="asset-guidance" style="margin-bottom:12px;">
-        Choose where you plan to sell. This informs localization recommendations and content compliance checks.
-      </div>
+      <div class="ob-section-label" style="margin-top:24px;">Distribution</div>
 
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label" for="ob-lang">Game's primary language</label>
-        <select class="form-input" id="ob-lang" onchange="syncField('primaryLanguage', this.value); updateObLangRecs()">
-          <option value="en">English</option>
-          <option value="fr">French</option>
-          <option value="de">German</option>
-          <option value="es">Spanish</option>
-          <option value="pt">Portuguese</option>
-          <option value="it">Italian</option>
-          <option value="ja">Japanese</option>
-          <option value="zh">Chinese (Simplified)</option>
-          <option value="ko">Korean</option>
-          <option value="ru">Russian</option>
-          <option value="ar">Arabic</option>
-        </select>
-      </div>
+      <div class="ob-subsection-label">Target Markets</div>
+
+      <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:10px;"></div>
 
       <div class="ob-dist-presets">
-        ${['everywhere','no_regulatory','english_only','exclude_china','custom'].map(p => {
-          const labels = {
-            everywhere:     'Globally',
-            no_regulatory:  'No additional regulatory steps',
-            english_only:   'English-speaking only',
-            exclude_china:  'Exclude China',
-            custom:         'Custom',
-          };
-          const active = (state.formData.distributionPreset || 'everywhere') === p;
-          return `<button class="ob-dist-preset-btn ${active ? 'is-active' : ''}" onclick="setObDistPreset('${p}')">${labels[p]}</button>`;
+        ${Object.entries(presetLabels).map(([p, label]) => {
+          const active = preset === p;
+          return `<button class="ob-dist-preset-btn ${active ? 'is-active' : ''}" onclick="setObDistPreset('${p}')">${label}</button>`;
         }).join('')}
       </div>
 
-      <div id="ob-dist-map-container" class="world-map-container" style="margin:12px 0 8px;"></div>
+      <div id="ob-country-list-wrap">${buildObCountryList()}</div>
+
+      <div class="ob-subsection-label" style="margin-top:18px;">Localization</div>
 
       <div id="ob-lang-recs">${buildObLangRecs()}</div>
 
-      <div class="ob-section-label" style="margin-top:20px;">Release Timing</div>
+      <div class="ob-section-label" style="margin-top:24px;">Release Timing</div>
       <div class="option-cards" id="ob-release-timing">
         <label class="option-card">
           <input type="radio" name="ob-release" value="manual" onchange="pickTiming(this)">
@@ -154,7 +142,8 @@ function buildGameDetailsTab() {
     </div>`;
 }
 
-/* Language recommendation + table — rendered inside #ob-lang-recs */
+/* ── Onboarding list helpers ─────────────────────────── */
+
 const OB_LANG_NAMES = {
   en:'English', zh:'Chinese (Simplified)', ja:'Japanese', ko:'Korean',
   pt:'Portuguese', es:'Spanish', de:'German', fr:'French',
@@ -165,14 +154,58 @@ const OB_LANG_NAMES = {
   ms:'Malay', he:'Hebrew', el:'Greek',
 };
 
-function buildObLangRecs() {
+function _obFmtGamers(n) {
+  return n >= 1 ? `${n}M` : '<1M';
+}
+
+function _obListHeader(leftLabel) {
+  return `
+    <div class="ob-list-header">
+      <span class="ob-list-col-name">${leftLabel}</span>
+      <span class="ob-list-col-count">iOS Gamers</span>
+    </div>`;
+}
+
+/* Country list — only shown when preset === 'custom' */
+function buildObCountryList() {
   const fd = state.formData;
+  if (fd.distributionPreset !== 'custom') return '';
+
+  const VISIBLE = 10;
+  const countries = (fd.selectedCountries || []);
+  // Sort by iosGamers descending using IOS_COUNTRIES order (already sorted)
+  const sorted = IOS_COUNTRIES.filter(c => countries.includes(c.code));
+  const extra  = sorted.length - VISIBLE;
+
+  const rows = sorted.map((c, i) => {
+    const hidden = i >= VISIBLE ? ' ob-list-row-extra' : '';
+    return `
+      <div class="ob-list-row${hidden}">
+        <button class="ob-list-chip is-on" onclick="toggleObCountry('${c.code}')">${c.name}</button>
+        <span class="ob-list-count">${_obFmtGamers(c.iosGamers)}</span>
+      </div>`;
+  }).join('');
+
+  const expandBtn = extra > 0 ? `
+    <div class="ob-list-expand" id="ob-country-expand" onclick="toggleObCountryList(this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      Show ${extra} more markets
+    </div>` : '';
+
+  return `
+    ${_obListHeader('Market')}
+    <div class="ob-list" id="ob-country-list">${rows}</div>
+    ${expandBtn}`;
+}
+
+/* Language recs + list */
+function buildObLangRecs() {
+  const fd       = state.formData;
   const countries = fd.selectedCountries || [];
-  const primary   = fd.primaryLanguage  || 'en';
+  const primary   = fd.primaryLanguage   || 'en';
 
   if (countries.length === 0) return '';
 
-  // Aggregate iOS gamers per non-primary language from selected countries
   const langTotals = {};
   IOS_COUNTRIES.forEach(c => {
     if (!countries.includes(c.code)) return;
@@ -186,34 +219,44 @@ function buildObLangRecs() {
 
   if (ranked.length === 0) return '';
 
+  const VISIBLE  = 5;
   const top3     = ranked.slice(0, 3);
   const top3Names = top3.map(([l]) => OB_LANG_NAMES[l] || l);
   const top3Total = top3.reduce((s,[,g]) => s + g, 0);
+  const extra    = ranked.length - VISIBLE;
 
-  const preset = fd.distributionPreset || 'everywhere';
   const presetLabel = {
     everywhere:'global', no_regulatory:'regulatory-light',
     english_only:'English-speaking', exclude_china:'non-China', custom:'custom',
-  }[preset] || 'selected';
+  }[fd.distributionPreset || 'everywhere'] || 'selected';
 
   const recText = top3Names.length
     ? `Based on your ${presetLabel} distribution, we suggest localizing into <strong>${top3Names.join(', ')}</strong> to reach an estimated <strong>${top3Total}M</strong> additional iOS gamers in their native language.`
     : '';
 
   const rows = ranked.map(([lang, gamers], i) => {
-    const isRec = i < 3;
+    const hidden = i >= VISIBLE ? ' ob-list-row-extra' : '';
+    const isRec  = i < 3;
     return `
-      <div class="ob-lang-row ${isRec ? 'is-recommended' : ''}">
-        <span class="ob-lang-name">${OB_LANG_NAMES[lang] || lang}${isRec ? ' <span class="ob-lang-rec-dot">●</span>' : ''}</span>
-        <span class="ob-lang-audience">${gamers >= 10 ? `${gamers}M` : `<${Math.max(1,gamers)}M`} iOS gamers</span>
+      <div class="ob-list-row${hidden}">
+        <span class="ob-list-name${isRec ? ' is-recommended' : ''}">${OB_LANG_NAMES[lang] || lang}</span>
+        <span class="ob-list-count">${_obFmtGamers(gamers)}</span>
       </div>`;
   }).join('');
+
+  const expandBtn = extra > 0 ? `
+    <div class="ob-list-expand" id="ob-lang-expand" onclick="toggleObLangList(this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      Show ${extra} more languages
+    </div>` : '';
 
   return `
     <div class="ob-lang-rec">
       <div class="ob-lang-rec-text">${recText}</div>
     </div>
-    <div class="ob-lang-table">${rows}</div>`;
+    ${_obListHeader('Language')}
+    <div class="ob-list" id="ob-lang-list">${rows}</div>
+    ${expandBtn}`;
 }
 
 /* Tab 2: Upload Assets */
