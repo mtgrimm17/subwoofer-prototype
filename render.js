@@ -110,11 +110,13 @@ function buildGameDetailsTab() {
 
       <div id="ob-country-list-wrap">${buildObCountryList()}</div>
 
-      <div class="ob-subsection-label" style="margin-top:20px;">Localization</div>
+      <div class="ob-section-label" style="margin-top:28px;">Localization</div>
+
+      <div class="ob-subsection-label">Supported Languages</div>
 
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
 
-      <div class="ob-section-label" style="margin-top:24px;">Release Timing</div>
+      <div class="ob-section-label" style="margin-top:28px;">Release Timing</div>
       <div class="option-cards" id="ob-release-timing">
         <label class="option-card">
           <input type="radio" name="ob-release" value="manual" onchange="pickTiming(this)">
@@ -219,35 +221,22 @@ function buildObCountryList() {
     </div>`;
 }
 
-/* ── Language chips ── top 8 languages as multi-select chips; star sets primary */
-const OB_LANG_DEFAULTS = ['en','zh','ja','ko','pt','es','de','fr'];
+/* ── Language chips ── fixed 9 languages; always shown regardless of market selection */
+// Industry-standard localization set (EFIGS + CJK + PT)
+const OB_LANG_FEATURED = ['en','zh','ja','ko','es','pt','fr','de','it'];
 
 function buildObLangList() {
-  const fd        = state.formData;
-  const countries = fd.selectedCountries || [];
-  const primary   = fd.primaryLanguage   || 'en';
-  const selected  = new Set(fd.localizations || []);
+  const fd       = state.formData;
+  const primary  = fd.primaryLanguage || 'en';
+  const selected = new Set(fd.localizations || []);
 
-  // Aggregate gamers per language from selected countries; fall back to global defaults
-  let top8;
-  if (countries.length > 0) {
-    const langTotals = {};
-    IOS_COUNTRIES.forEach(c => {
-      if (!countries.includes(c.code)) return;
-      langTotals[c.lang] = (langTotals[c.lang] || 0) + (c.iosGamers || 0);
-    });
-    top8 = Object.entries(langTotals)
-      .sort(([,a],[,b]) => b - a)
-      .map(([l]) => l)
-      .slice(0, 8);
-  } else {
-    top8 = OB_LANG_DEFAULTS.slice();
+  // Always use the fixed featured set; ensure primary is included (swap if needed)
+  let langs = OB_LANG_FEATURED.slice();
+  if (!langs.includes(primary)) {
+    langs = [primary, ...langs.slice(0, 8)]; // bump primary in, drop last
   }
 
-  // Ensure primary is always in the list (prepend if missing)
-  if (!top8.includes(primary)) top8 = [primary, ...top8.slice(0, 7)];
-
-  const chips = top8.map(lang => {
+  const chips = langs.map(lang => {
     const isPrimary  = lang === primary;
     const isSelected = isPrimary || selected.has(lang);
     return `

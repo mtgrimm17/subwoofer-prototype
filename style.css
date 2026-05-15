@@ -455,10 +455,10 @@ body {
 .ob-star-btn:hover { color: #fbbf24; }
 .ob-star-btn.is-primary { color: #fbbf24; }
 
-/* Language chips — multi-select chip strip */
+/* Language chips — 3-column equal-size grid */
 .ob-lang-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 7px;
   padding: 2px 0 4px;
 }
@@ -466,13 +466,14 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 12px 6px 7px;
+  padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
   cursor: pointer;
   font-size: 13px;
   transition: background 0.12s, border-color 0.12s, opacity 0.12s;
   user-select: none;
+  min-width: 0; /* prevent grid blowout */
 }
 .ob-lang-chip.is-on {
   background: rgba(96,165,250,0.09);
