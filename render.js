@@ -74,6 +74,7 @@ function buildGameDetailsTab() {
     { id:'minimize_regulatory',  label:'Minimize Regulatory Steps' },
     { id:'english_only',         label:'Native-English only' },
     { id:'exclude_china',        label:'Exclude China' },
+    { id:'custom',               label:'Custom' },
   ];
 
   const langPresets = [
@@ -112,15 +113,10 @@ function buildGameDetailsTab() {
         <span class="ob-presets-label">Presets</span>
         <div class="ob-preset-pills">
           ${distPresets.map(p => `
-            <button class="ob-preset-pill ${dPreset === p.id && !manual ? 'is-active' : ''}"
+            <button class="ob-preset-pill ${dPreset === p.id ? 'is-active' : ''}"
+                    data-preset="${p.id}"
                     onclick="setObDistPreset('${p.id}')">${p.label}</button>`).join('')}
         </div>
-      </div>
-
-      <div class="ob-manual-row">
-        <button class="ob-manual-btn ${manual ? 'is-active' : ''}" onclick="toggleManualMarkets()">
-          Manually select markets
-        </button>
       </div>
 
       <div id="ob-country-list-wrap">${buildObCountryList()}</div>
@@ -209,32 +205,26 @@ function _obListHeader(leftLabel) {
     </div>`;
 }
 
-/* ── Country list ── always rendered; expands when manualMarkets is active */
+/* ── Country list ── always interactive chips; collapsed at 10 with chevron */
 function buildObCountryList() {
-  const fd      = state.formData;
-  const manual  = fd.manualMarkets || false;
+  const fd       = state.formData;
   const selected = new Set(fd.selectedCountries || []);
-
-  // All IOS_COUNTRIES sorted by iosGamers (already sorted in state.js)
-  const VISIBLE = 10;
-  const all     = IOS_COUNTRIES; // show all, grey out unselected in manual mode
-  const extra   = all.length - VISIBLE;
+  const VISIBLE  = 10;
+  const all      = IOS_COUNTRIES;
+  const extra    = all.length - VISIBLE;
 
   const rows = all.map((c, i) => {
     const isOn   = selected.has(c.code);
-    const hidden = (!manual && i >= VISIBLE) ? ' ob-list-row-extra' : '';
-    const nameEl = manual
-      ? `<button class="ob-list-chip ${isOn ? 'is-on' : 'is-off'}"
-                 onclick="toggleObCountry('${c.code}')">${c.name}</button>`
-      : `<span class="ob-list-name ${isOn ? '' : 'is-dimmed'}">${c.name}</span>`;
+    const hidden = i >= VISIBLE ? ' ob-list-row-extra' : '';
     return `
       <div class="ob-list-row${hidden}">
-        ${nameEl}
+        <button class="ob-list-chip ${isOn ? 'is-on' : 'is-off'}"
+                onclick="toggleObCountry('${c.code}')">${c.name}</button>
         <span class="ob-list-count ${isOn ? '' : 'is-dimmed'}">${_obFmtGamers(c.iosGamers)}</span>
       </div>`;
   }).join('');
 
-  const expandBtn = !manual && extra > 0 ? `
+  const expandBtn = extra > 0 ? `
     <div class="ob-list-expand" id="ob-country-expand" onclick="toggleObCountryList(this)">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       Show ${extra} more markets
@@ -242,7 +232,7 @@ function buildObCountryList() {
 
   return `
     ${_obListHeader('Market')}
-    <div class="ob-list ${manual ? 'is-expanded' : ''}" id="ob-country-list">${rows}</div>
+    <div class="ob-list" id="ob-country-list">${rows}</div>
     ${expandBtn}`;
 }
 

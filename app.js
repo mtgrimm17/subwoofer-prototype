@@ -742,49 +742,43 @@ function _obCountriesForPreset(preset) {
 
 function setObDistPreset(preset) {
   state.formData.distributionPreset = preset;
-  state.formData.manualMarkets      = false;
-  state.formData.selectedCountries  = _obCountriesForPreset(preset);
+  if (preset !== 'custom') {
+    // Apply the preset's country list
+    state.formData.selectedCountries = _obCountriesForPreset(preset);
+  }
+  // 'custom' keeps whatever countries are currently selected
   _refreshObDistSection();
 }
 
-function toggleManualMarkets() {
-  state.formData.manualMarkets = !state.formData.manualMarkets;
-  if (state.formData.manualMarkets) {
-    // Keep current country selection but clear preset active state
-    state.formData.distributionPreset = null;
-    // Ensure we have countries to work with
-    if (!state.formData.selectedCountries?.length) {
-      state.formData.selectedCountries = IOS_COUNTRIES.map(c => c.code);
-    }
-  }
-  _refreshObDistSection();
+function _selectionMatchesPreset(preset) {
+  const expected = new Set(_obCountriesForPreset(preset));
+  const actual   = new Set(state.formData.selectedCountries || []);
+  if (expected.size !== actual.size) return false;
+  for (const c of expected) { if (!actual.has(c)) return false; }
+  return true;
 }
 
 function toggleObCountry(code) {
   const arr = state.formData.selectedCountries;
   const idx = arr.indexOf(code);
   if (idx === -1) arr.push(code); else arr.splice(idx, 1);
-  updateObCountryList();
-  updateObLangListWrap();
-  renderObDistMap();
+
+  // Snap preset label to whichever named preset matches the new selection, else 'custom'
+  const namedPresets = ['recommended', 'global', 'minimize_regulatory', 'english_only', 'exclude_china'];
+  const matched = namedPresets.find(p => _selectionMatchesPreset(p));
+  state.formData.distributionPreset = matched || 'custom';
+
+  _refreshObDistSection();
 }
 
 function _refreshObDistSection() {
   renderObDistMap();
   updateObCountryList();
   updateObLangListWrap();
-  // Refresh preset button states
-  document.querySelectorAll('.ob-preset-pill').forEach(btn => {
-    const presetMap = {
-      'Recommended':'recommended', 'Global':'global',
-      'Minimize Regulatory Steps':'minimize_regulatory',
-      'Native-English only':'english_only', 'Exclude China':'exclude_china',
-    };
-    const pid = presetMap[btn.textContent.trim()];
-    if (pid) btn.classList.toggle('is-active', pid === state.formData.distributionPreset && !state.formData.manualMarkets);
+  // Refresh dist preset pill active states using data-preset attribute
+  document.querySelectorAll('.ob-preset-pill[data-preset]').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.preset === state.formData.distributionPreset);
   });
-  const manBtn = document.querySelector('.ob-manual-btn');
-  if (manBtn) manBtn.classList.toggle('is-active', !!state.formData.manualMarkets);
 }
 
 function updateObCountryList() {
