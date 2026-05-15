@@ -379,13 +379,14 @@ body {
 .ob-list-chip.is-on  { color: var(--text); }
 .ob-list-chip.is-off { color: var(--text-dim); }
 
-/* Regulatory flag marker */
+/* Regulatory flag marker — uses tooltip-anchor system for hover tooltip */
 .ob-reg-flag {
   font-size: 10px;
   margin-left: 4px;
   color: var(--text-faint);
-  cursor: help;
+  cursor: default;
   vertical-align: middle;
+  font-family: inherit;
 }
 .ob-reg-flag.is-warned {
   color: var(--orange);
@@ -454,27 +455,40 @@ body {
 .ob-star-btn:hover { color: #fbbf24; }
 .ob-star-btn.is-primary { color: #fbbf24; }
 
-/* Language row left side: star + name */
-.ob-lang-row-left {
+/* Language chips — multi-select chip strip */
+.ob-lang-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 2px 0 4px;
+}
+.ob-lang-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  padding: 6px 12px 6px 7px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  user-select: none;
 }
-/* Language table header left side: Primary label + Language label */
-.ob-lang-header-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.ob-lang-chip.is-on {
+  background: rgba(96,165,250,0.09);
+  border-color: rgba(96,165,250,0.45);
+  color: var(--text);
 }
-.ob-list-col-primary {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.ob-lang-chip.is-off {
+  opacity: 0.5;
   color: var(--text-dim);
-  width: 22px;
-  text-align: center;
-  flex-shrink: 0;
+}
+.ob-lang-chip:hover {
+  border-color: #60a5fa;
+  opacity: 1 !important;
+}
+.ob-lang-chip-label {
+  line-height: 1;
 }
 
 /* Empty state for language list */

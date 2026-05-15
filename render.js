@@ -199,7 +199,7 @@ function buildObCountryList() {
     const isOn  = selected.has(c.code);
     const tip   = OB_REG_TIPS[c.code];
     const flag  = tip
-      ? `<span class="ob-reg-flag${isOn ? ' is-warned' : ''}" title="${tip}">${isOn ? '(!)' : '(?)'}</span>`
+      ? `<span class="ob-reg-flag${isOn ? ' is-warned' : ''} tooltip-anchor" data-tip="${tip}">${isOn ? '(!)' : '(?)'}</span>`
       : '';
     return `
       <div class="ob-list-row ${isOn ? 'is-on' : 'is-off'}" onclick="toggleObCountry('${c.code}')">
@@ -219,62 +219,52 @@ function buildObCountryList() {
     </div>`;
 }
 
-/* ── Language list ── full-row selectable; star column sets primary language */
+/* ── Language chips ── top 8 languages as multi-select chips; star sets primary */
+const OB_LANG_DEFAULTS = ['en','zh','ja','ko','pt','es','de','fr'];
+
 function buildObLangList() {
   const fd        = state.formData;
   const countries = fd.selectedCountries || [];
   const primary   = fd.primaryLanguage   || 'en';
   const selected  = new Set(fd.localizations || []);
 
-  if (countries.length === 0) return '<div class="ob-lang-empty">Select target markets to see language options.</div>';
+  // Aggregate gamers per language from selected countries; fall back to global defaults
+  let top8;
+  if (countries.length > 0) {
+    const langTotals = {};
+    IOS_COUNTRIES.forEach(c => {
+      if (!countries.includes(c.code)) return;
+      langTotals[c.lang] = (langTotals[c.lang] || 0) + (c.iosGamers || 0);
+    });
+    top8 = Object.entries(langTotals)
+      .sort(([,a],[,b]) => b - a)
+      .map(([l]) => l)
+      .slice(0, 8);
+  } else {
+    top8 = OB_LANG_DEFAULTS.slice();
+  }
 
-  // Aggregate gamers per language from selected countries
-  const langTotals = {};
-  IOS_COUNTRIES.forEach(c => {
-    if (!countries.includes(c.code)) return;
-    langTotals[c.lang] = (langTotals[c.lang] || 0) + (c.iosGamers || 0);
-  });
+  // Ensure primary is always in the list (prepend if missing)
+  if (!top8.includes(primary)) top8 = [primary, ...top8.slice(0, 7)];
 
-  const ranked = Object.entries(langTotals)
-    .sort(([,a],[,b]) => b - a)
-    .filter(([,g]) => g >= 1);
-
-  if (ranked.length === 0) return '';
-
-  const rows = ranked.map(([lang, gamers]) => {
+  const chips = top8.map(lang => {
     const isPrimary  = lang === primary;
     const isSelected = isPrimary || selected.has(lang);
     return `
-      <div class="ob-list-row ${isSelected ? 'is-on' : 'is-off'}"
+      <div class="ob-lang-chip ${isSelected ? 'is-on' : 'is-off'}"
            onclick="${isPrimary ? '' : `toggleObLang('${lang}')`}"
            style="${isPrimary ? 'cursor:default' : ''}">
-        <div class="ob-lang-row-left">
-          <button class="ob-star-btn${isPrimary ? ' is-primary' : ''}"
-                  data-lang="${lang}"
-                  onclick="setObPrimaryLang('${lang}'); event.stopPropagation()"
-                  title="${isPrimary ? 'Primary language' : 'Set as primary language'}">
-            ${isPrimary ? '★' : '☆'}
-          </button>
-          <span class="ob-list-name">${OB_LANG_NAMES[lang] || lang}</span>
-        </div>
-        <span class="ob-list-count">${_obFmtGamers(gamers)}</span>
+        <button class="ob-star-btn${isPrimary ? ' is-primary' : ''}"
+                data-lang="${lang}"
+                onclick="setObPrimaryLang('${lang}'); event.stopPropagation()"
+                title="${isPrimary ? 'Primary language' : 'Set as primary language'}">
+          ${isPrimary ? '★' : '☆'}
+        </button>
+        <span class="ob-lang-chip-label">${OB_LANG_NAMES[lang] || lang}</span>
       </div>`;
   }).join('');
 
-  return `
-    ${_obLangListHeader()}
-    <div class="ob-list" id="ob-lang-list">${rows}</div>`;
-}
-
-function _obLangListHeader() {
-  return `
-    <div class="ob-list-header">
-      <div class="ob-lang-header-left">
-        <span class="ob-list-col-primary">Primary</span>
-        <span class="ob-list-col-name">Language</span>
-      </div>
-      <span class="ob-list-col-count">iOS Gamers</span>
-    </div>`;
+  return `<div class="ob-lang-chips" id="ob-lang-list">${chips}</div>`;
 }
 
 /* Tab 2: Upload Assets */
@@ -630,7 +620,7 @@ function renderDashboard() {
   const active   = [...state.activePlatforms];
   const inactive = Object.keys(PLATFORMS).filter(pid => !state.activePlatforms.has(pid));
 
-  let h = buildConsolidatedBanner();
+  let h = '';
 
   if (active.length === 0) {
     h += `

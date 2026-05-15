@@ -115,7 +115,7 @@ function completeOnboarding() {
     state.projects.push(proj);
     state.activeProjectId    = proj.id;
     state.activeSubmissionId = sub.id;
-    state.activePlatforms    = new Set();
+    // Keep state.activePlatforms — already populated by platform-select tab in onboarding
     state.platformStepStatus = makeEmptyPlatformSteps();
   }
 
@@ -886,15 +886,15 @@ function toggleObLang(lang) {
 function _refreshLangListInPlace() {
   const primary  = state.formData.primaryLanguage || 'en';
   const selected = new Set(state.formData.localizations || []);
-  document.querySelectorAll('#ob-lang-list .ob-list-row').forEach(row => {
-    const starBtn = row.querySelector('.ob-star-btn');
+  document.querySelectorAll('#ob-lang-list .ob-lang-chip').forEach(chip => {
+    const starBtn = chip.querySelector('.ob-star-btn');
     if (!starBtn) return;
     const lang       = starBtn.getAttribute('data-lang');
     if (!lang) return;
     const isPrimary  = lang === primary;
     const isSelected = isPrimary || selected.has(lang);
-    row.className    = `ob-list-row ${isSelected ? 'is-on' : 'is-off'}`;
-    row.style.cursor = isPrimary ? 'default' : '';
+    chip.className    = `ob-lang-chip ${isSelected ? 'is-on' : 'is-off'}`;
+    chip.style.cursor = isPrimary ? 'default' : '';
     starBtn.className   = `ob-star-btn${isPrimary ? ' is-primary' : ''}`;
     starBtn.textContent = isPrimary ? '★' : '☆';
     starBtn.title = isPrimary ? 'Primary language' : 'Set as primary language';
