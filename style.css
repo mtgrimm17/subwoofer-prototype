@@ -379,18 +379,26 @@ body {
 .ob-list-chip.is-on  { color: var(--text); }
 .ob-list-chip.is-off { color: var(--text-dim); }
 
-/* Regulatory flag marker — uses tooltip-anchor system for hover tooltip */
-.ob-reg-flag {
-  font-size: 10px;
-  margin-left: 4px;
-  color: var(--text-faint);
-  cursor: default;
+/* Mandatory field orange dot */
+.req-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orange);
+  margin-right: 6px;
+  flex-shrink: 0;
   vertical-align: middle;
-  font-family: inherit;
+  position: relative;
+  top: -1px;
 }
-.ob-reg-flag.is-warned {
+
+/* Regulatory tooltip icon — warned state turns orange */
+.tooltip-icon.is-warned {
+  border-color: var(--orange);
   color: var(--orange);
 }
+.ob-reg-tip { margin-left: 4px; }
 
 /* Country summary row (count + expand chevron) — styled as a panel header */
 .ob-country-summary {
@@ -475,6 +483,8 @@ body {
 }
 
 .loc-label {
+  display: flex;
+  align-items: center;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -535,17 +545,10 @@ body {
 }
 
 .loc-primary-name {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text);
-  flex-shrink: 0;
-}
-
-.loc-primary-region {
-  font-size: 12px;
-  color: #666;
   flex: 1;
-  padding-left: 4px;
 }
 
 .loc-chevron {

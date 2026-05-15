@@ -784,11 +784,8 @@ function _refreshCountryListInPlace() {
     if (!c) return;
     const isOn = selected.has(c.code);
     row.className  = `ob-list-row ${isOn ? 'is-on' : 'is-off'}`;
-    const flag = row.querySelector('.ob-reg-flag');
-    if (flag) {
-      flag.className   = `ob-reg-flag${isOn ? ' is-warned' : ''}`;
-      flag.textContent = isOn ? '(!)' : '(?)';
-    }
+    const tipIcon = row.querySelector('.tooltip-icon');
+    if (tipIcon) tipIcon.classList.toggle('is-warned', isOn);
   });
 }
 
@@ -915,8 +912,6 @@ function _refreshLangListInPlace() {
     const lang = m[1];
     const isOn = selected.has(lang);
     chip.className = `loc-chip${isOn ? ' is-on' : ''}`;
-    const icon = chip.querySelector('.loc-chip-icon');
-    if (icon) icon.textContent = isOn ? '✓' : '+';
   });
   // Update live count
   const countEl = document.getElementById('loc-supported-count');

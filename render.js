@@ -77,7 +77,7 @@ function buildGameDetailsTab() {
       <div class="ob-section-label">About your game</div>
 
       <div class="form-group">
-        <label class="form-label" for="ob-title">Game Title</label>
+        <label class="form-label" for="ob-title"><span class="req-dot"></span>Game Title</label>
         <input class="form-input" id="ob-title" type="text" maxlength="50"
                placeholder="e.g. Go Ape Ship!"
                oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30)">
@@ -85,7 +85,7 @@ function buildGameDetailsTab() {
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="ob-desc">Description</label>
+        <label class="form-label" for="ob-desc"><span class="req-dot"></span>Description</label>
         <textarea class="form-input" id="ob-desc" rows="5"
                   placeholder="Tell players what makes your game worth their time..."
                   oninput="syncField('description', this.value); charCount('ob-desc-count', this.value, 4000)"></textarea>
@@ -199,7 +199,7 @@ function buildObCountryList() {
     const isOn  = selected.has(c.code);
     const tip   = OB_REG_TIPS[c.code];
     const flag  = tip
-      ? `<span class="ob-reg-flag${isOn ? ' is-warned' : ''} tooltip-anchor" data-tip="${tip}">${isOn ? '(!)' : '(?)'}</span>`
+      ? `<span class="tooltip-anchor ob-reg-tip" data-tip="${tip}"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
       : '';
     return `
       <div class="ob-list-row ${isOn ? 'is-on' : 'is-off'}" onclick="toggleObCountry('${c.code}')">
@@ -239,10 +239,9 @@ function buildObLangList() {
   const selected = new Set(fd.localizations || []);
   const count    = selected.size;
 
-  const primaryName   = OB_LANG_NAMES[primary]   || primary;
-  const primaryRegion = OB_LANG_REGIONS[primary]  || '';
+  const primaryName = OB_LANG_NAMES[primary] || primary;
 
-  // Dropdown: all known languages
+  // Dropdown: all known languages — names only, no region codes
   const allLangCodes = Object.keys(OB_LANG_NAMES);
   const ddItems = allLangCodes.map(lang => {
     const isCur = lang === primary;
@@ -250,19 +249,17 @@ function buildObLangList() {
       <button class="loc-dd-item${isCur ? ' is-current' : ''}"
               onclick="selectLocPrimary('${lang}')">
         <span class="loc-dd-name">${OB_LANG_NAMES[lang] || lang}</span>
-        <span class="loc-dd-region">${OB_LANG_REGIONS[lang] || ''}</span>
         ${isCur ? '<span class="loc-dd-tag">CURRENT</span>' : ''}
       </button>`;
   }).join('');
 
-  // Chip grid: featured set minus current primary
+  // Chip grid: featured set minus current primary — name only, no icon
   const chipLangs = OB_LANG_FEATURED.filter(l => l !== primary);
   const chips = chipLangs.map(lang => {
     const isOn = selected.has(lang);
     return `
       <button class="loc-chip${isOn ? ' is-on' : ''}"
               onclick="toggleObLang('${lang}')">
-        <span class="loc-chip-icon">${isOn ? '✓' : '+'}</span>
         <span class="loc-chip-name">${OB_LANG_NAMES[lang] || lang}</span>
       </button>`;
   }).join('');
@@ -273,15 +270,13 @@ function buildObLangList() {
     <div class="loc-picker">
       <div class="loc-row">
         <div class="loc-label-col">
-          <div class="loc-label">PRIMARY</div>
-          <div class="loc-helper">Required · storefront default</div>
+          <div class="loc-label"><span class="req-dot"></span>PRIMARY</div>
         </div>
         <div class="loc-control-col">
           <div class="loc-primary-wrap" id="loc-primary-wrap">
             <button class="loc-primary-pill" onclick="toggleLocPrimaryDropdown(event)">
               <span class="loc-star">★</span>
               <span class="loc-primary-name">${primaryName}</span>
-              <span class="loc-primary-region">${primaryRegion}</span>
               ${chevSvg}
             </button>
             <div class="loc-dropdown" id="loc-dropdown">${ddItems}</div>
@@ -294,7 +289,6 @@ function buildObLangList() {
       <div class="loc-row">
         <div class="loc-label-col">
           <div class="loc-label">SUPPORTED</div>
-          <div class="loc-helper" id="loc-supported-count">Optional · ${count} selected</div>
         </div>
         <div class="loc-control-col">
           <div class="loc-chips" id="loc-chips">${chips}</div>
