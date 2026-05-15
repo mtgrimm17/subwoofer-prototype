@@ -731,12 +731,9 @@ const OB_REGULATORY_EXCLUSIONS = ['CN', 'KR', 'JP', 'DE', 'BE', 'VN', 'ZA'];
 
 function _obCountriesForPreset(preset) {
   switch (preset) {
-    case 'recommended':
-    case 'global':             return IOS_COUNTRIES.map(c => c.code);
-    case 'minimize_regulatory':return IOS_COUNTRIES.filter(c => !OB_REGULATORY_EXCLUSIONS.includes(c.code)).map(c => c.code);
-    case 'english_only':       return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
-    case 'exclude_china':      return IOS_COUNTRIES.filter(c => c.code !== 'CN').map(c => c.code);
-    default:                   return state.formData.selectedCountries || IOS_COUNTRIES.map(c => c.code);
+    case 'global':       return IOS_COUNTRIES.map(c => c.code);
+    case 'english_only': return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
+    default:             return state.formData.selectedCountries || IOS_COUNTRIES.map(c => c.code);
   }
 }
 
@@ -764,7 +761,7 @@ function toggleObCountry(code) {
   if (idx === -1) arr.push(code); else arr.splice(idx, 1);
 
   // Snap preset label to whichever named preset matches the new selection, else 'custom'
-  const namedPresets = ['recommended', 'global', 'minimize_regulatory', 'english_only', 'exclude_china'];
+  const namedPresets = ['global', 'english_only'];
   const matched = namedPresets.find(p => _selectionMatchesPreset(p));
   state.formData.distributionPreset = matched || 'custom';
 
@@ -780,21 +777,16 @@ function toggleObCountry(code) {
 }
 
 function _refreshCountryListInPlace() {
-  // Re-render chip states without collapsing the table
+  // Update row states without collapsing the table
   const selected = new Set(state.formData.selectedCountries || []);
   document.querySelectorAll('#ob-country-list .ob-list-row').forEach((row, i) => {
     const c    = IOS_COUNTRIES[i];
     if (!c) return;
     const isOn = selected.has(c.code);
-    const btn  = row.querySelector('.ob-list-chip');
-    const cnt  = row.querySelector('.ob-list-count');
+    row.className  = `ob-list-row ${isOn ? 'is-on' : 'is-off'}`;
     const flag = row.querySelector('.ob-reg-flag');
-    if (btn) {
-      btn.className = `ob-list-chip ${isOn ? 'is-on' : 'is-off'}`;
-    }
-    if (cnt) cnt.className = `ob-list-count${isOn ? '' : ' is-dimmed'}`;
     if (flag) {
-      flag.className = `ob-reg-flag${isOn ? ' is-warned' : ''}`;
+      flag.className   = `ob-reg-flag${isOn ? ' is-warned' : ''}`;
       flag.textContent = isOn ? '(!)' : '(?)';
     }
   });
@@ -851,6 +843,13 @@ function _computeLangPresetSelections(preset) {
   return fd.localizations || [];
 }
 
+function setObPrimaryLang(lang) {
+  state.formData.primaryLanguage = lang;
+  // Primary is always included; remove from additional localizations
+  state.formData.localizations = (state.formData.localizations || []).filter(l => l !== lang);
+  updateObLangListWrap();
+}
+
 function setObLangPreset(preset) {
   state.formData.localizationPreset = preset;
   state.formData.localizations      = _computeLangPresetSelections(preset);
@@ -875,12 +874,31 @@ function applyObLangPreset() {
 }
 
 function toggleObLang(lang) {
+  const primary = state.formData.primaryLanguage || 'en';
+  if (lang === primary) return; // primary can't be toggled off
   const arr = state.formData.localizations || [];
   const idx = arr.indexOf(lang);
   if (idx === -1) arr.push(lang); else arr.splice(idx, 1);
   state.formData.localizations = arr;
-  state.formData.localizationPreset = 'custom';
-  updateObLangListWrap();
+  _refreshLangListInPlace();
+}
+
+function _refreshLangListInPlace() {
+  const primary  = state.formData.primaryLanguage || 'en';
+  const selected = new Set(state.formData.localizations || []);
+  document.querySelectorAll('#ob-lang-list .ob-list-row').forEach(row => {
+    const starBtn = row.querySelector('.ob-star-btn');
+    if (!starBtn) return;
+    const lang       = starBtn.getAttribute('data-lang');
+    if (!lang) return;
+    const isPrimary  = lang === primary;
+    const isSelected = isPrimary || selected.has(lang);
+    row.className    = `ob-list-row ${isSelected ? 'is-on' : 'is-off'}`;
+    row.style.cursor = isPrimary ? 'default' : '';
+    starBtn.className   = `ob-star-btn${isPrimary ? ' is-primary' : ''}`;
+    starBtn.textContent = isPrimary ? '★' : '☆';
+    starBtn.title = isPrimary ? 'Primary language' : 'Set as primary language';
+  });
 }
 
 function updateObLangListWrap() {

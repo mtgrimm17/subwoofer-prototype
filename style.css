@@ -334,11 +334,23 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 10px;
-  border-radius: 7px;
-  transition: background 0.12s;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, opacity 0.12s, box-shadow 0.12s;
+  user-select: none;
 }
-.ob-list-row:hover { background: rgba(255,255,255,0.04); }
+.ob-list-row.is-on {
+  background: rgba(96,165,250,0.09);
+  box-shadow: inset 2px 0 0 rgba(96,165,250,0.6);
+}
+.ob-list-row.is-off {
+  opacity: 0.42;
+}
+.ob-list-row:hover {
+  background: rgba(255,255,255,0.06) !important;
+  opacity: 1 !important;
+}
 .ob-list-row-extra { display: none; }
 .ob-list.is-expanded .ob-list-row-extra { display: flex; }
 
@@ -353,27 +365,19 @@ body {
   font-family: inherit;
   text-align: left;
 }
-/* Country/language chip button — visually selectable */
-.ob-list-chip.is-on {
-  color: var(--text);
-  background: rgba(96,165,250,0.1);
-  border: 1px solid rgba(96,165,250,0.35);
-  border-radius: 5px;
-  padding: 2px 8px;
-}
-.ob-list-chip.is-off {
-  color: var(--text-dim);
+/* ob-list-chip kept for any legacy uses; selection is now row-level */
+.ob-list-chip {
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 2px 8px;
-  opacity: 0.7;
+  border: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
 }
-.ob-list-chip:hover {
-  border-color: #60a5fa;
-  color: var(--text);
-  opacity: 1;
-}
+.ob-list-chip.is-on  { color: var(--text); }
+.ob-list-chip.is-off { color: var(--text-dim); }
 
 /* Regulatory flag marker */
 .ob-reg-flag {
@@ -387,26 +391,33 @@ body {
   color: var(--orange);
 }
 
-/* Country summary row (count + expand chevron) */
+/* Country summary row (count + expand chevron) — styled as a panel header */
 .ob-country-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 9px 12px;
   cursor: pointer;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  transition: background 0.12s;
-  margin-bottom: 2px;
+  transition: background 0.12s, border-color 0.12s;
+  margin-bottom: 4px;
 }
-.ob-country-summary:hover { background: rgba(255,255,255,0.04); }
+.ob-country-summary:hover {
+  background: var(--panel-3);
+  border-color: var(--border-hover);
+}
 .ob-country-count {
   font-size: 12px;
+  font-weight: 600;
   color: var(--text-dim);
+  letter-spacing: 0.01em;
 }
 .ob-country-chevron {
   display: flex;
   align-items: center;
-  color: var(--text-faint);
+  color: var(--text-dim);
 }
 
 /* Collapsible table wrapper */
@@ -426,7 +437,54 @@ body {
   border-color: rgba(96,165,250,0.35);
 }
 
-/* Dot indicator for primary language */
+/* Star button — sets primary language */
+.ob-star-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 22px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+.ob-star-btn:hover { color: #fbbf24; }
+.ob-star-btn.is-primary { color: #fbbf24; }
+
+/* Language row left side: star + name */
+.ob-lang-row-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Language table header left side: Primary label + Language label */
+.ob-lang-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ob-list-col-primary {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Empty state for language list */
+.ob-lang-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 10px 10px 4px;
+}
+
+/* Dot indicator for primary language (legacy, kept for safety) */
 .ob-lang-primary-dot {
   display: inline-block;
   width: 5px;

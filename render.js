@@ -63,24 +63,13 @@ function renderOnboardingFooter() {
 
 /* Tab 1: Game Details */
 function buildGameDetailsTab() {
-  const fd     = state.formData;
-  const dPreset = fd.distributionPreset || 'recommended';
-  const lPreset = fd.localizationPreset || 'recommended';
-  const manual  = fd.manualMarkets || false;
+  const fd      = state.formData;
+  const dPreset = fd.distributionPreset || 'global';
 
   const distPresets = [
-    { id:'recommended',          label:'Recommended' },
-    { id:'global',               label:'Global' },
-    { id:'minimize_regulatory',  label:'Minimize Regulatory Steps' },
-    { id:'english_only',         label:'Native-English only' },
-    { id:'exclude_china',        label:'Exclude China' },
-    { id:'custom',               label:'Custom' },
-  ];
-
-  const langPresets = [
-    { id:'recommended',  label:'Recommended' },
-    { id:'primary_only', label:'Primary Language only' },
-    { id:'all_regions',  label:'Localize for all selected regions' },
+    { id:'global',        label:'Global' },
+    { id:'english_only',  label:'English only' },
+    { id:'custom',        label:'Custom' },
   ];
 
   return `
@@ -122,33 +111,6 @@ function buildGameDetailsTab() {
       <div id="ob-country-list-wrap">${buildObCountryList()}</div>
 
       <div class="ob-subsection-label" style="margin-top:20px;">Localization</div>
-
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label" for="ob-lang">Primary Language</label>
-        <select class="form-input" id="ob-lang"
-                onchange="syncField('primaryLanguage', this.value); applyObLangPreset()">
-          <option value="en">English</option>
-          <option value="fr">French</option>
-          <option value="de">German</option>
-          <option value="es">Spanish</option>
-          <option value="pt">Portuguese</option>
-          <option value="it">Italian</option>
-          <option value="ja">Japanese</option>
-          <option value="zh">Chinese (Simplified)</option>
-          <option value="ko">Korean</option>
-          <option value="ru">Russian</option>
-          <option value="ar">Arabic</option>
-        </select>
-      </div>
-
-      <div class="ob-presets-row">
-        <span class="ob-presets-label">Additional Languages</span>
-        <div class="ob-preset-pills">
-          ${langPresets.map(p => `
-            <button class="ob-preset-pill ${lPreset === p.id ? 'is-active' : ''}"
-                    onclick="setObLangPreset('${p.id}')">${p.label}</button>`).join('')}
-        </div>
-      </div>
 
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
 
@@ -205,15 +167,21 @@ function _obListHeader(leftLabel) {
     </div>`;
 }
 
-/* Regulatory extra-steps tooltip map */
+/* Regulatory extra-steps tooltip map — countries requiring non-standard compliance */
 const OB_REG_TIPS = {
-  CN: 'Requires government licensing & mandatory age verification system.',
-  KR: 'Requires GRAC age rating approval before distribution.',
-  JP: 'Requires CERO rating; platform-specific compliance steps apply.',
-  DE: 'Strict content regulations enforced by USK.',
-  BE: 'Loot box / gambling laws may require mechanics changes.',
-  VN: 'Requires government content approval prior to launch.',
-  ZA: 'Requires content classification from the Film and Publication Board.',
+  CN: 'Requires an ISBN game license from China\'s NPPA and a licensed local publishing partner. Foreign companies cannot self-publish.',
+  KR: 'Mandatory age rating from Korea\'s Game Rating and Administration Committee (GRAC) before any distribution.',
+  JP: 'CERO age rating required. Some content categories (extreme violence, adult themes) may be rejected or require edits.',
+  DE: 'USK age rating required. Certain content (hate symbols, excessive gore) is banned. USK-18 titles face advertising restrictions.',
+  AU: 'ACB classification required. Games refused classification cannot be sold. Content thresholds differ from US/EU standards.',
+  BR: 'CLASSIND age rating required for Brazilian app stores. Content descriptors must match local rating system.',
+  SA: 'Content must be approved by the General Authority for Audiovisual Media. Religious and political content is strictly restricted.',
+  ID: 'Ministry of Communication and Information Technology registration required. Local content rules apply.',
+  VN: 'Ministry of Information and Communications approval required before launch. Foreign games need a licensed local partner.',
+  NL: 'Paid loot boxes face gambling-law scrutiny; some mechanics may require modification or legal review.',
+  BE: 'Paid loot boxes are classified as illegal gambling. Games with paid randomized rewards risk fines or a sales ban.',
+  RU: 'Roskomnadzor content oversight applies. Geopolitical sanctions may complicate payment processing and distribution.',
+  ZA: 'Film and Publication Board (FPB) classification required. Unclassified games may not be sold commercially.',
 };
 
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
@@ -231,13 +199,12 @@ function buildObCountryList() {
     const isOn  = selected.has(c.code);
     const tip   = OB_REG_TIPS[c.code];
     const flag  = tip
-      ? ` <span class="ob-reg-flag${isOn ? ' is-warned' : ''}" title="${tip}">${isOn ? '(!)' : '(?)'}</span>`
+      ? `<span class="ob-reg-flag${isOn ? ' is-warned' : ''}" title="${tip}">${isOn ? '(!)' : '(?)'}</span>`
       : '';
     return `
-      <div class="ob-list-row">
-        <button class="ob-list-chip ${isOn ? 'is-on' : 'is-off'}"
-                onclick="toggleObCountry('${c.code}')">${c.name}${flag}</button>
-        <span class="ob-list-count ${isOn ? '' : 'is-dimmed'}">${_obFmtGamers(c.iosGamers)}</span>
+      <div class="ob-list-row ${isOn ? 'is-on' : 'is-off'}" onclick="toggleObCountry('${c.code}')">
+        <span class="ob-list-name">${c.name} ${flag}</span>
+        <span class="ob-list-count">${_obFmtGamers(c.iosGamers)}</span>
       </div>`;
   }).join('');
 
@@ -252,17 +219,16 @@ function buildObCountryList() {
     </div>`;
 }
 
-/* ── Language list ── shows all languages ranked by iOS gamers in selected regions */
+/* ── Language list ── full-row selectable; star column sets primary language */
 function buildObLangList() {
   const fd        = state.formData;
   const countries = fd.selectedCountries || [];
   const primary   = fd.primaryLanguage   || 'en';
-  const lPreset   = fd.localizationPreset || 'recommended';
   const selected  = new Set(fd.localizations || []);
 
-  if (countries.length === 0) return '';
+  if (countries.length === 0) return '<div class="ob-lang-empty">Select target markets to see language options.</div>';
 
-  // Aggregate gamers per language from selected countries (include primary for display)
+  // Aggregate gamers per language from selected countries
   const langTotals = {};
   IOS_COUNTRIES.forEach(c => {
     if (!countries.includes(c.code)) return;
@@ -275,47 +241,40 @@ function buildObLangList() {
 
   if (ranked.length === 0) return '';
 
-  const VISIBLE = 10;
-  const extra   = Math.max(0, ranked.length - VISIBLE);
-
-  // Recommendation text (top 2 non-primary)
-  const top2nonPrimary = ranked.filter(([l]) => l !== primary).slice(0, 2);
-  const top2Names = top2nonPrimary.map(([l]) => OB_LANG_NAMES[l] || l);
-  const top2Total = top2nonPrimary.reduce((s,[,g]) => s + g, 0);
-  const recText = lPreset === 'recommended' && top2Names.length
-    ? `Recommended: <strong>${[OB_LANG_NAMES[primary] || primary, ...top2Names].join(', ')}</strong> — reaches ~<strong>${top2Total}M</strong> additional gamers in their native language.`
-    : lPreset === 'primary_only'
-      ? `Publishing in <strong>${OB_LANG_NAMES[primary] || primary}</strong> only.`
-      : lPreset === 'all_regions'
-        ? `Localizing into all <strong>${ranked.length}</strong> languages across your selected markets.`
-        : '';
-
-  const rows = ranked.map(([lang, gamers], i) => {
-    const isSelected = lang === primary || selected.has(lang);
+  const rows = ranked.map(([lang, gamers]) => {
     const isPrimary  = lang === primary;
-    const hidden     = i >= VISIBLE ? ' ob-list-row-extra' : '';
+    const isSelected = isPrimary || selected.has(lang);
     return `
-      <div class="ob-list-row${hidden}">
-        <button class="ob-list-chip ${isSelected ? 'is-on' : 'is-off'} ${isPrimary ? 'is-primary' : ''}"
-                onclick="${isPrimary ? '' : `toggleObLang('${lang}')`}"
-                ${isPrimary ? 'disabled title="Primary language"' : ''}>
-          ${OB_LANG_NAMES[lang] || lang}${isPrimary ? ' <span class="ob-lang-primary-dot">●</span>' : ''}
-        </button>
+      <div class="ob-list-row ${isSelected ? 'is-on' : 'is-off'}"
+           onclick="${isPrimary ? '' : `toggleObLang('${lang}')`}"
+           style="${isPrimary ? 'cursor:default' : ''}">
+        <div class="ob-lang-row-left">
+          <button class="ob-star-btn${isPrimary ? ' is-primary' : ''}"
+                  data-lang="${lang}"
+                  onclick="setObPrimaryLang('${lang}'); event.stopPropagation()"
+                  title="${isPrimary ? 'Primary language' : 'Set as primary language'}">
+            ${isPrimary ? '★' : '☆'}
+          </button>
+          <span class="ob-list-name">${OB_LANG_NAMES[lang] || lang}</span>
+        </div>
         <span class="ob-list-count">${_obFmtGamers(gamers)}</span>
       </div>`;
   }).join('');
 
-  const expandBtn = extra > 0 ? `
-    <div class="ob-list-expand" id="ob-lang-expand" onclick="toggleObLangList(this)">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      Show ${extra} more languages
-    </div>` : '';
-
   return `
-    <div class="ob-lang-rec"><div class="ob-lang-rec-text">${recText}</div></div>
-    ${_obListHeader('Language')}
-    <div class="ob-list" id="ob-lang-list">${rows}</div>
-    ${expandBtn}`;
+    ${_obLangListHeader()}
+    <div class="ob-list" id="ob-lang-list">${rows}</div>`;
+}
+
+function _obLangListHeader() {
+  return `
+    <div class="ob-list-header">
+      <div class="ob-lang-header-left">
+        <span class="ob-list-col-primary">Primary</span>
+        <span class="ob-list-col-name">Language</span>
+      </div>
+      <span class="ob-list-col-count">iOS Gamers</span>
+    </div>`;
 }
 
 /* Tab 2: Upload Assets */
@@ -452,7 +411,6 @@ function hydrateGameDetailsTab() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   set('ob-title', fd.title);
   set('ob-desc',  fd.description);
-  set('ob-lang',  fd.primaryLanguage);
   set('ob-date',  fd.releaseDate);
   if (fd.title)       charCount('ob-title-count', fd.title,       30);
   if (fd.description) charCount('ob-desc-count',  fd.description, 4000);
