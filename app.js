@@ -843,12 +843,33 @@ function _computeLangPresetSelections(preset) {
   return fd.localizations || [];
 }
 
-function setObPrimaryLang(lang) {
-  state.formData.primaryLanguage = lang;
-  // Primary is always included; remove from additional localizations
-  state.formData.localizations = (state.formData.localizations || []).filter(l => l !== lang);
+/* ── Localization picker handlers ────────────────────── */
+
+function toggleLocPrimaryDropdown(event) {
+  event.stopPropagation();
+  const wrap = document.getElementById('loc-primary-wrap');
+  if (!wrap) return;
+  const isOpen = wrap.classList.contains('is-open');
+  closeAllDropdowns();
+  if (!isOpen) wrap.classList.add('is-open');
+}
+
+function selectLocPrimary(lang) {
+  const oldPrimary = state.formData.primaryLanguage || 'en';
+  // Demote old primary into supported (if it's in the featured set and not already there)
+  if (lang !== oldPrimary) {
+    const locs = new Set(state.formData.localizations || []);
+    if (OB_LANG_FEATURED.includes(oldPrimary)) locs.add(oldPrimary);
+    locs.delete(lang); // new primary leaves supported
+    state.formData.localizations  = [...locs];
+    state.formData.primaryLanguage = lang;
+  }
+  closeAllDropdowns();
   updateObLangListWrap();
 }
+
+// Legacy alias — kept for any older callers
+function setObPrimaryLang(lang) { selectLocPrimary(lang); }
 
 function setObLangPreset(preset) {
   state.formData.localizationPreset = preset;
@@ -875,7 +896,7 @@ function applyObLangPreset() {
 
 function toggleObLang(lang) {
   const primary = state.formData.primaryLanguage || 'en';
-  if (lang === primary) return; // primary can't be toggled off
+  if (lang === primary) return;
   const arr = state.formData.localizations || [];
   const idx = arr.indexOf(lang);
   if (idx === -1) arr.push(lang); else arr.splice(idx, 1);
@@ -884,21 +905,22 @@ function toggleObLang(lang) {
 }
 
 function _refreshLangListInPlace() {
-  const primary  = state.formData.primaryLanguage || 'en';
   const selected = new Set(state.formData.localizations || []);
-  document.querySelectorAll('#ob-lang-list .ob-lang-chip').forEach(chip => {
-    const starBtn = chip.querySelector('.ob-star-btn');
-    if (!starBtn) return;
-    const lang       = starBtn.getAttribute('data-lang');
-    if (!lang) return;
-    const isPrimary  = lang === primary;
-    const isSelected = isPrimary || selected.has(lang);
-    chip.className    = `ob-lang-chip ${isSelected ? 'is-on' : 'is-off'}`;
-    chip.style.cursor = isPrimary ? 'default' : '';
-    starBtn.className   = `ob-star-btn${isPrimary ? ' is-primary' : ''}`;
-    starBtn.textContent = isPrimary ? '★' : '☆';
-    starBtn.title = isPrimary ? 'Primary language' : 'Set as primary language';
+  const count    = selected.size;
+  // Update chip states
+  document.querySelectorAll('#loc-chips .loc-chip').forEach(chip => {
+    const onclick = chip.getAttribute('onclick') || '';
+    const m = onclick.match(/toggleObLang\('([^']+)'\)/);
+    if (!m) return;
+    const lang = m[1];
+    const isOn = selected.has(lang);
+    chip.className = `loc-chip${isOn ? ' is-on' : ''}`;
+    const icon = chip.querySelector('.loc-chip-icon');
+    if (icon) icon.textContent = isOn ? '✓' : '+';
   });
+  // Update live count
+  const countEl = document.getElementById('loc-supported-count');
+  if (countEl) countEl.textContent = `Optional · ${count} selected`;
 }
 
 function updateObLangListWrap() {
@@ -1246,6 +1268,7 @@ function closeAllDropdowns() {
   document.getElementById('submissionSelectorWrap')?.classList.remove('open');
   document.getElementById('submissionMenu')?.classList.remove('open');
   document.getElementById('profileMenu')?.classList.remove('open');
+  document.getElementById('loc-primary-wrap')?.classList.remove('is-open');
 }
 
 /* ── Profile menu ────────────────────────────────────── */

@@ -112,8 +112,6 @@ function buildGameDetailsTab() {
 
       <div class="ob-section-label" style="margin-top:28px;">Localization</div>
 
-      <div class="ob-subsection-label">Supported Languages</div>
-
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
 
       <div class="ob-section-label" style="margin-top:28px;">Release Timing</div>
@@ -221,39 +219,88 @@ function buildObCountryList() {
     </div>`;
 }
 
-/* ── Language chips ── fixed 9 languages; always shown regardless of market selection */
-// Industry-standard localization set (EFIGS + CJK + PT)
+/* ── Language picker ── two-row: primary (amber dropdown) + supported (green chips) */
+// Industry-standard localization set (EFIGS + CJK + PT) — always shown
 const OB_LANG_FEATURED = ['en','zh','ja','ko','es','pt','fr','de','it'];
+
+// Region labels for each language code
+const OB_LANG_REGIONS = {
+  en:'Global', zh:'CN / TW', ja:'JP', ko:'KR',
+  es:'ES / LATAM', pt:'BR / PT', fr:'FR', de:'DE', it:'IT',
+  ru:'RU', ar:'MENA', tr:'TR', id:'ID', th:'TH',
+  nl:'NL', pl:'PL', sv:'SE', nb:'NO', da:'DK', fi:'FI',
+  cs:'CZ', hu:'HU', ro:'RO', uk:'UA', vi:'VN',
+  ms:'MY', he:'IL', el:'GR',
+};
 
 function buildObLangList() {
   const fd       = state.formData;
   const primary  = fd.primaryLanguage || 'en';
   const selected = new Set(fd.localizations || []);
+  const count    = selected.size;
 
-  // Always use the fixed featured set; ensure primary is included (swap if needed)
-  let langs = OB_LANG_FEATURED.slice();
-  if (!langs.includes(primary)) {
-    langs = [primary, ...langs.slice(0, 8)]; // bump primary in, drop last
-  }
+  const primaryName   = OB_LANG_NAMES[primary]   || primary;
+  const primaryRegion = OB_LANG_REGIONS[primary]  || '';
 
-  const chips = langs.map(lang => {
-    const isPrimary  = lang === primary;
-    const isSelected = isPrimary || selected.has(lang);
+  // Dropdown: all known languages
+  const allLangCodes = Object.keys(OB_LANG_NAMES);
+  const ddItems = allLangCodes.map(lang => {
+    const isCur = lang === primary;
     return `
-      <div class="ob-lang-chip ${isSelected ? 'is-on' : 'is-off'}"
-           onclick="${isPrimary ? '' : `toggleObLang('${lang}')`}"
-           style="${isPrimary ? 'cursor:default' : ''}">
-        <button class="ob-star-btn${isPrimary ? ' is-primary' : ''}"
-                data-lang="${lang}"
-                onclick="setObPrimaryLang('${lang}'); event.stopPropagation()"
-                title="${isPrimary ? 'Primary language' : 'Set as primary language'}">
-          ${isPrimary ? '★' : '☆'}
-        </button>
-        <span class="ob-lang-chip-label">${OB_LANG_NAMES[lang] || lang}</span>
-      </div>`;
+      <button class="loc-dd-item${isCur ? ' is-current' : ''}"
+              onclick="selectLocPrimary('${lang}')">
+        <span class="loc-dd-name">${OB_LANG_NAMES[lang] || lang}</span>
+        <span class="loc-dd-region">${OB_LANG_REGIONS[lang] || ''}</span>
+        ${isCur ? '<span class="loc-dd-tag">CURRENT</span>' : ''}
+      </button>`;
   }).join('');
 
-  return `<div class="ob-lang-chips" id="ob-lang-list">${chips}</div>`;
+  // Chip grid: featured set minus current primary
+  const chipLangs = OB_LANG_FEATURED.filter(l => l !== primary);
+  const chips = chipLangs.map(lang => {
+    const isOn = selected.has(lang);
+    return `
+      <button class="loc-chip${isOn ? ' is-on' : ''}"
+              onclick="toggleObLang('${lang}')">
+        <span class="loc-chip-icon">${isOn ? '✓' : '+'}</span>
+        <span class="loc-chip-name">${OB_LANG_NAMES[lang] || lang}</span>
+      </button>`;
+  }).join('');
+
+  const chevSvg = `<svg class="loc-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+
+  return `
+    <div class="loc-picker">
+      <div class="loc-row">
+        <div class="loc-label-col">
+          <div class="loc-label">PRIMARY</div>
+          <div class="loc-helper">Required · storefront default</div>
+        </div>
+        <div class="loc-control-col">
+          <div class="loc-primary-wrap" id="loc-primary-wrap">
+            <button class="loc-primary-pill" onclick="toggleLocPrimaryDropdown(event)">
+              <span class="loc-star">★</span>
+              <span class="loc-primary-name">${primaryName}</span>
+              <span class="loc-primary-region">${primaryRegion}</span>
+              ${chevSvg}
+            </button>
+            <div class="loc-dropdown" id="loc-dropdown">${ddItems}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="loc-divider"></div>
+
+      <div class="loc-row">
+        <div class="loc-label-col">
+          <div class="loc-label">SUPPORTED</div>
+          <div class="loc-helper" id="loc-supported-count">Optional · ${count} selected</div>
+        </div>
+        <div class="loc-control-col">
+          <div class="loc-chips" id="loc-chips">${chips}</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 /* Tab 2: Upload Assets */
