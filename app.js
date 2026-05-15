@@ -768,7 +768,36 @@ function toggleObCountry(code) {
   const matched = namedPresets.find(p => _selectionMatchesPreset(p));
   state.formData.distributionPreset = matched || 'custom';
 
-  _refreshObDistSection();
+  // Update map + lang list; update country list in-place to preserve expand state
+  renderObDistMap();
+  updateObLangListWrap();
+  _refreshCountryListInPlace();
+  _refreshCountrySummary();
+  // Refresh preset pills
+  document.querySelectorAll('.ob-preset-pill[data-preset]').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.preset === state.formData.distributionPreset);
+  });
+}
+
+function _refreshCountryListInPlace() {
+  // Re-render chip states without collapsing the table
+  const selected = new Set(state.formData.selectedCountries || []);
+  document.querySelectorAll('#ob-country-list .ob-list-row').forEach((row, i) => {
+    const c    = IOS_COUNTRIES[i];
+    if (!c) return;
+    const isOn = selected.has(c.code);
+    const btn  = row.querySelector('.ob-list-chip');
+    const cnt  = row.querySelector('.ob-list-count');
+    const flag = row.querySelector('.ob-reg-flag');
+    if (btn) {
+      btn.className = `ob-list-chip ${isOn ? 'is-on' : 'is-off'}`;
+    }
+    if (cnt) cnt.className = `ob-list-count${isOn ? '' : ' is-dimmed'}`;
+    if (flag) {
+      flag.className = `ob-reg-flag${isOn ? ' is-warned' : ''}`;
+      flag.textContent = isOn ? '(!)' : '(?)';
+    }
+  });
 }
 
 function _refreshObDistSection() {
@@ -781,19 +810,24 @@ function _refreshObDistSection() {
   });
 }
 
+function _refreshCountrySummary() {
+  const el = document.querySelector('.ob-country-count');
+  if (!el) return;
+  const count = (state.formData.selectedCountries || []).length;
+  el.textContent = `${count} ${count === 1 ? 'country' : 'countries'} selected`;
+}
+
 function updateObCountryList() {
   const el = document.getElementById('ob-country-list-wrap');
   if (el) el.innerHTML = buildObCountryList();
 }
 
-function toggleObCountryList(btn) {
-  const list = document.getElementById('ob-country-list');
-  if (!list) return;
-  const expanded = list.classList.toggle('is-expanded');
-  const extra = IOS_COUNTRIES.length - 10;
-  btn.innerHTML = expanded
-    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Show fewer markets`
-    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Show ${extra} more markets`;
+function toggleObCountryList() {
+  const table   = document.getElementById('ob-country-table');
+  const chevron = document.getElementById('ob-country-chevron');
+  if (!table) return;
+  const nowExpanded = table.classList.toggle('is-expanded');
+  if (chevron) chevron.innerHTML = nowExpanded ? _chevUp : _chevDown;
 }
 
 /* ── Localization handlers ───────────────────────────── */

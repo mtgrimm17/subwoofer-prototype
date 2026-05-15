@@ -205,35 +205,51 @@ function _obListHeader(leftLabel) {
     </div>`;
 }
 
-/* ── Country list ── always interactive chips; collapsed at 10 with chevron */
+/* Regulatory extra-steps tooltip map */
+const OB_REG_TIPS = {
+  CN: 'Requires government licensing & mandatory age verification system.',
+  KR: 'Requires GRAC age rating approval before distribution.',
+  JP: 'Requires CERO rating; platform-specific compliance steps apply.',
+  DE: 'Strict content regulations enforced by USK.',
+  BE: 'Loot box / gambling laws may require mechanics changes.',
+  VN: 'Requires government content approval prior to launch.',
+  ZA: 'Requires content classification from the Film and Publication Board.',
+};
+
+const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
+
+/* ── Country list ── summary row + collapsible table; Custom starts expanded */
 function buildObCountryList() {
   const fd       = state.formData;
   const selected = new Set(fd.selectedCountries || []);
-  const VISIBLE  = 10;
+  const isCustom = (fd.distributionPreset || 'recommended') === 'custom';
+  const count    = selected.size;
   const all      = IOS_COUNTRIES;
-  const extra    = all.length - VISIBLE;
 
-  const rows = all.map((c, i) => {
-    const isOn   = selected.has(c.code);
-    const hidden = i >= VISIBLE ? ' ob-list-row-extra' : '';
+  const rows = all.map(c => {
+    const isOn  = selected.has(c.code);
+    const tip   = OB_REG_TIPS[c.code];
+    const flag  = tip
+      ? ` <span class="ob-reg-flag${isOn ? ' is-warned' : ''}" title="${tip}">${isOn ? '(!)' : '(?)'}</span>`
+      : '';
     return `
-      <div class="ob-list-row${hidden}">
+      <div class="ob-list-row">
         <button class="ob-list-chip ${isOn ? 'is-on' : 'is-off'}"
-                onclick="toggleObCountry('${c.code}')">${c.name}</button>
+                onclick="toggleObCountry('${c.code}')">${c.name}${flag}</button>
         <span class="ob-list-count ${isOn ? '' : 'is-dimmed'}">${_obFmtGamers(c.iosGamers)}</span>
       </div>`;
   }).join('');
 
-  const expandBtn = extra > 0 ? `
-    <div class="ob-list-expand" id="ob-country-expand" onclick="toggleObCountryList(this)">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      Show ${extra} more markets
-    </div>` : '';
-
   return `
-    ${_obListHeader('Market')}
-    <div class="ob-list" id="ob-country-list">${rows}</div>
-    ${expandBtn}`;
+    <div class="ob-country-summary" onclick="toggleObCountryList()">
+      <span class="ob-country-count">${count} ${count === 1 ? 'country' : 'countries'} selected</span>
+      <span class="ob-country-chevron" id="ob-country-chevron">${isCustom ? _chevUp : _chevDown}</span>
+    </div>
+    <div class="ob-country-table${isCustom ? ' is-expanded' : ''}" id="ob-country-table">
+      ${_obListHeader('Country')}
+      <div class="ob-list" id="ob-country-list">${rows}</div>
+    </div>`;
 }
 
 /* ── Language list ── shows all languages ranked by iOS gamers in selected regions */
