@@ -63,14 +63,24 @@ function renderOnboardingFooter() {
 
 /* Tab 1: Game Details */
 function buildGameDetailsTab() {
-  const preset = state.formData.distributionPreset || 'everywhere';
-  const presetLabels = {
-    everywhere:    'Globally',
-    no_regulatory: 'No additional regulatory steps',
-    english_only:  'English-speaking only',
-    exclude_china: 'Exclude China',
-    custom:        'Custom',
-  };
+  const fd     = state.formData;
+  const dPreset = fd.distributionPreset || 'recommended';
+  const lPreset = fd.localizationPreset || 'recommended';
+  const manual  = fd.manualMarkets || false;
+
+  const distPresets = [
+    { id:'recommended',          label:'Recommended' },
+    { id:'global',               label:'Global' },
+    { id:'minimize_regulatory',  label:'Minimize Regulatory Steps' },
+    { id:'english_only',         label:'Native-English only' },
+    { id:'exclude_china',        label:'Exclude China' },
+  ];
+
+  const langPresets = [
+    { id:'recommended',  label:'Recommended' },
+    { id:'primary_only', label:'Primary Language only' },
+    { id:'all_regions',  label:'Localize for all selected regions' },
+  ];
 
   return `
     <div class="ob-form">
@@ -96,20 +106,55 @@ function buildGameDetailsTab() {
 
       <div class="ob-subsection-label">Target Markets</div>
 
-      <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:10px;"></div>
+      <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:12px;"></div>
 
-      <div class="ob-dist-presets">
-        ${Object.entries(presetLabels).map(([p, label]) => {
-          const active = preset === p;
-          return `<button class="ob-dist-preset-btn ${active ? 'is-active' : ''}" onclick="setObDistPreset('${p}')">${label}</button>`;
-        }).join('')}
+      <div class="ob-presets-row">
+        <span class="ob-presets-label">Presets</span>
+        <div class="ob-preset-pills">
+          ${distPresets.map(p => `
+            <button class="ob-preset-pill ${dPreset === p.id && !manual ? 'is-active' : ''}"
+                    onclick="setObDistPreset('${p.id}')">${p.label}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="ob-manual-row">
+        <button class="ob-manual-btn ${manual ? 'is-active' : ''}" onclick="toggleManualMarkets()">
+          Manually select markets
+        </button>
       </div>
 
       <div id="ob-country-list-wrap">${buildObCountryList()}</div>
 
-      <div class="ob-subsection-label" style="margin-top:18px;">Localization</div>
+      <div class="ob-subsection-label" style="margin-top:20px;">Localization</div>
 
-      <div id="ob-lang-recs">${buildObLangRecs()}</div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label" for="ob-lang">Primary Language</label>
+        <select class="form-input" id="ob-lang"
+                onchange="syncField('primaryLanguage', this.value); applyObLangPreset()">
+          <option value="en">English</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="es">Spanish</option>
+          <option value="pt">Portuguese</option>
+          <option value="it">Italian</option>
+          <option value="ja">Japanese</option>
+          <option value="zh">Chinese (Simplified)</option>
+          <option value="ko">Korean</option>
+          <option value="ru">Russian</option>
+          <option value="ar">Arabic</option>
+        </select>
+      </div>
+
+      <div class="ob-presets-row">
+        <span class="ob-presets-label">Additional Languages</span>
+        <div class="ob-preset-pills">
+          ${langPresets.map(p => `
+            <button class="ob-preset-pill ${lPreset === p.id ? 'is-active' : ''}"
+                    onclick="setObLangPreset('${p.id}')">${p.label}</button>`).join('')}
+        </div>
+      </div>
+
+      <div id="ob-lang-list-wrap">${buildObLangList()}</div>
 
       <div class="ob-section-label" style="margin-top:24px;">Release Timing</div>
       <div class="option-cards" id="ob-release-timing">
@@ -154,9 +199,7 @@ const OB_LANG_NAMES = {
   ms:'Malay', he:'Hebrew', el:'Greek',
 };
 
-function _obFmtGamers(n) {
-  return n >= 1 ? `${n}M` : '<1M';
-}
+function _obFmtGamers(n) { return n >= 1 ? `${n}M` : '<1M'; }
 
 function _obListHeader(leftLabel) {
   return `
@@ -166,27 +209,32 @@ function _obListHeader(leftLabel) {
     </div>`;
 }
 
-/* Country list — only shown when preset === 'custom' */
+/* ── Country list ── always rendered; expands when manualMarkets is active */
 function buildObCountryList() {
-  const fd = state.formData;
-  if (fd.distributionPreset !== 'custom') return '';
+  const fd      = state.formData;
+  const manual  = fd.manualMarkets || false;
+  const selected = new Set(fd.selectedCountries || []);
 
+  // All IOS_COUNTRIES sorted by iosGamers (already sorted in state.js)
   const VISIBLE = 10;
-  const countries = (fd.selectedCountries || []);
-  // Sort by iosGamers descending using IOS_COUNTRIES order (already sorted)
-  const sorted = IOS_COUNTRIES.filter(c => countries.includes(c.code));
-  const extra  = sorted.length - VISIBLE;
+  const all     = IOS_COUNTRIES; // show all, grey out unselected in manual mode
+  const extra   = all.length - VISIBLE;
 
-  const rows = sorted.map((c, i) => {
-    const hidden = i >= VISIBLE ? ' ob-list-row-extra' : '';
+  const rows = all.map((c, i) => {
+    const isOn   = selected.has(c.code);
+    const hidden = (!manual && i >= VISIBLE) ? ' ob-list-row-extra' : '';
+    const nameEl = manual
+      ? `<button class="ob-list-chip ${isOn ? 'is-on' : 'is-off'}"
+                 onclick="toggleObCountry('${c.code}')">${c.name}</button>`
+      : `<span class="ob-list-name ${isOn ? '' : 'is-dimmed'}">${c.name}</span>`;
     return `
       <div class="ob-list-row${hidden}">
-        <button class="ob-list-chip is-on" onclick="toggleObCountry('${c.code}')">${c.name}</button>
-        <span class="ob-list-count">${_obFmtGamers(c.iosGamers)}</span>
+        ${nameEl}
+        <span class="ob-list-count ${isOn ? '' : 'is-dimmed'}">${_obFmtGamers(c.iosGamers)}</span>
       </div>`;
   }).join('');
 
-  const expandBtn = extra > 0 ? `
+  const expandBtn = !manual && extra > 0 ? `
     <div class="ob-list-expand" id="ob-country-expand" onclick="toggleObCountryList(this)">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       Show ${extra} more markets
@@ -194,22 +242,24 @@ function buildObCountryList() {
 
   return `
     ${_obListHeader('Market')}
-    <div class="ob-list" id="ob-country-list">${rows}</div>
+    <div class="ob-list ${manual ? 'is-expanded' : ''}" id="ob-country-list">${rows}</div>
     ${expandBtn}`;
 }
 
-/* Language recs + list */
-function buildObLangRecs() {
-  const fd       = state.formData;
+/* ── Language list ── shows all languages ranked by iOS gamers in selected regions */
+function buildObLangList() {
+  const fd        = state.formData;
   const countries = fd.selectedCountries || [];
   const primary   = fd.primaryLanguage   || 'en';
+  const lPreset   = fd.localizationPreset || 'recommended';
+  const selected  = new Set(fd.localizations || []);
 
   if (countries.length === 0) return '';
 
+  // Aggregate gamers per language from selected countries (include primary for display)
   const langTotals = {};
   IOS_COUNTRIES.forEach(c => {
     if (!countries.includes(c.code)) return;
-    if (c.lang === primary) return;
     langTotals[c.lang] = (langTotals[c.lang] || 0) + (c.iosGamers || 0);
   });
 
@@ -219,27 +269,32 @@ function buildObLangRecs() {
 
   if (ranked.length === 0) return '';
 
-  const VISIBLE  = 5;
-  const top3     = ranked.slice(0, 3);
-  const top3Names = top3.map(([l]) => OB_LANG_NAMES[l] || l);
-  const top3Total = top3.reduce((s,[,g]) => s + g, 0);
-  const extra    = ranked.length - VISIBLE;
+  const VISIBLE = 10;
+  const extra   = Math.max(0, ranked.length - VISIBLE);
 
-  const presetLabel = {
-    everywhere:'global', no_regulatory:'regulatory-light',
-    english_only:'English-speaking', exclude_china:'non-China', custom:'custom',
-  }[fd.distributionPreset || 'everywhere'] || 'selected';
-
-  const recText = top3Names.length
-    ? `Based on your ${presetLabel} distribution, we suggest localizing into <strong>${top3Names.join(', ')}</strong> to reach an estimated <strong>${top3Total}M</strong> additional iOS gamers in their native language.`
-    : '';
+  // Recommendation text (top 2 non-primary)
+  const top2nonPrimary = ranked.filter(([l]) => l !== primary).slice(0, 2);
+  const top2Names = top2nonPrimary.map(([l]) => OB_LANG_NAMES[l] || l);
+  const top2Total = top2nonPrimary.reduce((s,[,g]) => s + g, 0);
+  const recText = lPreset === 'recommended' && top2Names.length
+    ? `Recommended: <strong>${[OB_LANG_NAMES[primary] || primary, ...top2Names].join(', ')}</strong> — reaches ~<strong>${top2Total}M</strong> additional gamers in their native language.`
+    : lPreset === 'primary_only'
+      ? `Publishing in <strong>${OB_LANG_NAMES[primary] || primary}</strong> only.`
+      : lPreset === 'all_regions'
+        ? `Localizing into all <strong>${ranked.length}</strong> languages across your selected markets.`
+        : '';
 
   const rows = ranked.map(([lang, gamers], i) => {
-    const hidden = i >= VISIBLE ? ' ob-list-row-extra' : '';
-    const isRec  = i < 3;
+    const isSelected = lang === primary || selected.has(lang);
+    const isPrimary  = lang === primary;
+    const hidden     = i >= VISIBLE ? ' ob-list-row-extra' : '';
     return `
       <div class="ob-list-row${hidden}">
-        <span class="ob-list-name${isRec ? ' is-recommended' : ''}">${OB_LANG_NAMES[lang] || lang}</span>
+        <button class="ob-list-chip ${isSelected ? 'is-on' : 'is-off'} ${isPrimary ? 'is-primary' : ''}"
+                onclick="${isPrimary ? '' : `toggleObLang('${lang}')`}"
+                ${isPrimary ? 'disabled title="Primary language"' : ''}>
+          ${OB_LANG_NAMES[lang] || lang}${isPrimary ? ' <span class="ob-lang-primary-dot">●</span>' : ''}
+        </button>
         <span class="ob-list-count">${_obFmtGamers(gamers)}</span>
       </div>`;
   }).join('');
@@ -251,9 +306,7 @@ function buildObLangRecs() {
     </div>` : '';
 
   return `
-    <div class="ob-lang-rec">
-      <div class="ob-lang-rec-text">${recText}</div>
-    </div>
+    <div class="ob-lang-rec"><div class="ob-lang-rec-text">${recText}</div></div>
     ${_obListHeader('Language')}
     <div class="ob-list" id="ob-lang-list">${rows}</div>
     ${expandBtn}`;

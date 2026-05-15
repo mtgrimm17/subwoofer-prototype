@@ -1342,8 +1342,10 @@ function makeBlankFormData() {
     primaryLanguage:      'en',
     localized:            false,
     localizations:        [],   // languages the developer plans to localize into
-    distributionPreset:   'everywhere',
-    selectedCountries:    [],   // project-level market selection (initialized from preset on first use)
+    distributionPreset:   'recommended', // recommended|global|minimize_regulatory|english_only|exclude_china
+    selectedCountries:    [],            // initialized from preset on first use
+    manualMarkets:        false,         // true when user is manually toggling countries
+    localizationPreset:   'recommended', // recommended|primary_only|all_regions
     releaseTiming:        'manual',
     releaseDate:          '',
     trailerUrl:           '',

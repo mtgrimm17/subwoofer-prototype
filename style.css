@@ -202,17 +202,32 @@ body {
 
 .ob-dot.is-done { background: rgba(74, 222, 128, 0.4); }
 
-/* Distribution preset pills (onboarding tab 1) */
-.ob-dist-presets {
+/* Presets row: "Presets:" label + pill strip */
+.ob-presets-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.ob-presets-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-top: 6px;
+  flex-shrink: 0;
+}
+.ob-preset-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 4px;
 }
-.ob-dist-preset-btn {
+.ob-preset-pill {
   font-size: 12px;
   font-weight: 500;
-  padding: 5px 12px;
+  padding: 4px 12px;
   border-radius: 20px;
   border: 1.5px solid var(--border);
   background: transparent;
@@ -222,14 +237,43 @@ body {
   transition: border-color 0.15s, color 0.15s, background 0.15s;
   white-space: nowrap;
 }
-.ob-dist-preset-btn:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
+.ob-preset-pill:hover {
+  border-color: #60a5fa;
+  color: var(--text);
 }
-.ob-dist-preset-btn.is-active {
-  border-color: var(--accent);
-  background: rgba(10,132,255,0.14);
-  color: #4da3ff;
+.ob-preset-pill.is-active {
+  border-color: #60a5fa;
+  background: rgba(96,165,250,0.13);
+  color: #60a5fa;
+}
+
+/* Manual markets row */
+.ob-manual-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ob-manual-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.ob-manual-btn:hover {
+  border-color: #60a5fa;
+  color: var(--text);
+}
+.ob-manual-btn.is-active {
+  border-color: #60a5fa;
+  background: rgba(96,165,250,0.13);
+  color: #60a5fa;
 }
 
 /* Subsection label */
@@ -309,15 +353,44 @@ body {
   font-family: inherit;
   text-align: left;
 }
-.ob-list-chip.is-on { color: var(--text-primary); }
-.ob-list-chip:hover { color: var(--accent); }
+.ob-list-chip.is-on  { color: var(--text); }
+.ob-list-chip.is-off {
+  color: var(--text-faint);
+  opacity: 0.55;
+}
+.ob-list-chip:hover { color: #60a5fa; }
+
+/* Primary language chip — always-on, no pointer */
+.ob-list-chip.is-primary {
+  color: #60a5fa;
+  cursor: default;
+  opacity: 1;
+}
+.ob-list-chip.is-primary:hover { color: #60a5fa; }
+
+/* Dot indicator for primary language */
+.ob-lang-primary-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #60a5fa;
+  margin-left: 4px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* Dimmed state for non-selected rows */
+.is-dimmed {
+  opacity: 0.38;
+}
 
 .ob-list-name {
   font-size: 13px;
-  color: var(--text-secondary, #ccc);
+  color: #ccc;
 }
 .ob-list-name.is-recommended {
-  color: var(--text-primary);
+  color: var(--text);
   font-weight: 500;
 }
 .ob-list-count {

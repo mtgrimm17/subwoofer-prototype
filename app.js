@@ -727,34 +727,64 @@ function toggleLang(el, code) {
 
 /* ── Onboarding Distribution Map & Localization ──────── */
 
-// Countries requiring extra regulatory steps beyond standard IARC
 const OB_REGULATORY_EXCLUSIONS = ['CN', 'KR', 'JP', 'DE', 'BE', 'VN', 'ZA'];
 
 function _obCountriesForPreset(preset) {
   switch (preset) {
-    case 'everywhere':    return IOS_COUNTRIES.map(c => c.code);
-    case 'no_regulatory': return IOS_COUNTRIES.filter(c => !OB_REGULATORY_EXCLUSIONS.includes(c.code)).map(c => c.code);
-    case 'english_only':  return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
-    case 'exclude_china': return IOS_COUNTRIES.filter(c => c.code !== 'CN').map(c => c.code);
-    case 'custom':        return state.formData.selectedCountries; // keep as-is
-    default:              return IOS_COUNTRIES.map(c => c.code);
+    case 'recommended':
+    case 'global':             return IOS_COUNTRIES.map(c => c.code);
+    case 'minimize_regulatory':return IOS_COUNTRIES.filter(c => !OB_REGULATORY_EXCLUSIONS.includes(c.code)).map(c => c.code);
+    case 'english_only':       return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
+    case 'exclude_china':      return IOS_COUNTRIES.filter(c => c.code !== 'CN').map(c => c.code);
+    default:                   return state.formData.selectedCountries || IOS_COUNTRIES.map(c => c.code);
   }
 }
 
 function setObDistPreset(preset) {
   state.formData.distributionPreset = preset;
+  state.formData.manualMarkets      = false;
   state.formData.selectedCountries  = _obCountriesForPreset(preset);
+  _refreshObDistSection();
+}
 
-  // Update preset button active states
-  document.querySelectorAll('.ob-dist-preset-btn').forEach(btn => {
-    const labels = { everywhere:'Globally', no_regulatory:'No additional regulatory steps',
-      english_only:'English-speaking only', exclude_china:'Exclude China', custom:'Custom' };
-    btn.classList.toggle('is-active', btn.textContent.trim() === labels[preset]);
-  });
+function toggleManualMarkets() {
+  state.formData.manualMarkets = !state.formData.manualMarkets;
+  if (state.formData.manualMarkets) {
+    // Keep current country selection but clear preset active state
+    state.formData.distributionPreset = null;
+    // Ensure we have countries to work with
+    if (!state.formData.selectedCountries?.length) {
+      state.formData.selectedCountries = IOS_COUNTRIES.map(c => c.code);
+    }
+  }
+  _refreshObDistSection();
+}
 
+function toggleObCountry(code) {
+  const arr = state.formData.selectedCountries;
+  const idx = arr.indexOf(code);
+  if (idx === -1) arr.push(code); else arr.splice(idx, 1);
+  updateObCountryList();
+  updateObLangListWrap();
+  renderObDistMap();
+}
+
+function _refreshObDistSection() {
   renderObDistMap();
   updateObCountryList();
-  updateObLangRecs();
+  updateObLangListWrap();
+  // Refresh preset button states
+  document.querySelectorAll('.ob-preset-pill').forEach(btn => {
+    const presetMap = {
+      'Recommended':'recommended', 'Global':'global',
+      'Minimize Regulatory Steps':'minimize_regulatory',
+      'Native-English only':'english_only', 'Exclude China':'exclude_china',
+    };
+    const pid = presetMap[btn.textContent.trim()];
+    if (pid) btn.classList.toggle('is-active', pid === state.formData.distributionPreset && !state.formData.manualMarkets);
+  });
+  const manBtn = document.querySelector('.ob-manual-btn');
+  if (manBtn) manBtn.classList.toggle('is-active', !!state.formData.manualMarkets);
 }
 
 function updateObCountryList() {
@@ -762,25 +792,75 @@ function updateObCountryList() {
   if (el) el.innerHTML = buildObCountryList();
 }
 
-function toggleObCountry(code) {
-  state.formData.distributionPreset = 'custom';
-  const arr = state.formData.selectedCountries;
-  const idx = arr.indexOf(code);
-  if (idx === -1) arr.push(code); else arr.splice(idx, 1);
-  updateObCountryList();
-  updateObLangRecs();
-  renderObDistMap();
-}
-
 function toggleObCountryList(btn) {
   const list = document.getElementById('ob-country-list');
   if (!list) return;
   const expanded = list.classList.toggle('is-expanded');
-  const extra = IOS_COUNTRIES.filter(c => (state.formData.selectedCountries || []).includes(c.code)).length - 10;
+  const extra = IOS_COUNTRIES.length - 10;
   btn.innerHTML = expanded
     ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Show fewer markets`
     : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Show ${extra} more markets`;
 }
+
+/* ── Localization handlers ───────────────────────────── */
+
+function _computeLangPresetSelections(preset) {
+  const fd      = state.formData;
+  const primary = fd.primaryLanguage || 'en';
+  const countries = fd.selectedCountries || [];
+
+  // Aggregate gamers per non-primary language
+  const langTotals = {};
+  IOS_COUNTRIES.forEach(c => {
+    if (!countries.includes(c.code) || c.lang === primary) return;
+    langTotals[c.lang] = (langTotals[c.lang] || 0) + (c.iosGamers || 0);
+  });
+  const ranked = Object.entries(langTotals).sort(([,a],[,b]) => b - a).map(([l]) => l);
+
+  if (preset === 'recommended')  return ranked.slice(0, 2);
+  if (preset === 'primary_only') return [];
+  if (preset === 'all_regions')  return ranked;
+  return fd.localizations || [];
+}
+
+function setObLangPreset(preset) {
+  state.formData.localizationPreset = preset;
+  state.formData.localizations      = _computeLangPresetSelections(preset);
+  updateObLangListWrap();
+  // Update pill states
+  document.querySelectorAll('.ob-preset-pill').forEach(btn => {
+    const presetMap = {
+      'Recommended':'recommended',
+      'Primary Language only':'primary_only',
+      'Localize for all selected regions':'all_regions',
+    };
+    const pid = presetMap[btn.textContent.trim()];
+    if (pid) btn.classList.toggle('is-active', pid === preset);
+  });
+}
+
+function applyObLangPreset() {
+  // Re-apply current lang preset when primary language changes
+  const preset = state.formData.localizationPreset || 'recommended';
+  state.formData.localizations = _computeLangPresetSelections(preset);
+  updateObLangListWrap();
+}
+
+function toggleObLang(lang) {
+  const arr = state.formData.localizations || [];
+  const idx = arr.indexOf(lang);
+  if (idx === -1) arr.push(lang); else arr.splice(idx, 1);
+  state.formData.localizations = arr;
+  state.formData.localizationPreset = 'custom';
+  updateObLangListWrap();
+}
+
+function updateObLangListWrap() {
+  const el = document.getElementById('ob-lang-list-wrap');
+  if (el) el.innerHTML = buildObLangList();
+}
+
+function updateObLangRecs() { updateObLangListWrap(); } // alias for old callers
 
 function toggleObLangList(btn) {
   const list = document.getElementById('ob-lang-list');
