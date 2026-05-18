@@ -43,7 +43,7 @@ function setOnboardingTab(idx) {
 }
 
 function nextOnboardingTab() {
-  if (state.onboardingTab < 3) {
+  if (state.onboardingTab < 2) {
     state.onboardingTab++;
     renderOnboarding();
     const body = document.getElementById('ob-body');
@@ -60,9 +60,9 @@ function toggleOnboardingPlatform(pid) {
       state.platformStepStatus[pid] = makeEmptyPlatformSteps()[pid] || {};
     }
   }
-  // Re-render just the body + footer so selection reflects immediately
-  const el = document.getElementById('ob-body');
-  if (el) el.innerHTML = buildPlatformSelectTab();
+  // Re-render just the platform tiles section in-place (platform is now in Game Details tab)
+  const gridWrap = document.getElementById('ob-plat-grid-wrap');
+  if (gridWrap) gridWrap.innerHTML = buildObPlatTilesHTML();
   renderOnboardingFooter();
 }
 
@@ -81,9 +81,14 @@ function completeOnboarding() {
     setOnboardingTab(0);
     return;
   }
+  if (state.activePlatforms.size === 0) {
+    alert('Please select at least one platform before continuing.');
+    setOnboardingTab(0);
+    return;
+  }
 
   if (state._newProjectMode) {
-    // Creating a 2nd+ project
+    // Creating a 2nd+ project — preserve activePlatforms selected during onboarding
     const sub  = makeEmptySubmission('Submission 1.0');
     const proj = {
       id:               generateId('proj'),
@@ -97,7 +102,7 @@ function completeOnboarding() {
     state.projects.push(proj);
     state.activeProjectId    = proj.id;
     state.activeSubmissionId = sub.id;
-    state.activePlatforms    = new Set();
+    // Keep state.activePlatforms — already populated by platform tiles in onboarding
     state.platformStepStatus = makeEmptyPlatformSteps();
     state._newProjectMode    = false;
   } else {
@@ -582,7 +587,7 @@ function toggleIOSCountry(code) {
   // Update bar color directly
   const row = chip && chip.closest('.dist-country-row');
   const fill = row && row.querySelector('.dist-bar-fill');
-  if (fill) fill.style.background = (idx === -1) ? 'rgba(59,130,246,0.5)' : 'var(--border-hover)';
+  if (fill) fill.style.background = (idx === -1) ? 'rgba(74,222,128,0.5)' : 'var(--border-hover)';
 
   // Update preset button highlights without full re-render
   document.querySelectorAll('.dist-preset-btn').forEach(btn => {
@@ -765,11 +770,10 @@ function toggleObCountry(code) {
   const matched = namedPresets.find(p => _selectionMatchesPreset(p));
   state.formData.distributionPreset = matched || 'custom';
 
-  // Update map + lang list; update country list in-place to preserve expand state
+  // Update map + lang list; update chips in-place to preserve expand state
   renderObDistMap();
   updateObLangListWrap();
   _refreshCountryListInPlace();
-  _refreshCountrySummary();
   // Refresh preset pills
   document.querySelectorAll('.ob-preset-pill[data-preset]').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.preset === state.formData.distributionPreset);
@@ -777,15 +781,12 @@ function toggleObCountry(code) {
 }
 
 function _refreshCountryListInPlace() {
-  // Update row states without collapsing the table
+  // Update chip states in-place without collapsing the list
   const selected = new Set(state.formData.selectedCountries || []);
-  document.querySelectorAll('#ob-country-list .ob-list-row').forEach((row, i) => {
-    const c    = IOS_COUNTRIES[i];
-    if (!c) return;
-    const isOn = selected.has(c.code);
-    row.className  = `ob-list-row ${isOn ? 'is-on' : 'is-off'}`;
-    const tipIcon = row.querySelector('.tooltip-icon');
-    if (tipIcon) tipIcon.classList.toggle('is-warned', isOn);
+  document.querySelectorAll('#ob-dist-country-list .ob-dist-chip').forEach(chip => {
+    const code = chip.id.replace('ob-dist-chip-', '');
+    const isOn = selected.has(code);
+    chip.classList.toggle('is-on', isOn);
   });
 }
 
@@ -793,7 +794,7 @@ function _refreshObDistSection() {
   renderObDistMap();
   updateObCountryList();
   updateObLangListWrap();
-  // Refresh dist preset pill active states using data-preset attribute
+  // Refresh dist preset pill active states
   document.querySelectorAll('.ob-preset-pill[data-preset]').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.preset === state.formData.distributionPreset);
   });
@@ -808,7 +809,7 @@ function _refreshCountrySummary() {
 
 function updateObCountryList() {
   const el = document.getElementById('ob-country-list-wrap');
-  if (el) el.innerHTML = buildObCountryList();
+  if (el) el.innerHTML = buildObCountryChips();
 }
 
 function toggleObCountryList() {
@@ -903,19 +904,15 @@ function toggleObLang(lang) {
 
 function _refreshLangListInPlace() {
   const selected = new Set(state.formData.localizations || []);
-  const count    = selected.size;
-  // Update chip states
-  document.querySelectorAll('#loc-chips .loc-chip').forEach(chip => {
+  // Update chip states in-place
+  document.querySelectorAll('#loc-chips .loc-chip:not(.loc-chip-add)').forEach(chip => {
     const onclick = chip.getAttribute('onclick') || '';
     const m = onclick.match(/toggleObLang\('([^']+)'\)/);
     if (!m) return;
     const lang = m[1];
     const isOn = selected.has(lang);
-    chip.className = `loc-chip${isOn ? ' is-on' : ''}`;
+    chip.classList.toggle('is-on', isOn);
   });
-  // Update live count
-  const countEl = document.getElementById('loc-supported-count');
-  if (countEl) countEl.textContent = `Optional · ${count} selected`;
 }
 
 function updateObLangListWrap() {
@@ -1029,12 +1026,12 @@ function _drawMap(container, W, activeCodes, primaryCodes) {
   // Natural Earth projection fits ~2:1 width-to-height; use 0.50 for full uncropped world
   const H = Math.round(W * 0.50);
 
-  // Colors (dark-theme palette)
+  // Colors — green for all active/selected countries
   const C_OCEAN    = '#0d1117';
   const C_INACTIVE = '#1e2230';
-  const C_ACTIVE   = '#2563d4';
+  const C_ACTIVE   = '#4ade80';   // green (--sel-color)
   const C_BORDER   = '#0d1117';
-  const C_PRIMARY  = '#3b82f6';
+  const C_PRIMARY  = '#86efac';  // lighter green for primary-only highlight
 
   const projection = d3.geoNaturalEarth1()
     .scale(W / 5.5)
@@ -1591,6 +1588,82 @@ function setCQSingle(qid, optIdx) {
 }
 
 // Multi-select checkbox toggle
+/* ── Country chip expand/collapse ────────────────────── */
+
+function toggleObDistExpand(btn) {
+  const list = document.getElementById('ob-dist-country-list');
+  if (!list) return;
+  const isExpanded = list.classList.toggle('is-expanded');
+  const extraCount = IOS_COUNTRIES.length - 10;
+  if (isExpanded) {
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Show fewer markets`;
+  } else {
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Show ${extraCount} more markets`;
+    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+/* ── Language type-ahead search ──────────────────────── */
+
+function toggleLangSearch(event) {
+  event.stopPropagation();
+  const wrap = document.getElementById('lang-search-wrap');
+  if (!wrap) return;
+  const isOpen = !wrap.classList.contains('hidden');
+  if (isOpen) {
+    wrap.classList.add('hidden');
+  } else {
+    wrap.classList.remove('hidden');
+    filterLangSearch('');
+    const input = document.getElementById('lang-search-input');
+    if (input) { input.value = ''; input.focus(); }
+  }
+}
+
+function filterLangSearch(query) {
+  const fd = state.formData;
+  const primary = fd.primaryLanguage || 'en';
+  const selected = new Set(fd.localizations || []);
+  const featured = new Set(OB_LANG_FEATURED);
+
+  const list = document.getElementById('lang-search-list');
+  if (!list) return;
+
+  const q = (query || '').toLowerCase();
+  const results = Object.entries(OB_LANG_NAMES)
+    .filter(([code, name]) =>
+      code !== primary &&
+      !featured.has(code) &&
+      (q === '' || name.toLowerCase().includes(q) || code.toLowerCase().includes(q))
+    )
+    .slice(0, 20);
+
+  if (results.length === 0) {
+    list.innerHTML = '<div class="lang-search-empty">No languages found</div>';
+    return;
+  }
+
+  list.innerHTML = results.map(([code, name]) => {
+    const isOn = selected.has(code);
+    return `<button class="lang-search-item${isOn ? ' is-on' : ''}" onclick="addLangFromSearch('${code}')">
+      <span>${name}</span>
+      ${isOn ? '<span class="lang-search-check">✓</span>' : ''}
+    </button>`;
+  }).join('');
+}
+
+function addLangFromSearch(code) {
+  const arr = state.formData.localizations || [];
+  const idx = arr.indexOf(code);
+  if (idx === -1) {
+    arr.push(code);
+  } else {
+    arr.splice(idx, 1);
+  }
+  state.formData.localizations = arr;
+  updateObLangListWrap();
+}
+
 function handleCQMulti(el) {
   const qid  = el.dataset.qid;
   const idx  = parseInt(el.dataset.oidx);

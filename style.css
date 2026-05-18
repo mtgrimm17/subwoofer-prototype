@@ -20,6 +20,18 @@
   --magenta-soft: rgba(255, 59, 118, 0.2);
   --blue:         #60a5fa;
   --blue-soft:    rgba(96, 165, 250, 0.12);
+
+  /* ── Selection design tokens (green = selected everywhere) ── */
+  --sel-color:     #4ade80;
+  --sel-bg:        rgba(74, 222, 128, 0.10);
+  --sel-bg-strong: rgba(74, 222, 128, 0.20);
+  --sel-border:    #4ade80;
+  --sel-shadow:    rgba(74, 222, 128, 0.25);
+
+  /* ── Subwoofer tip tokens ── */
+  --sw-tip-color:  #4ade80;
+  --sw-tip-bg:     rgba(74, 222, 128, 0.06);
+  --sw-tip-border: rgba(74, 222, 128, 0.18);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -238,13 +250,13 @@ body {
   white-space: nowrap;
 }
 .ob-preset-pill:hover {
-  border-color: #60a5fa;
+  border-color: var(--sel-color);
   color: var(--text);
 }
 .ob-preset-pill.is-active {
-  border-color: #60a5fa;
-  background: rgba(96,165,250,0.13);
-  color: #60a5fa;
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+  color: var(--sel-color);
 }
 
 /* Manual markets row */
@@ -267,13 +279,13 @@ body {
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .ob-manual-btn:hover {
-  border-color: #60a5fa;
+  border-color: var(--sel-color);
   color: var(--text);
 }
 .ob-manual-btn.is-active {
-  border-color: #60a5fa;
-  background: rgba(96,165,250,0.13);
-  color: #60a5fa;
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+  color: var(--sel-color);
 }
 
 /* Subsection label */
@@ -341,8 +353,8 @@ body {
   user-select: none;
 }
 .ob-list-row.is-on {
-  background: rgba(96,165,250,0.09);
-  box-shadow: inset 2px 0 0 rgba(96,165,250,0.6);
+  background: var(--sel-bg);
+  box-shadow: inset 2px 0 0 var(--sel-border);
 }
 .ob-list-row.is-off {
   opacity: 0.42;
@@ -524,9 +536,9 @@ body {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1.5px solid #f5b342;
-  background: rgba(245,179,66,0.05);
-  box-shadow: 0 0 0 3px rgba(245,179,66,0.07);
+  border: 1.5px solid var(--sel-border);
+  background: var(--sel-bg);
+  box-shadow: 0 0 0 3px var(--sel-shadow);
   cursor: pointer;
   font-family: inherit;
   width: 100%;
@@ -535,11 +547,11 @@ body {
 }
 
 .loc-primary-pill:hover {
-  box-shadow: 0 0 0 5px rgba(245,179,66,0.14);
+  box-shadow: 0 0 0 5px var(--sel-shadow);
 }
 
 .loc-star {
-  color: #f5b342;
+  color: var(--sel-color);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -601,7 +613,7 @@ body {
   color: var(--text);
 }
 
-.loc-dd-item.is-current { color: #f5b342; }
+.loc-dd-item.is-current { color: var(--sel-color); }
 
 .loc-dd-name {
   font-size: 13px;
@@ -618,8 +630,8 @@ body {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #f5b342;
-  border: 1px solid rgba(245,179,66,0.35);
+  color: var(--sel-color);
+  border: 1px solid rgba(74,222,128,0.35);
   padding: 1px 5px;
   border-radius: 3px;
   white-space: nowrap;
@@ -637,27 +649,40 @@ body {
   align-items: center;
   gap: 7px;
   padding: 7px 13px;
-  border-radius: 7px;
-  border: 1.5px dashed #2a2a2a;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
   background: transparent;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
-  color: #555;
+  color: var(--text-faint);
   transition: border-color 0.12s, background 0.12s, color 0.12s;
+  position: relative;
 }
 
 .loc-chip.is-on {
-  border-style: solid;
-  border-color: #4ade80;
-  background: rgba(74,222,128,0.06);
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
   color: var(--text);
 }
 
 .loc-chip:hover {
-  border-style: solid;
-  border-color: #4ade80;
+  border-color: var(--sel-border);
   color: var(--text);
+}
+
+/* [+] add language chip */
+.loc-chip.loc-chip-add {
+  border-style: dashed;
+  border-color: var(--border-hover);
+  color: var(--text-dim);
+  font-size: 16px;
+  padding: 4px 12px;
+  line-height: 1;
+}
+.loc-chip.loc-chip-add:hover {
+  border-color: var(--sel-border);
+  color: var(--sel-color);
 }
 
 .loc-chip-icon {
@@ -784,6 +809,237 @@ body {
 }
 .ob-plat-hint-ok {
   color: #30d158;
+}
+
+/* ─── Subwoofer tip system ────────────────────────────── */
+
+/* Subwoofer tip icon — ! version of tooltip-icon */
+.sw-tip-icon {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--sw-tip-bg, rgba(74,222,128,0.08));
+  border: 1px solid var(--sw-tip-color, #4ade80);
+  color: var(--sw-tip-color, #4ade80);
+  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  margin-left: 6px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Always-visible Subwoofer tip box */
+.sw-tip-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--sw-tip-bg, rgba(74,222,128,0.06));
+  border: 1px solid var(--sw-tip-border, rgba(74,222,128,0.18));
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.sw-tip-box-sm { margin-bottom: 10px; }
+
+.sw-tip-label {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sw-tip-color);
+  background: rgba(74,222,128,0.12);
+  border: 1px solid rgba(74,222,128,0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-top: 1px;
+}
+
+.sw-tip-text { flex: 1; }
+
+/* Distribution question header */
+.ob-dist-question {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+
+/* ─── Country chip grid ───────────────────────────────── */
+
+.ob-dist-country-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.ob-dist-chip-extra { display: none; }
+.ob-dist-country-list.is-expanded .ob-dist-chip-extra { display: flex; }
+
+.ob-dist-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+  user-select: none;
+}
+
+.ob-dist-chip.is-on {
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+}
+
+.ob-dist-chip:not(.is-on) {
+  opacity: 0.55;
+}
+
+.ob-dist-chip:hover {
+  opacity: 1 !important;
+  border-color: var(--sel-border);
+}
+
+.ob-dist-chip-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.ob-dist-chip-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.ob-dist-chip-count {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ob-dist-chip-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ob-dist-chip-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--sel-color);
+  transition: background 0.2s;
+}
+
+.ob-dist-chip:not(.is-on) .ob-dist-chip-bar-fill {
+  background: var(--border-hover);
+}
+
+.ob-dist-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  margin-top: 2px;
+  transition: color 0.15s;
+}
+.ob-dist-expand-btn:hover { color: var(--text); }
+
+/* ─── Platform selection in Game Details tab ──────────── */
+
+.ob-plat-section {
+  margin-top: 4px;
+}
+
+.ob-plat-section .ob-plat-grid {
+  margin-bottom: 10px;
+}
+
+/* ─── Language type-ahead search ─────────────────────── */
+
+.lang-search-wrap {
+  margin-top: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-hover);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lang-search-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.lang-search-input::placeholder { color: var(--text-faint); }
+
+.lang-search-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.lang-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: left;
+  transition: background 0.1s, color 0.1s;
+}
+.lang-search-item:hover { background: var(--panel-3); color: var(--text); }
+.lang-search-item.is-on { color: var(--sel-color); }
+
+.lang-search-check {
+  font-size: 11px;
+  color: var(--sel-color);
+}
+
+.lang-search-empty {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: center;
 }
 
 /* Form inside modal */

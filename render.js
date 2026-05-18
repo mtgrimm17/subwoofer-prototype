@@ -33,7 +33,6 @@ function renderOnboardingBody() {
   if (state.onboardingTab === 0) { el.innerHTML = buildGameDetailsTab(); requestAnimationFrame(() => initObDistMap()); }
   if (state.onboardingTab === 1) el.innerHTML = buildUploadAssetsTab();
   if (state.onboardingTab === 2) el.innerHTML = buildComplianceTab();
-  if (state.onboardingTab === 3) el.innerHTML = buildPlatformSelectTab();
   // After rendering, hydrate form fields from state
   hydrateGameDetailsTab();
   hydrateUploadAssetsTab();
@@ -45,14 +44,14 @@ function renderOnboardingBody() {
 function renderOnboardingFooter() {
   const el = document.getElementById('ob-footer');
   if (!el) return;
-  const isLast  = state.onboardingTab === 3;
+  const isLast  = state.onboardingTab === 2;
   const isFirst = state.onboardingTab === 0;
   const hasPlat = state.activePlatforms.size > 0;
   el.innerHTML = `
     <div class="ob-footer-inner">
       <button class="btn btn-ghost" onclick="prevOnboardingTab()" ${isFirst ? 'style="visibility:hidden"' : ''}>← Back</button>
       <div class="ob-step-dots">
-        ${[0,1,2,3].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
+        ${[0,1,2].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
       </div>
       <button class="btn btn-primary" onclick="${isLast ? 'completeOnboarding()' : 'nextOnboardingTab()'}"
         ${isLast && !hasPlat ? 'disabled title="Select at least one platform to continue"' : ''}>
@@ -92,13 +91,24 @@ function buildGameDetailsTab() {
         <div class="char-count" id="ob-desc-count">0 / 4000</div>
       </div>
 
-      <div class="ob-section-label" style="margin-top:24px;">Distribution</div>
+      <div class="ob-section-label" style="margin-top:24px;"><span class="req-dot"></span>Platforms</div>
+      <div class="ob-plat-section">
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Select the storefronts you plan to submit to. You can add more later from the dashboard.</div>
+        <div id="ob-plat-grid-wrap">${buildObPlatTilesHTML()}</div>
+      </div>
 
-      <div class="ob-subsection-label">Target Markets</div>
+      <div class="ob-section-label" style="margin-top:24px;">Distribution</div>
 
       <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:12px;"></div>
 
-      <div class="ob-presets-row">
+      <span class="ob-dist-question">Where do you want to distribute?</span>
+
+      <div class="sw-tip-box">
+        <span class="sw-tip-label">Subwoofer tip</span>
+        <span class="sw-tip-text">Distributing globally maximizes discoverability. Most markets outside the top 10 require no localization for strong conversion.</span>
+      </div>
+
+      <div class="ob-presets-row" style="margin-bottom:6px;">
         <span class="ob-presets-label">Presets</span>
         <div class="ob-preset-pills">
           ${distPresets.map(p => `
@@ -108,7 +118,7 @@ function buildGameDetailsTab() {
         </div>
       </div>
 
-      <div id="ob-country-list-wrap">${buildObCountryList()}</div>
+      <div id="ob-country-list-wrap">${buildObCountryChips()}</div>
 
       <div class="ob-section-label" style="margin-top:28px;">Localization</div>
 
@@ -187,36 +197,67 @@ const OB_REG_TIPS = {
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
-/* ── Country list ── summary row + collapsible table; Custom starts expanded */
-function buildObCountryList() {
+/* ── Country chip grid ── first 10 visible, rest collapsible ── */
+function buildObCountryChips() {
   const fd       = state.formData;
   const selected = new Set(fd.selectedCountries || []);
-  const isCustom = (fd.distributionPreset || 'recommended') === 'custom';
-  const count    = selected.size;
-  const all      = IOS_COUNTRIES;
+  const maxGamers = IOS_COUNTRIES[0]?.iosGamers || 1;
+  const extraCount = Math.max(0, IOS_COUNTRIES.length - 10);
 
-  const rows = all.map(c => {
+  const chips = IOS_COUNTRIES.map((c, i) => {
     const isOn  = selected.has(c.code);
-    const tip   = OB_REG_TIPS[c.code];
-    const flag  = tip
-      ? `<span class="tooltip-anchor ob-reg-tip" data-tip="${tip}"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
+    const isExtra = i >= 10;
+    const barPct = Math.round((c.iosGamers / maxGamers) * 100);
+    const regTip = OB_REG_TIPS[c.code]
+      ? `<span class="tooltip-anchor" data-tip="${OB_REG_TIPS[c.code]}" style="margin-left:auto;flex-shrink:0;"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
       : '';
     return `
-      <div class="ob-list-row ${isOn ? 'is-on' : 'is-off'}" onclick="toggleObCountry('${c.code}')">
-        <span class="ob-list-name">${c.name} ${flag}</span>
-        <span class="ob-list-count">${_obFmtGamers(c.iosGamers)}</span>
+      <div class="ob-dist-chip${isOn ? ' is-on' : ''}${isExtra ? ' ob-dist-chip-extra' : ''}"
+           id="ob-dist-chip-${c.code}"
+           onclick="toggleObCountry('${c.code}')">
+        <div class="ob-dist-chip-info">
+          <span class="ob-dist-chip-name">${c.name}</span>
+          <span class="ob-dist-chip-count">${_obFmtGamers(c.iosGamers)}</span>
+          ${regTip}
+        </div>
+        <div class="ob-dist-chip-bar">
+          <div class="ob-dist-chip-bar-fill" style="width:${barPct}%"></div>
+        </div>
       </div>`;
   }).join('');
 
   return `
-    <div class="ob-country-summary" onclick="toggleObCountryList()">
-      <span class="ob-country-count">${count} ${count === 1 ? 'country' : 'countries'} selected</span>
-      <span class="ob-country-chevron" id="ob-country-chevron">${isCustom ? _chevUp : _chevDown}</span>
+    <div class="ob-dist-country-list" id="ob-dist-country-list">
+      ${chips}
     </div>
-    <div class="ob-country-table${isCustom ? ' is-expanded' : ''}" id="ob-country-table">
-      ${_obListHeader('Country')}
-      <div class="ob-list" id="ob-country-list">${rows}</div>
-    </div>`;
+    ${extraCount > 0 ? `
+    <button class="ob-dist-expand-btn" id="ob-dist-expand-btn" onclick="toggleObDistExpand(this)">
+      ${_chevDown} Show ${extraCount} more markets
+    </button>` : ''}`;
+}
+
+/* ── Legacy alias (kept for any callers) ── */
+function buildObCountryList() { return buildObCountryChips(); }
+
+/* ── Platform tiles HTML (used inline + in-place refresh) ── */
+function buildObPlatTilesHTML() {
+  const selectable = ['ios', 'android', 'steam', 'egs'];
+  const tiles = selectable.map(pid => {
+    const p = PLATFORMS[pid];
+    const isOn = state.activePlatforms.has(pid);
+    const icons = { ios:'🍎', android:'🤖', steam:'🎮', egs:'⚡' };
+    return `
+      <button class="ob-plat-tile ${isOn ? 'is-on' : ''}" onclick="toggleOnboardingPlatform('${pid}')"
+              style="--plat-color:${p.color}">
+        <div class="ob-plat-tile-icon">${icons[pid]}</div>
+        <div class="ob-plat-tile-name">${p.label}</div>
+        ${isOn ? '<div class="ob-plat-tile-check">✓</div>' : ''}
+      </button>`;
+  }).join('');
+  const hint = state.activePlatforms.size === 0
+    ? `<div class="ob-plat-hint">Select at least one platform to continue.</div>`
+    : `<div class="ob-plat-hint ob-plat-hint-ok">${state.activePlatforms.size} platform${state.activePlatforms.size > 1 ? 's' : ''} selected</div>`;
+  return `<div class="ob-plat-grid">${tiles}</div>${hint}`;
 }
 
 /* ── Language picker ── two-row: primary (amber dropdown) + supported (green chips) */
@@ -233,15 +274,36 @@ const OB_LANG_REGIONS = {
   ms:'MY', he:'IL', el:'GR',
 };
 
+/* ── Find highest-impact unselected featured language ── */
+function _highestImpactUnselectedLang() {
+  const fd = state.formData;
+  const primary  = fd.primaryLanguage || 'en';
+  const selected = new Set(fd.localizations || []);
+  const countries = new Set(fd.selectedCountries || []);
+
+  const candidates = OB_LANG_FEATURED.filter(l => l !== primary && !selected.has(l));
+
+  let best = null, bestTotal = 0;
+  for (const lang of candidates) {
+    const total = IOS_COUNTRIES
+      .filter(c => countries.has(c.code) && c.lang === lang)
+      .reduce((sum, c) => sum + (c.iosGamers || 0), 0);
+    if (total > bestTotal) { bestTotal = total; best = lang; }
+  }
+  return { lang: best, total: bestTotal };
+}
+
 function buildObLangList() {
   const fd       = state.formData;
   const primary  = fd.primaryLanguage || 'en';
   const selected = new Set(fd.localizations || []);
   const count    = selected.size;
-
   const primaryName = OB_LANG_NAMES[primary] || primary;
 
-  // Dropdown: all known languages — names only, no region codes
+  // Find the highest-impact unselected lang for the Subwoofer tip
+  const { lang: tipLang, total: tipTotal } = _highestImpactUnselectedLang();
+
+  // Primary language dropdown items
   const allLangCodes = Object.keys(OB_LANG_NAMES);
   const ddItems = allLangCodes.map(lang => {
     const isCur = lang === primary;
@@ -249,20 +311,34 @@ function buildObLangList() {
       <button class="loc-dd-item${isCur ? ' is-current' : ''}"
               onclick="selectLocPrimary('${lang}')">
         <span class="loc-dd-name">${OB_LANG_NAMES[lang] || lang}</span>
-        ${isCur ? '<span class="loc-dd-tag">CURRENT</span>' : ''}
+        ${isCur ? '<span class="loc-dd-tag">PRIMARY</span>' : ''}
       </button>`;
   }).join('');
 
-  // Chip grid: featured set minus current primary — name only, no icon
+  // Featured chips (minus primary)
+  const featuredSet = new Set(OB_LANG_FEATURED);
   const chipLangs = OB_LANG_FEATURED.filter(l => l !== primary);
-  const chips = chipLangs.map(lang => {
+
+  // Non-featured langs that were added via [+]
+  const extraSelected = [...selected].filter(l => !featuredSet.has(l) && l !== primary);
+
+  const buildChip = (lang) => {
     const isOn = selected.has(lang);
+    const isTipLang = lang === tipLang && !isOn;
+    const tipIcon = isTipLang && tipTotal > 0
+      ? `<span class="tooltip-anchor" data-tip="Subwoofer tip: adding ${OB_LANG_NAMES[lang]} support could reach ~${tipTotal}M players in their native language." style="margin-left:4px;"><span class="sw-tip-icon">!</span></span>`
+      : '';
     return `
       <button class="loc-chip${isOn ? ' is-on' : ''}"
               onclick="toggleObLang('${lang}')">
         <span class="loc-chip-name">${OB_LANG_NAMES[lang] || lang}</span>
+        ${tipIcon}
       </button>`;
-  }).join('');
+  };
+
+  const featuredChips = chipLangs.map(buildChip).join('');
+  const extraChips    = extraSelected.map(buildChip).join('');
+  const addBtn = `<button class="loc-chip loc-chip-add" onclick="toggleLangSearch(event)" title="Add another language">+</button>`;
 
   const chevSvg = `<svg class="loc-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
@@ -289,9 +365,25 @@ function buildObLangList() {
       <div class="loc-row">
         <div class="loc-label-col">
           <div class="loc-label">SUPPORTED</div>
+          <div class="loc-helper" style="margin-top:4px;font-size:10px;color:var(--text-faint);">Optional · ${count} selected</div>
         </div>
         <div class="loc-control-col">
-          <div class="loc-chips" id="loc-chips">${chips}</div>
+          <div class="sw-tip-box sw-tip-box-sm">
+            <span class="sw-tip-label">Subwoofer tip</span>
+            <span class="sw-tip-text">Language support is one of the best ways to increase traction and conversion in secondary markets.</span>
+          </div>
+          <div class="loc-chips" id="loc-chips">
+            ${featuredChips}
+            ${extraChips}
+            ${addBtn}
+          </div>
+          <div class="lang-search-wrap hidden" id="lang-search-wrap">
+            <input class="lang-search-input" id="lang-search-input" type="text"
+                   placeholder="Search languages…"
+                   oninput="filterLangSearch(this.value)"
+                   onclick="event.stopPropagation()">
+            <div class="lang-search-list" id="lang-search-list"></div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -385,45 +477,7 @@ function buildComplianceTab() {
     </div>`;
 }
 
-/* Tab 4: Platform Selection */
-function buildPlatformSelectTab() {
-  const selectable = ['ios', 'android', 'steam', 'egs'];
-  const tiles = selectable.map(pid => {
-    const p = PLATFORMS[pid];
-    const isOn = state.activePlatforms.has(pid);
-    const icons = {
-      ios:     '🍎',
-      android: '🤖',
-      steam:   '🎮',
-      egs:     '⚡',
-    };
-    return `
-      <button class="ob-plat-tile ${isOn ? 'is-on' : ''}" onclick="toggleOnboardingPlatform('${pid}')"
-              style="--plat-color:${p.color}">
-        <div class="ob-plat-tile-icon">${icons[pid]}</div>
-        <div class="ob-plat-tile-name">${p.label}</div>
-        ${isOn ? '<div class="ob-plat-tile-check">✓</div>' : ''}
-      </button>`;
-  }).join('');
-
-  return `
-    <div class="ob-form">
-      <div class="ob-section-label">Where will you publish?</div>
-      <div class="asset-guidance" style="margin-bottom:20px;">
-        Select all the storefronts you plan to submit to. You can add or remove platforms later from the dashboard.
-      </div>
-      <div class="ob-plat-grid">
-        ${tiles}
-      </div>
-      ${state.activePlatforms.size === 0 ? `
-        <div class="ob-plat-hint">Select at least one platform to continue.</div>
-      ` : `
-        <div class="ob-plat-hint ob-plat-hint-ok">
-          ${state.activePlatforms.size} platform${state.activePlatforms.size > 1 ? 's' : ''} selected — Subwoofer will tailor your submission flow accordingly.
-        </div>
-      `}
-    </div>`;
-}
+/* buildPlatformSelectTab() removed — platforms are now in buildGameDetailsTab() */
 
 /* Hydration helpers — fill form fields from state after render */
 function hydrateGameDetailsTab() {
