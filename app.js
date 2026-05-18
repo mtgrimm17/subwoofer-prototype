@@ -737,10 +737,10 @@ const OB_REGULATORY_EXCLUSIONS = ['CN', 'KR', 'JP', 'DE', 'BE', 'VN', 'ZA'];
 function _obCountriesForPreset(preset) {
   switch (preset) {
     case 'everywhere':
-    case 'global':         return IOS_COUNTRIES.map(c => c.code);
-    case 'everywhere_except_cn': return IOS_COUNTRIES.filter(c => c.code !== 'CN').map(c => c.code);
-    case 'english_only':   return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
-    default:               return state.formData.selectedCountries || IOS_COUNTRIES.map(c => c.code);
+    case 'global':              return IOS_COUNTRIES.map(c => c.code);
+    case 'english_only':        return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
+    case 'minimize_regulation': return IOS_COUNTRIES.filter(c => !OB_REG_TIPS[c.code]).map(c => c.code);
+    default:                    return state.formData.selectedCountries || IOS_COUNTRIES.map(c => c.code);
   }
 }
 
@@ -768,7 +768,7 @@ function toggleObCountry(code) {
   if (idx === -1) arr.push(code); else arr.splice(idx, 1);
 
   // Snap preset label to whichever named preset matches the new selection, else 'custom'
-  const namedPresets = ['everywhere', 'everywhere_except_cn', 'english_only'];
+  const namedPresets = ['everywhere', 'english_only', 'minimize_regulation'];
   const matched = namedPresets.find(p => _selectionMatchesPreset(p));
   state.formData.distributionPreset = matched || 'custom';
 
@@ -906,7 +906,8 @@ function toggleObLang(lang) {
   const idx = arr.indexOf(lang);
   if (idx === -1) arr.push(lang); else arr.splice(idx, 1);
   state.formData.localizations = arr;
-  _refreshLangListInPlace();
+  // Full re-render so the Subwoofer tip ! badge moves to the next best candidate
+  updateObLangListWrap();
 }
 
 function _refreshLangListInPlace() {
@@ -1090,6 +1091,16 @@ function pickTiming(radio) {
   state.formData.releaseTiming = radio.value;
   const dateRow = document.getElementById('ob-release-date-row');
   if (dateRow) dateRow.style.display = radio.value === 'specific_date' ? 'block' : 'none';
+}
+
+/* ── Alert helpers ───────────────────────────────────────── */
+
+// Show/hide the privacy policy alert based on whether the field has a value
+function updatePrivacyAlert(value) {
+  const el = document.getElementById('ob-privacy-alert');
+  if (!el) return;
+  // Show the alert only when the field has been touched (blurred or has some input) AND is empty
+  el.style.display = (!value || !value.trim()) ? 'flex' : 'none';
 }
 
 function togglePrivacyGen(checkbox) {

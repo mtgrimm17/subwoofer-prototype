@@ -21,17 +21,22 @@
   --blue:         #60a5fa;
   --blue-soft:    rgba(96, 165, 250, 0.12);
 
-  /* ── Selection design tokens (green = selected everywhere) ── */
-  --sel-color:     #4ade80;
-  --sel-bg:        rgba(74, 222, 128, 0.10);
-  --sel-bg-strong: rgba(74, 222, 128, 0.20);
-  --sel-border:    #4ade80;
-  --sel-shadow:    rgba(74, 222, 128, 0.25);
+  /* ── Selection design tokens (blue = selected everywhere) ── */
+  --sel-color:     #60a5fa;
+  --sel-bg:        rgba(96, 165, 250, 0.10);
+  --sel-bg-strong: rgba(96, 165, 250, 0.20);
+  --sel-border:    #60a5fa;
+  --sel-shadow:    rgba(96, 165, 250, 0.25);
 
   /* ── Subwoofer tip tokens ── */
   --sw-tip-color:  #4ade80;
   --sw-tip-bg:     rgba(74, 222, 128, 0.06);
   --sw-tip-border: rgba(74, 222, 128, 0.18);
+
+  /* ── Alert tokens (rejection-risk warnings) ── */
+  --alert-color:   #FF3B76;
+  --alert-bg:      rgba(255, 59, 118, 0.08);
+  --alert-border:  rgba(255, 59, 118, 0.30);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -239,18 +244,18 @@ body {
 .ob-preset-pill {
   font-size: 12px;
   font-weight: 500;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 7px 13px;
+  border-radius: 6px;
   border: 1.5px solid var(--border);
   background: transparent;
-  color: var(--text-dim);
+  color: var(--text-faint);
   cursor: pointer;
   font-family: inherit;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
   white-space: nowrap;
 }
 .ob-preset-pill:hover {
-  border-color: var(--sel-color);
+  border-color: var(--sel-border);
   color: var(--text);
 }
 .ob-preset-pill.is-active {
@@ -690,7 +695,7 @@ body {
   width: 11px;
   text-align: center;
   flex-shrink: 0;
-  color: #4ade80;
+  color: var(--sel-color);
 }
 
 .loc-chip:not(.is-on) .loc-chip-icon {
@@ -831,6 +836,30 @@ body {
   flex-shrink: 0;
 }
 
+/* Inline ! badge on the highest-impact unselected language chip */
+.sw-tip-chip-badge {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid #4ade80;
+  color: #4ade80;
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: default;
+  margin-left: 4px;
+  line-height: 1;
+}
+
+/* Chip with an active Subwoofer tip gets a subtle green border hint */
+.loc-chip.has-sw-tip {
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
 /* Always-visible Subwoofer tip box */
 .sw-tip-box {
   display: flex;
@@ -867,6 +896,60 @@ body {
 .sw-tip-bold {
   color: var(--sw-tip-color);
   font-weight: 700;
+}
+
+/* ─── Alert box (rejection-risk warnings) ──────────────── */
+
+/* Full-width alert bar — same format as sw-tip-box but red/magenta */
+.alert-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: var(--alert-bg);
+  border: 1px solid var(--alert-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--alert-color);
+}
+
+/* Circle ! icon — matches sw-tip-icon-circle shape but in alert red */
+.alert-icon-circle {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(255, 59, 118, 0.12);
+  border: 1px solid var(--alert-color);
+  color: var(--alert-color);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.alert-text { flex: 1; }
+
+/* Inline alert badge on a chip or row (small dot variant) */
+.alert-chip-badge {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(255, 59, 118, 0.12);
+  border: 1px solid var(--alert-color);
+  color: var(--alert-color);
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: default;
+  margin-left: 4px;
 }
 
 /* Distribution question header */
@@ -922,22 +1005,22 @@ body {
 .ob-dist-row:hover { opacity: 1 !important; }
 
 .ob-dist-row-chip {
-  flex: 0 0 156px;
+  flex: 0 0 172px;
   padding: 5px 10px;
   border-radius: 7px;
   border: 1.5px solid var(--border);
   font-size: 12px;
   font-weight: 500;
   color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   transition: border-color 0.12s, color 0.12s;
 }
 
 .ob-dist-row-chip.is-on {
-  border-color: var(--blue);
-  color: var(--blue);
+  border-color: var(--sel-border);
+  color: var(--sel-color);
 }
 
 .ob-dist-row-bar-wrap {

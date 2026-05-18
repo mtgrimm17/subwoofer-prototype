@@ -63,13 +63,13 @@ function renderOnboardingFooter() {
 /* Tab 1: Game Details */
 function buildGameDetailsTab() {
   const fd = state.formData;
-  const knownPresets = ['everywhere','everywhere_except_cn','english_only','custom'];
+  const knownPresets = ['everywhere','english_only','minimize_regulation','custom'];
   const dPreset = knownPresets.includes(fd.distributionPreset) ? fd.distributionPreset : 'everywhere';
 
   const distPresets = [
     { id:'everywhere',          label:'Everywhere' },
-    { id:'everywhere_except_cn',label:'Everywhere except China' },
     { id:'english_only',        label:'English only' },
+    { id:'minimize_regulation', label:'Minimize regulation' },
     { id:'custom',              label:'Custom' },
   ];
 
@@ -212,18 +212,19 @@ function buildObCountryChips() {
     const isExtra = i >= 10;
     const barPct  = Math.round((c.iosGamers / maxGamers) * 100);
     const regTip  = OB_REG_TIPS[c.code]
-      ? `<span class="tooltip-anchor" data-tip="${OB_REG_TIPS[c.code]}"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
+      ? `<span class="tooltip-anchor" data-tip="${OB_REG_TIPS[c.code]}" onclick="event.stopPropagation()"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
       : '';
     return `
       <div class="ob-dist-row${isOn ? ' is-on' : ''}${isExtra ? ' ob-dist-row-extra' : ''}"
            data-code="${c.code}"
            onclick="toggleObCountry('${c.code}')">
-        <div class="ob-dist-row-chip${isOn ? ' is-on' : ''}" id="ob-dist-chip-${c.code}">${c.name}</div>
+        <div class="ob-dist-row-chip${isOn ? ' is-on' : ''}" id="ob-dist-chip-${c.code}">
+          ${c.name}${regTip}
+        </div>
         <div class="ob-dist-row-bar-wrap">
           <div class="ob-dist-row-bar-fill" style="width:${barPct}%"></div>
         </div>
         <span class="ob-dist-row-count">${_obFmtGamers(c.iosGamers)}</span>
-        ${regTip}
       </div>`;
   }).join('');
 
@@ -315,7 +316,6 @@ function buildObLangList() {
       <button class="loc-dd-item${isCur ? ' is-current' : ''}"
               onclick="selectLocPrimary('${lang}')">
         <span class="loc-dd-name">${OB_LANG_NAMES[lang] || lang}</span>
-        ${isCur ? '<span class="loc-dd-tag">PRIMARY</span>' : ''}
       </button>`;
   }).join('');
 
@@ -328,15 +328,14 @@ function buildObLangList() {
 
   const buildChip = (lang) => {
     const isOn = selected.has(lang);
-    const isTipLang = lang === tipLang && !isOn;
-    const tipIcon = isTipLang && tipTotal > 0
-      ? `<span class="tooltip-anchor" data-tip="Subwoofer tip: adding ${OB_LANG_NAMES[lang]} support could reach ~${tipTotal}M players in their native language." style="margin-left:4px;"><span class="sw-tip-icon">!</span></span>`
+    const isTipVisible = lang === tipLang && !isOn && tipTotal > 0;
+    const tipBadge = isTipVisible
+      ? `<span class="sw-tip-chip-badge tooltip-anchor" data-tip="Subwoofer Tip: adding ${OB_LANG_NAMES[lang]} support could reach ~${tipTotal}M gamers in their native language." onclick="event.stopPropagation()">!</span>`
       : '';
     return `
-      <button class="loc-chip${isOn ? ' is-on' : ''}"
+      <button class="loc-chip${isOn ? ' is-on' : ''}${isTipVisible ? ' has-sw-tip' : ''}"
               onclick="toggleObLang('${lang}')">
-        <span class="loc-chip-name">${OB_LANG_NAMES[lang] || lang}</span>
-        ${tipIcon}
+        <span class="loc-chip-name">${OB_LANG_NAMES[lang] || lang}</span>${tipBadge}
       </button>`;
   };
 
@@ -355,7 +354,6 @@ function buildObLangList() {
         <div class="loc-control-col">
           <div class="loc-primary-wrap" id="loc-primary-wrap">
             <button class="loc-primary-pill" onclick="toggleLocPrimaryDropdown(event)">
-              <span class="loc-star">★</span>
               <span class="loc-primary-name">${primaryName}</span>
               ${chevSvg}
             </button>
@@ -456,15 +454,13 @@ function buildComplianceTab() {
       <div class="ob-section-label">Links</div>
 
       <div class="form-group">
-        <label class="form-label" for="ob-support">Support URL</label>
-        <input class="form-input" id="ob-support" type="url" placeholder="https://yourgame.com/support"
-               oninput="syncField('supportUrl', this.value)">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
+        <label class="form-label" for="ob-privacy"><span class="req-dot"></span>Privacy Policy URL</label>
         <input class="form-input" id="ob-privacy" type="url" placeholder="https://yourgame.com/privacy"
-               oninput="syncField('privacyUrl', this.value)">
+               oninput="syncField('privacyUrl', this.value); updatePrivacyAlert(this.value)">
+        <div id="ob-privacy-alert" class="alert-box" style="display:none;">
+          <span class="alert-icon-circle">!</span>
+          <span class="alert-text">Required. A missing privacy policy URL is an automatic App Review rejection.</span>
+        </div>
       </div>
 
       <div class="ob-section-label" style="margin-top:20px;">Compliance Questions</div>
@@ -517,8 +513,9 @@ function hydrateUploadAssetsTab() {
 
 function hydrateComplianceTab() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-  set('ob-support', state.formData.supportUrl);
   set('ob-privacy', state.formData.privacyUrl);
+  // Show privacy alert if the field was previously visited but left blank
+  if (state.onboardingTab === 2) updatePrivacyAlert(state.formData.privacyUrl);
   if (state.formData.privacyGenerated) {
     const cb = document.getElementById('ob-privacy-gen-check');
     if (cb) cb.checked = true;
