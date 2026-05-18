@@ -736,9 +736,11 @@ const OB_REGULATORY_EXCLUSIONS = ['CN', 'KR', 'JP', 'DE', 'BE', 'VN', 'ZA'];
 
 function _obCountriesForPreset(preset) {
   switch (preset) {
-    case 'global':       return IOS_COUNTRIES.map(c => c.code);
-    case 'english_only': return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
-    default:             return state.formData.selectedCountries || IOS_COUNTRIES.map(c => c.code);
+    case 'everywhere':
+    case 'global':         return IOS_COUNTRIES.map(c => c.code);
+    case 'everywhere_except_cn': return IOS_COUNTRIES.filter(c => c.code !== 'CN').map(c => c.code);
+    case 'english_only':   return IOS_COUNTRIES.filter(c => c.lang === 'en').map(c => c.code);
+    default:               return state.formData.selectedCountries || IOS_COUNTRIES.map(c => c.code);
   }
 }
 
@@ -766,7 +768,7 @@ function toggleObCountry(code) {
   if (idx === -1) arr.push(code); else arr.splice(idx, 1);
 
   // Snap preset label to whichever named preset matches the new selection, else 'custom'
-  const namedPresets = ['global', 'english_only'];
+  const namedPresets = ['everywhere', 'everywhere_except_cn', 'english_only'];
   const matched = namedPresets.find(p => _selectionMatchesPreset(p));
   state.formData.distributionPreset = matched || 'custom';
 
@@ -781,12 +783,17 @@ function toggleObCountry(code) {
 }
 
 function _refreshCountryListInPlace() {
-  // Update chip states in-place without collapsing the list
+  // Update row states in-place without collapsing the list
   const selected = new Set(state.formData.selectedCountries || []);
-  document.querySelectorAll('#ob-dist-country-list .ob-dist-chip').forEach(chip => {
-    const code = chip.id.replace('ob-dist-chip-', '');
+  document.querySelectorAll('#ob-dist-country-list .ob-dist-row').forEach(row => {
+    const code = row.dataset.code;
+    if (!code) return;
     const isOn = selected.has(code);
-    chip.classList.toggle('is-on', isOn);
+    row.classList.toggle('is-on', isOn);
+    const chip = row.querySelector('.ob-dist-row-chip');
+    if (chip) chip.classList.toggle('is-on', isOn);
+    const tipIcon = row.querySelector('.tooltip-icon');
+    if (tipIcon) tipIcon.classList.toggle('is-warned', isOn);
   });
 }
 
@@ -1026,12 +1033,12 @@ function _drawMap(container, W, activeCodes, primaryCodes) {
   // Natural Earth projection fits ~2:1 width-to-height; use 0.50 for full uncropped world
   const H = Math.round(W * 0.50);
 
-  // Colors — green for all active/selected countries
+  // Colors (dark-theme palette)
   const C_OCEAN    = '#0d1117';
   const C_INACTIVE = '#1e2230';
-  const C_ACTIVE   = '#4ade80';   // green (--sel-color)
+  const C_ACTIVE   = '#2563d4';
   const C_BORDER   = '#0d1117';
-  const C_PRIMARY  = '#86efac';  // lighter green for primary-only highlight
+  const C_PRIMARY  = '#3b82f6';
 
   const projection = d3.geoNaturalEarth1()
     .scale(W / 5.5)
@@ -1595,10 +1602,12 @@ function toggleObDistExpand(btn) {
   if (!list) return;
   const isExpanded = list.classList.toggle('is-expanded');
   const extraCount = IOS_COUNTRIES.length - 10;
+  const chevD = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+  const chevU = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
   if (isExpanded) {
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Show fewer markets`;
+    btn.innerHTML = `${chevU} Show fewer markets`;
   } else {
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Show ${extraCount} more markets`;
+    btn.innerHTML = `${chevD} Show ${extraCount} more markets`;
     btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }

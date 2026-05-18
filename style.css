@@ -835,33 +835,39 @@ body {
 .sw-tip-box {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 9px;
   background: var(--sw-tip-bg, rgba(74,222,128,0.06));
   border: 1px solid var(--sw-tip-border, rgba(74,222,128,0.18));
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   margin-bottom: 12px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--text-dim);
 }
-.sw-tip-box-sm { margin-bottom: 10px; }
 
-.sw-tip-label {
+.sw-tip-icon-circle {
   flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--sw-tip-color);
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
   background: rgba(74,222,128,0.12);
-  border: 1px solid rgba(74,222,128,0.25);
-  border-radius: 3px;
-  padding: 1px 5px;
+  border: 1px solid var(--sw-tip-color);
+  color: var(--sw-tip-color);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 1px;
 }
 
 .sw-tip-text { flex: 1; }
+
+.sw-tip-bold {
+  color: var(--sw-tip-color);
+  font-weight: 700;
+}
 
 /* Distribution question header */
 .ob-dist-question {
@@ -873,88 +879,92 @@ body {
   margin-top: 4px;
 }
 
-/* ─── Country chip grid ───────────────────────────────── */
+/* ─── Distribution table header ──────────────────────── */
 
-.ob-dist-country-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 6px;
-  margin-top: 8px;
-  margin-bottom: 4px;
+.ob-dist-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
 }
 
-.ob-dist-chip-extra { display: none; }
-.ob-dist-country-list.is-expanded .ob-dist-chip-extra { display: flex; }
+.ob-dist-col-market { flex: 0 0 auto; }
+.ob-dist-col-count  { text-align: right; }
 
-.ob-dist-chip {
+/* ─── Distribution country rows ─────────────────────── */
+
+.ob-dist-country-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1.5px solid var(--border);
-  background: transparent;
+}
+
+.ob-dist-row-extra { display: none; }
+.ob-dist-country-list.is-expanded .ob-dist-row-extra { display: flex; }
+
+.ob-dist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
-  font-family: inherit;
-  text-align: left;
-  transition: border-color 0.12s, background 0.12s;
+  transition: opacity 0.12s;
   user-select: none;
 }
 
-.ob-dist-chip.is-on {
-  border-color: var(--sel-border);
-  background: var(--sel-bg);
-}
+.ob-dist-row:not(.is-on) { opacity: 0.42; }
+.ob-dist-row:hover { opacity: 1 !important; }
 
-.ob-dist-chip:not(.is-on) {
-  opacity: 0.55;
-}
-
-.ob-dist-chip:hover {
-  opacity: 1 !important;
-  border-color: var(--sel-border);
-}
-
-.ob-dist-chip-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.ob-dist-chip-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text);
+.ob-dist-row-chip {
+  flex: 0 0 156px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.ob-dist-row-chip.is-on {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.ob-dist-row-bar-wrap {
   flex: 1;
-}
-
-.ob-dist-chip-count {
-  font-size: 10px;
-  color: var(--text-dim);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.ob-dist-chip-bar {
   height: 3px;
   background: var(--border);
   border-radius: 2px;
   overflow: hidden;
 }
 
-.ob-dist-chip-bar-fill {
+.ob-dist-row-bar-fill {
   height: 100%;
+  background: var(--border-hover);
   border-radius: 2px;
-  background: var(--sel-color);
   transition: background 0.2s;
 }
 
-.ob-dist-chip:not(.is-on) .ob-dist-chip-bar-fill {
-  background: var(--border-hover);
+.ob-dist-row.is-on .ob-dist-row-bar-fill {
+  background: rgba(96, 165, 250, 0.5);
+}
+
+.ob-dist-row-count {
+  flex: 0 0 40px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .ob-dist-expand-btn {
@@ -964,23 +974,50 @@ body {
   font-size: 12px;
   color: var(--text-dim);
   cursor: pointer;
-  padding: 6px 4px;
+  padding: 8px 0;
   background: none;
   border: none;
+  border-top: 1px dashed var(--border);
   font-family: inherit;
-  margin-top: 2px;
+  width: 100%;
+  justify-content: center;
   transition: color 0.15s;
+  margin-top: 0;
 }
 .ob-dist-expand-btn:hover { color: var(--text); }
 
-/* ─── Platform selection in Game Details tab ──────────── */
+/* ─── Platform chips (multi-select, text-only) ────────── */
 
-.ob-plat-section {
-  margin-top: 4px;
+.ob-plat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
-.ob-plat-section .ob-plat-grid {
-  margin-bottom: 10px;
+.ob-plat-chip {
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.ob-plat-chip:hover {
+  border-color: var(--sel-border);
+  color: var(--text);
+}
+
+.ob-plat-chip.is-on {
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+  color: var(--sel-color);
+  font-weight: 600;
 }
 
 /* ─── Language type-ahead search ─────────────────────── */

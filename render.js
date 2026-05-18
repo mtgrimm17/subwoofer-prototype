@@ -62,13 +62,15 @@ function renderOnboardingFooter() {
 
 /* Tab 1: Game Details */
 function buildGameDetailsTab() {
-  const fd      = state.formData;
-  const dPreset = fd.distributionPreset || 'global';
+  const fd = state.formData;
+  const knownPresets = ['everywhere','everywhere_except_cn','english_only','custom'];
+  const dPreset = knownPresets.includes(fd.distributionPreset) ? fd.distributionPreset : 'everywhere';
 
   const distPresets = [
-    { id:'global',        label:'Global' },
-    { id:'english_only',  label:'English only' },
-    { id:'custom',        label:'Custom' },
+    { id:'everywhere',          label:'Everywhere' },
+    { id:'everywhere_except_cn',label:'Everywhere except China' },
+    { id:'english_only',        label:'English only' },
+    { id:'custom',              label:'Custom' },
   ];
 
   return `
@@ -92,24 +94,15 @@ function buildGameDetailsTab() {
       </div>
 
       <div class="ob-section-label" style="margin-top:24px;"><span class="req-dot"></span>Platforms</div>
-      <div class="ob-plat-section">
-        <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Select the storefronts you plan to submit to. You can add more later from the dashboard.</div>
-        <div id="ob-plat-grid-wrap">${buildObPlatTilesHTML()}</div>
-      </div>
+      <div id="ob-plat-grid-wrap">${buildObPlatTilesHTML()}</div>
 
       <div class="ob-section-label" style="margin-top:24px;">Distribution</div>
 
-      <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:12px;"></div>
+      <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
 
-      <span class="ob-dist-question">Where do you want to distribute?</span>
+      <span class="ob-dist-question">Where do you intend to make the game available?</span>
 
-      <div class="sw-tip-box">
-        <span class="sw-tip-label">Subwoofer tip</span>
-        <span class="sw-tip-text">Distributing globally maximizes discoverability. Most markets outside the top 10 require no localization for strong conversion.</span>
-      </div>
-
-      <div class="ob-presets-row" style="margin-bottom:6px;">
-        <span class="ob-presets-label">Presets</span>
+      <div class="ob-presets-row" style="margin-bottom:10px;">
         <div class="ob-preset-pills">
           ${distPresets.map(p => `
             <button class="ob-preset-pill ${dPreset === p.id ? 'is-active' : ''}"
@@ -118,9 +111,19 @@ function buildGameDetailsTab() {
         </div>
       </div>
 
+      <div class="sw-tip-box" style="margin-bottom:10px;">
+        <span class="sw-tip-icon-circle">!</span>
+        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
+      </div>
+
       <div id="ob-country-list-wrap">${buildObCountryChips()}</div>
 
       <div class="ob-section-label" style="margin-top:28px;">Localization</div>
+
+      <div class="sw-tip-box" style="margin-bottom:12px;">
+        <span class="sw-tip-icon-circle">!</span>
+        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Language support is one of the best ways to increase traction and conversion in secondary markets.</span>
+      </div>
 
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
 
@@ -197,38 +200,40 @@ const OB_REG_TIPS = {
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
-/* ── Country chip grid ── first 10 visible, rest collapsible ── */
+/* ── Country row list ── first 10 visible, rest collapsible ── */
 function buildObCountryChips() {
-  const fd       = state.formData;
-  const selected = new Set(fd.selectedCountries || []);
+  const fd        = state.formData;
+  const selected  = new Set(fd.selectedCountries || []);
   const maxGamers = IOS_COUNTRIES[0]?.iosGamers || 1;
   const extraCount = Math.max(0, IOS_COUNTRIES.length - 10);
 
-  const chips = IOS_COUNTRIES.map((c, i) => {
-    const isOn  = selected.has(c.code);
+  const rows = IOS_COUNTRIES.map((c, i) => {
+    const isOn    = selected.has(c.code);
     const isExtra = i >= 10;
-    const barPct = Math.round((c.iosGamers / maxGamers) * 100);
-    const regTip = OB_REG_TIPS[c.code]
-      ? `<span class="tooltip-anchor" data-tip="${OB_REG_TIPS[c.code]}" style="margin-left:auto;flex-shrink:0;"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
+    const barPct  = Math.round((c.iosGamers / maxGamers) * 100);
+    const regTip  = OB_REG_TIPS[c.code]
+      ? `<span class="tooltip-anchor" data-tip="${OB_REG_TIPS[c.code]}"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
       : '';
     return `
-      <div class="ob-dist-chip${isOn ? ' is-on' : ''}${isExtra ? ' ob-dist-chip-extra' : ''}"
-           id="ob-dist-chip-${c.code}"
+      <div class="ob-dist-row${isOn ? ' is-on' : ''}${isExtra ? ' ob-dist-row-extra' : ''}"
+           data-code="${c.code}"
            onclick="toggleObCountry('${c.code}')">
-        <div class="ob-dist-chip-info">
-          <span class="ob-dist-chip-name">${c.name}</span>
-          <span class="ob-dist-chip-count">${_obFmtGamers(c.iosGamers)}</span>
-          ${regTip}
+        <div class="ob-dist-row-chip${isOn ? ' is-on' : ''}" id="ob-dist-chip-${c.code}">${c.name}</div>
+        <div class="ob-dist-row-bar-wrap">
+          <div class="ob-dist-row-bar-fill" style="width:${barPct}%"></div>
         </div>
-        <div class="ob-dist-chip-bar">
-          <div class="ob-dist-chip-bar-fill" style="width:${barPct}%"></div>
-        </div>
+        <span class="ob-dist-row-count">${_obFmtGamers(c.iosGamers)}</span>
+        ${regTip}
       </div>`;
   }).join('');
 
   return `
+    <div class="ob-dist-table-header">
+      <span class="ob-dist-col-market">Market</span>
+      <span class="ob-dist-col-count">iOS Gamers (approx)</span>
+    </div>
     <div class="ob-dist-country-list" id="ob-dist-country-list">
-      ${chips}
+      ${rows}
     </div>
     ${extraCount > 0 ? `
     <button class="ob-dist-expand-btn" id="ob-dist-expand-btn" onclick="toggleObDistExpand(this)">
@@ -236,28 +241,22 @@ function buildObCountryChips() {
     </button>` : ''}`;
 }
 
-/* ── Legacy alias (kept for any callers) ── */
+/* ── Legacy alias ── */
 function buildObCountryList() { return buildObCountryChips(); }
 
-/* ── Platform tiles HTML (used inline + in-place refresh) ── */
+/* ── Platform chips (text-only multi-select, same style as lang chips) ── */
 function buildObPlatTilesHTML() {
-  const selectable = ['ios', 'android', 'steam', 'egs'];
-  const tiles = selectable.map(pid => {
-    const p = PLATFORMS[pid];
-    const isOn = state.activePlatforms.has(pid);
-    const icons = { ios:'🍎', android:'🤖', steam:'🎮', egs:'⚡' };
-    return `
-      <button class="ob-plat-tile ${isOn ? 'is-on' : ''}" onclick="toggleOnboardingPlatform('${pid}')"
-              style="--plat-color:${p.color}">
-        <div class="ob-plat-tile-icon">${icons[pid]}</div>
-        <div class="ob-plat-tile-name">${p.label}</div>
-        ${isOn ? '<div class="ob-plat-tile-check">✓</div>' : ''}
-      </button>`;
+  const selectable = [
+    { id:'ios',     label:'App Store' },
+    { id:'android', label:'Google Play' },
+    { id:'steam',   label:'Steam' },
+    { id:'egs',     label:'Epic Games Store' },
+  ];
+  const chips = selectable.map(({ id, label }) => {
+    const isOn = state.activePlatforms.has(id);
+    return `<button class="ob-plat-chip${isOn ? ' is-on' : ''}" onclick="toggleOnboardingPlatform('${id}')">${label}</button>`;
   }).join('');
-  const hint = state.activePlatforms.size === 0
-    ? `<div class="ob-plat-hint">Select at least one platform to continue.</div>`
-    : `<div class="ob-plat-hint ob-plat-hint-ok">${state.activePlatforms.size} platform${state.activePlatforms.size > 1 ? 's' : ''} selected</div>`;
-  return `<div class="ob-plat-grid">${tiles}</div>${hint}`;
+  return `<div class="ob-plat-chips">${chips}</div>`;
 }
 
 /* ── Language picker ── two-row: primary (amber dropdown) + supported (green chips) */
@@ -279,7 +278,12 @@ function _highestImpactUnselectedLang() {
   const fd = state.formData;
   const primary  = fd.primaryLanguage || 'en';
   const selected = new Set(fd.localizations || []);
-  const countries = new Set(fd.selectedCountries || []);
+  // Use selected countries, or fall back to all countries if none chosen yet
+  const countries = new Set(
+    (fd.selectedCountries && fd.selectedCountries.length > 0)
+      ? fd.selectedCountries
+      : IOS_COUNTRIES.map(c => c.code)
+  );
 
   const candidates = OB_LANG_FEATURED.filter(l => l !== primary && !selected.has(l));
 
@@ -365,13 +369,8 @@ function buildObLangList() {
       <div class="loc-row">
         <div class="loc-label-col">
           <div class="loc-label">SUPPORTED</div>
-          <div class="loc-helper" style="margin-top:4px;font-size:10px;color:var(--text-faint);">Optional · ${count} selected</div>
         </div>
         <div class="loc-control-col">
-          <div class="sw-tip-box sw-tip-box-sm">
-            <span class="sw-tip-label">Subwoofer tip</span>
-            <span class="sw-tip-text">Language support is one of the best ways to increase traction and conversion in secondary markets.</span>
-          </div>
           <div class="loc-chips" id="loc-chips">
             ${featuredChips}
             ${extraChips}
