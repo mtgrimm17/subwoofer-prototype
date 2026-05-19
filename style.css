@@ -409,6 +409,18 @@ body {
   top: -1px;
 }
 
+.form-optional-tag {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
 /* Regulatory tooltip icon — warned state turns orange */
 .tooltip-icon.is-warned {
   border-color: var(--orange);
@@ -538,8 +550,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border-radius: 8px;
+  padding: 7px 13px;
+  border-radius: 6px;
   border: 1.5px solid var(--sel-border);
   background: var(--sel-bg);
   box-shadow: 0 0 0 3px var(--sel-shadow);
@@ -683,10 +695,10 @@ body {
   font-size: 16px;
   padding: 4px 12px;
   line-height: 1;
+  background: transparent;
 }
 .loc-chip.loc-chip-add:hover {
-  border-color: var(--sel-border);
-  color: var(--sel-color);
+  color: var(--text);
 }
 
 .loc-chip-icon {
@@ -835,13 +847,13 @@ body {
   flex-shrink: 0;
 }
 
-/* ! badge — absolute, top-right corner of the chip, overlapping the border */
+/* ! badge — absolute, very corner of the chip, matching ai-badge placement */
 .sw-tip-chip-badge {
   position: absolute;
-  top: -7px;
-  right: -7px;
-  width: 14px;
-  height: 14px;
+  top: -6px;
+  right: -5px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: var(--panel);
   border: 1px solid #4ade80;
@@ -853,7 +865,7 @@ body {
   justify-content: center;
   cursor: default;
   line-height: 1;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* Always-visible Subwoofer tip box */
@@ -3580,6 +3592,40 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   transition: background 0.12s;
 }
 .ai-autofill-btn:hover { background: var(--blue); color: #fff; }
+
+/* "See prompt" toggle button and collapsible area */
+.ai-see-prompt-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.12s;
+}
+.ai-see-prompt-btn:hover { color: var(--text); }
+
+.ai-prompt-drawer {
+  display: none;
+  margin-top: 8px;
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+.ai-prompt-drawer.is-open { display: block; }
 
 .ai-ghost-btn {
   flex-shrink: 0;

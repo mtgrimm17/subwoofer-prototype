@@ -75,7 +75,17 @@ function buildGameDetailsTab() {
 
   return `
     <div class="ob-form">
-      <div class="ob-section-label">About your game</div>
+
+      <div class="form-group">
+        <label class="form-label" for="ob-product-url" style="display:flex;align-items:center;gap:6px;">
+          Already have a product page live on any platform?
+          <span class="form-optional-tag">Optional</span>
+        </label>
+        <input class="form-input" id="ob-product-url" type="url" placeholder="Drop a link here to jump‑start the process"
+               oninput="syncField('productUrl', this.value)">
+      </div>
+
+      <div class="ob-section-label" style="margin-top:8px;">About your game</div>
 
       <div class="form-group">
         <label class="form-label" for="ob-title"><span class="req-dot"></span>Game Title</label>
@@ -122,7 +132,7 @@ function buildGameDetailsTab() {
 
       <div class="sw-tip-box" style="margin-bottom:12px;">
         <span class="sw-tip-icon-circle">!</span>
-        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Language support is one of the best ways to increase traction and conversion in secondary markets.</span>
+        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is one of the best ways to increase traction and conversion in secondary markets.</span>
       </div>
 
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
@@ -331,7 +341,7 @@ function buildObLangList() {
     const isOn = selected.has(lang);
     const isTipVisible = lang === tipLang && !isOn && tipTotal > 0;
     const tipBadge = isTipVisible
-      ? `<span class="sw-tip-chip-badge tooltip-anchor" data-tip="Subwoofer Tip: adding ${OB_LANG_NAMES[lang]} support could reach ~${tipTotal}M gamers in their native language." onclick="event.stopPropagation()">!</span>`
+      ? `<span class="sw-tip-chip-badge tooltip-anchor" data-tip="Subwoofer Tip: adding ${OB_LANG_NAMES[lang]} support could reach ~${tipTotal}M gamers in their native language across your selected countries." onclick="event.stopPropagation()">!</span>`
       : '';
     return `
       <button class="loc-chip${isOn ? ' is-on' : ''}${isTipVisible ? ' has-sw-tip' : ''}"
@@ -457,6 +467,7 @@ function buildComplianceTab() {
 function hydrateGameDetailsTab() {
   const fd = state.formData;
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('ob-product-url', fd.productUrl);
   set('ob-title', fd.title);
   set('ob-desc',  fd.description);
   set('ob-date',  fd.releaseDate);
@@ -942,9 +953,11 @@ function renderStepModal() {
         </div>`;
     } else if (state.claudeCache && inferenceStatus !== 'error') {
       inferenceBanner = `
-        <div class="ai-banner ai-banner-done">
+        <div class="ai-banner ai-banner-done" style="flex-wrap:wrap;">
           <span class="ai-banner-icon">✦</span>
-          <div class="ai-banner-text">Subwoofer pre-populated answers based on the information you provided. Please review these answers before saving.</div>
+          <div class="ai-banner-text" style="flex:1;">Subwoofer pre-populated answers based on the information you provided. Please review these answers before saving.</div>
+          <button class="ai-see-prompt-btn" onclick="togglePromptDrawer(this)">See prompt</button>
+          <div class="ai-prompt-drawer" style="flex-basis:100%;">${(state.claudeLastPrompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         </div>`;
     } else if (inferenceStatus === 'error') {
       inferenceBanner = `

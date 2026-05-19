@@ -1337,6 +1337,7 @@ function makeBlankFormData() {
     title:                '',
     description:          '',
     price:                '',   // collected per-platform (iOS Business), kept here for store preview
+    productUrl:           '',   // existing product page URL (optional jump-start)
     supportUrl:           '',
     privacyUrl:           '',
     primaryLanguage:      'en',

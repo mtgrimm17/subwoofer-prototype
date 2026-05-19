@@ -1092,6 +1092,15 @@ function pickTiming(radio) {
   if (dateRow) dateRow.style.display = radio.value === 'specific_date' ? 'block' : 'none';
 }
 
+/* ── Prompt drawer (debug) ───────────────────────────────── */
+
+function togglePromptDrawer(btn) {
+  const drawer = btn.nextElementSibling;
+  if (!drawer) return;
+  const isOpen = drawer.classList.toggle('is-open');
+  btn.textContent = isOpen ? 'Hide prompt' : 'See prompt';
+}
+
 /* ── Alert helpers ───────────────────────────────────────── */
 
 // Show/hide the privacy policy alert based on whether the field has a value
@@ -1278,6 +1287,8 @@ function closeAllDropdowns() {
   document.getElementById('submissionMenu')?.classList.remove('open');
   document.getElementById('profileMenu')?.classList.remove('open');
   document.getElementById('loc-primary-wrap')?.classList.remove('is-open');
+  // Close language type-ahead search if open
+  document.getElementById('lang-search-wrap')?.classList.add('hidden');
 }
 
 /* ── Profile menu ────────────────────────────────────── */
@@ -1657,6 +1668,7 @@ function filterLangSearch(query) {
       !featured.has(code) &&
       (q === '' || name.toLowerCase().includes(q) || code.toLowerCase().includes(q))
     )
+    .sort(([, a], [, b]) => a.localeCompare(b))   // always alphabetical
     .slice(0, 20);
 
   if (results.length === 0) {

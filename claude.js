@@ -117,7 +117,9 @@ async function analyzeGameWithClaude() {
     }
   }
 
-  content.push({ type: 'text', text: buildGeminiPrompt() });
+  const promptText = buildGeminiPrompt();
+  state.claudeLastPrompt = promptText;  // store for "See prompt" debug view
+  content.push({ type: 'text', text: promptText });
 
   const res = await fetch(CLAUDE_ENDPOINT, {
     method: 'POST',
