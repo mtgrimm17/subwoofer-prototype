@@ -247,15 +247,14 @@ body {
   padding: 7px 13px;
   border-radius: 6px;
   border: 1.5px solid var(--border);
-  background: transparent;
-  color: var(--text-faint);
+  background: var(--panel-2);
+  color: var(--text-dim);
   cursor: pointer;
   font-family: inherit;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
   white-space: nowrap;
 }
-.ob-preset-pill:hover {
-  border-color: var(--sel-border);
+.ob-preset-pill:hover:not(.is-active) {
   color: var(--text);
 }
 .ob-preset-pill.is-active {
@@ -564,7 +563,7 @@ body {
 .loc-primary-name {
   font-size: 12px;
   font-weight: 500;
-  color: var(--text);
+  color: var(--sel-color);
   flex: 1;
 }
 
@@ -656,23 +655,23 @@ body {
   padding: 7px 13px;
   border-radius: 6px;
   border: 1.5px solid var(--border);
-  background: transparent;
+  background: var(--panel-2);
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
-  color: var(--text-faint);
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  color: var(--text-dim);
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
   position: relative;
+  overflow: visible;
 }
 
 .loc-chip.is-on {
   border-color: var(--sel-border);
   background: var(--sel-bg);
-  color: var(--text);
+  color: var(--sel-color);
 }
 
-.loc-chip:hover {
-  border-color: var(--sel-border);
+.loc-chip:hover:not(.is-on) {
   color: var(--text);
 }
 
@@ -836,28 +835,25 @@ body {
   flex-shrink: 0;
 }
 
-/* Inline ! badge on the highest-impact unselected language chip */
+/* ! badge — absolute, top-right corner of the chip, overlapping the border */
 .sw-tip-chip-badge {
-  width: 15px;
-  height: 15px;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: rgba(74, 222, 128, 0.12);
+  background: var(--panel);
   border: 1px solid #4ade80;
   color: #4ade80;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   cursor: default;
-  margin-left: 4px;
   line-height: 1;
-}
-
-/* Chip with an active Subwoofer tip gets a subtle green border hint */
-.loc-chip.has-sw-tip {
-  border-color: rgba(74, 222, 128, 0.35);
+  z-index: 1;
 }
 
 /* Always-visible Subwoofer tip box */
@@ -955,8 +951,8 @@ body {
 /* Distribution question header */
 .ob-dist-question {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 400;
+  color: var(--text-dim);
   display: block;
   margin-bottom: 8px;
   margin-top: 4px;
@@ -1009,13 +1005,17 @@ body {
   padding: 5px 10px;
   border-radius: 7px;
   border: 1.5px solid var(--border);
+  background: var(--panel-2);
   font-size: 12px;
   font-weight: 500;
   color: var(--text-dim);
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: border-color 0.12s, color 0.12s;
+  transition: color 0.12s, border-color 0.12s;
+}
+.ob-dist-row:hover .ob-dist-row-chip:not(.is-on) {
+  color: var(--text);
 }
 
 .ob-dist-row-chip.is-on {
@@ -1082,17 +1082,16 @@ body {
   padding: 7px 14px;
   border-radius: 6px;
   border: 1.5px solid var(--border);
-  background: transparent;
-  color: var(--text-faint);
+  background: var(--panel-2);
+  color: var(--text-dim);
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
 
-.ob-plat-chip:hover {
-  border-color: var(--sel-border);
+.ob-plat-chip:hover:not(.is-on) {
   color: var(--text);
 }
 

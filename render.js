@@ -200,22 +200,21 @@ const OB_REG_TIPS = {
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
-/* ── Country row list ── first 10 visible, rest collapsible ── */
+/* ── Country row list ── first 10 always visible, rest collapsible ── */
 function buildObCountryChips() {
-  const fd        = state.formData;
-  const selected  = new Set(fd.selectedCountries || []);
-  const maxGamers = IOS_COUNTRIES[0]?.iosGamers || 1;
+  const fd         = state.formData;
+  const selected   = new Set(fd.selectedCountries || []);
+  const maxGamers  = IOS_COUNTRIES[0]?.iosGamers || 1;
   const extraCount = Math.max(0, IOS_COUNTRIES.length - 10);
 
-  const rows = IOS_COUNTRIES.map((c, i) => {
-    const isOn    = selected.has(c.code);
-    const isExtra = i >= 10;
-    const barPct  = Math.round((c.iosGamers / maxGamers) * 100);
-    const regTip  = OB_REG_TIPS[c.code]
+  const buildRow = (c, i) => {
+    const isOn   = selected.has(c.code);
+    const barPct = Math.round((c.iosGamers / maxGamers) * 100);
+    const regTip = OB_REG_TIPS[c.code]
       ? `<span class="tooltip-anchor" data-tip="${OB_REG_TIPS[c.code]}" onclick="event.stopPropagation()"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
       : '';
     return `
-      <div class="ob-dist-row${isOn ? ' is-on' : ''}${isExtra ? ' ob-dist-row-extra' : ''}"
+      <div class="ob-dist-row${isOn ? ' is-on' : ''}"
            data-code="${c.code}"
            onclick="toggleObCountry('${c.code}')">
         <div class="ob-dist-row-chip${isOn ? ' is-on' : ''}" id="ob-dist-chip-${c.code}">
@@ -226,20 +225,22 @@ function buildObCountryChips() {
         </div>
         <span class="ob-dist-row-count">${_obFmtGamers(c.iosGamers)}</span>
       </div>`;
-  }).join('');
+  };
+
+  const topRows   = IOS_COUNTRIES.slice(0, 10).map(buildRow).join('');
+  const extraRows = IOS_COUNTRIES.slice(10).map(buildRow).join('');
 
   return `
     <div class="ob-dist-table-header">
       <span class="ob-dist-col-market">Market</span>
       <span class="ob-dist-col-count">iOS Gamers (approx)</span>
     </div>
-    <div class="ob-dist-country-list" id="ob-dist-country-list">
-      ${rows}
-    </div>
+    <div class="ob-dist-country-list" id="ob-dist-country-list">${topRows}</div>
     ${extraCount > 0 ? `
     <button class="ob-dist-expand-btn" id="ob-dist-expand-btn" onclick="toggleObDistExpand(this)">
       ${_chevDown} Show ${extraCount} more markets
-    </button>` : ''}`;
+    </button>
+    <div class="ob-dist-country-list hidden" id="ob-dist-country-list-extra">${extraRows}</div>` : ''}`;
 }
 
 /* ── Legacy alias ── */
@@ -406,24 +407,6 @@ function buildUploadAssetsTab() {
       </div>
       <div class="asset-grid" id="ob-screenshot-grid"></div>
 
-      ${hasAndroid ? `
-      <div class="ob-section-label" style="margin-top:24px;">
-        Feature Graphic
-        <span class="platform-req-badge">Google Play</span>
-      </div>
-      <div class="asset-guidance">Required for Google Play listings. Used as the hero image at the top of your store page.</div>
-      <div class="asset-dropzone" id="ob-feature-dropzone"
-           onclick="document.getElementById('ob-feature-input').click()"
-           ondragover="event.preventDefault(); this.classList.add('is-over')"
-           ondragleave="this.classList.remove('is-over')"
-           ondrop="handleFeatureDrop(event); this.classList.remove('is-over')">
-        <div class="asset-dropzone-icon">↑</div>
-        <div class="asset-dropzone-label">Drop feature graphic here, or click to browse</div>
-        <div class="asset-dropzone-hint">PNG or JPG · 1024×500</div>
-        <input type="file" id="ob-feature-input" accept="image/*" style="display:none"
-               onchange="handleFeatureFiles(this.files); this.value=''">
-      </div>
-      <div id="ob-feature-preview"></div>` : ''}
 
       <div class="ob-section-label" style="margin-top:24px;">Trailer <span class="form-section-note">Optional</span></div>
       <div class="asset-guidance">A short gameplay trailer (60–90 seconds) shown on your store pages. Upload a video file or link a YouTube video below.</div>
@@ -454,13 +437,9 @@ function buildComplianceTab() {
       <div class="ob-section-label">Links</div>
 
       <div class="form-group">
-        <label class="form-label" for="ob-privacy"><span class="req-dot"></span>Privacy Policy URL</label>
+        <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
         <input class="form-input" id="ob-privacy" type="url" placeholder="https://yourgame.com/privacy"
-               oninput="syncField('privacyUrl', this.value); updatePrivacyAlert(this.value)">
-        <div id="ob-privacy-alert" class="alert-box" style="display:none;">
-          <span class="alert-icon-circle">!</span>
-          <span class="alert-text">Required. A missing privacy policy URL is an automatic App Review rejection.</span>
-        </div>
+               oninput="syncField('privacyUrl', this.value)">
       </div>
 
       <div class="ob-section-label" style="margin-top:20px;">Compliance Questions</div>
@@ -514,8 +493,6 @@ function hydrateUploadAssetsTab() {
 function hydrateComplianceTab() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   set('ob-privacy', state.formData.privacyUrl);
-  // Show privacy alert if the field was previously visited but left blank
-  if (state.onboardingTab === 2) updatePrivacyAlert(state.formData.privacyUrl);
   if (state.formData.privacyGenerated) {
     const cb = document.getElementById('ob-privacy-gen-check');
     if (cb) cb.checked = true;

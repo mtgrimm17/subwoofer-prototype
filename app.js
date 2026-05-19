@@ -783,11 +783,10 @@ function toggleObCountry(code) {
 }
 
 function _refreshCountryListInPlace() {
-  // Update row states in-place without collapsing the list
+  // Update row states in-place without collapsing the extra list
   const selected = new Set(state.formData.selectedCountries || []);
-  document.querySelectorAll('#ob-dist-country-list .ob-dist-row').forEach(row => {
+  document.querySelectorAll('.ob-dist-row[data-code]').forEach(row => {
     const code = row.dataset.code;
-    if (!code) return;
     const isOn = selected.has(code);
     row.classList.toggle('is-on', isOn);
     const chip = row.querySelector('.ob-dist-row-chip');
@@ -1609,17 +1608,19 @@ function setCQSingle(qid, optIdx) {
 /* ── Country chip expand/collapse ────────────────────── */
 
 function toggleObDistExpand(btn) {
-  const list = document.getElementById('ob-dist-country-list');
-  if (!list) return;
-  const isExpanded = list.classList.toggle('is-expanded');
+  const extraList = document.getElementById('ob-dist-country-list-extra');
+  if (!extraList) return;
   const extraCount = IOS_COUNTRIES.length - 10;
   const chevD = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
   const chevU = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
-  if (isExpanded) {
-    btn.innerHTML = `${chevU} Show fewer markets`;
-  } else {
+  const nowHidden = extraList.classList.toggle('hidden');
+  if (nowHidden) {
+    // Collapsed — show the expand prompt and scroll button into view
     btn.innerHTML = `${chevD} Show ${extraCount} more markets`;
     btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    // Expanded
+    btn.innerHTML = `${chevU} Show fewer markets`;
   }
 }
 
