@@ -2532,8 +2532,8 @@ select.form-input {
 /* ── Release Timing redesign ──────────────────────────── */
 .ob-timing-q {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 500;
+  color: var(--text-dim);
   margin-bottom: 10px;
 }
 .ob-timing-chips {
@@ -2572,7 +2572,7 @@ select.form-input {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 18px 16px 10px;
-  overflow: visible;
+  overflow: hidden; /* prevent date labels bleeding outside border */
 }
 .ob-timing-row {
   display: flex;
@@ -2603,7 +2603,7 @@ select.form-input {
   overflow: visible;
 }
 .ob-timing-track--sd {
-  height: 54px; /* extra room for two-line RECOMMENDED label below */
+  height: 64px; /* extra room for two-line RECOMMENDED label below */
 }
 /* Line variants */
 .ob-timing-bar-line {
@@ -2613,12 +2613,20 @@ select.form-input {
   height: 2px;
   left: 0;
 }
+.ob-timing-faint-line {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+  left: 0;
+  background: var(--border);
+  opacity: 0.5;
+}
 .ob-timing-dash-line {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   height: 0;
-  left: 0;
   border-top: 2px dashed var(--border-hover);
 }
 .ob-timing-solid-line {
@@ -2638,6 +2646,11 @@ select.form-input {
   border: 2px solid var(--border-hover);
   background: var(--panel-2);
   z-index: 1;
+}
+/* Recommended date dot — dashed border to match screenshot */
+.ob-timing-hdot--rec {
+  border-style: dashed;
+  border-color: var(--text-faint);
 }
 .ob-timing-fdot {
   position: absolute;

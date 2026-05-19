@@ -198,9 +198,14 @@ function buildReleaseTimingContent() {
     const stagger = (maxDays - minDays).toFixed(1);
 
     const rows = reviewData.map(r => {
-      const pct    = (r.days / maxDays) * 100;
-      const midPct = pct / 2;
+      const pct      = (r.days / maxDays) * 100;
+      const midPct   = pct / 2;
       const liveDate = fmtDateShort(_addDays(today, r.days));
+      // Right-align date label for the max-days bar to prevent bleeding past the track edge
+      const isMaxBar     = r.days === maxDays;
+      const dateLblStyle = isMaxBar
+        ? 'right:0;transform:none;text-align:right;'
+        : `left:${pct.toFixed(1)}%;transform:translateX(-50%);`;
       return `
         <div class="ob-timing-row">
           <div class="ob-timing-label">
@@ -211,8 +216,8 @@ function buildReleaseTimingContent() {
             <div class="ob-timing-bar-line" style="width:${pct.toFixed(1)}%;background:${r.color}"></div>
             <div class="ob-timing-hdot" style="left:0"></div>
             <div class="ob-timing-fdot" style="left:${pct.toFixed(1)}%;background:${r.color};border-color:${r.color}"></div>
-            <div class="ob-timing-lead-lbl" style="left:${midPct.toFixed(1)}%">+${r.days}d</div>
-            <div class="ob-timing-date-lbl" style="left:${pct.toFixed(1)}%">${liveDate}</div>
+            <div class="ob-timing-lead-lbl" style="left:${midPct.toFixed(1)}%">${r.days} days on average</div>
+            <div class="ob-timing-date-lbl" style="${dateLblStyle}">${liveDate}</div>
           </div>
         </div>`;
     }).join('');
@@ -222,7 +227,7 @@ function buildReleaseTimingContent() {
         ${rows}
         <div class="ob-timing-ruler"><span>Today</span></div>
       </div>
-      <div class="ob-timing-footer">Live dates stagger by up to <strong>${stagger}d</strong>. For a coordinated launch, pick a specific date.</div>`;
+      <div class="ob-timing-footer">For a coordinated launch, pick a specific date.</div>`;
   }
 
   if (rt === 'specific_date') {
@@ -244,6 +249,7 @@ function buildReleaseTimingContent() {
         const recPct     = ((spanDays - r.days * 2) / spanDays) * 100;
         const subPct     = ((spanDays - r.days)     / spanDays) * 100;
         const solidW     = 100 - subPct;
+        const dashW      = subPct - recPct;
         const leadMidPct = subPct + solidW / 2;
 
         return `
@@ -253,11 +259,21 @@ function buildReleaseTimingContent() {
               <span>${r.label}</span>
             </div>
             <div class="ob-timing-track ob-timing-track--sd">
-              <div class="ob-timing-dash-line" style="width:${subPct.toFixed(1)}%"></div>
+              <!-- 1. Faint gray line: left edge → recommended date -->
+              <div class="ob-timing-faint-line" style="width:${recPct.toFixed(1)}%"></div>
+              <!-- 2. Dotted line: recommended → submit-by -->
+              <div class="ob-timing-dash-line" style="left:${recPct.toFixed(1)}%;width:${dashW.toFixed(1)}%"></div>
+              <!-- 3. Solid colored line: submit-by → live -->
               <div class="ob-timing-solid-line" style="left:${subPct.toFixed(1)}%;width:${solidW.toFixed(1)}%;background:${r.color}"></div>
-              <div class="ob-timing-hdot" style="left:${recPct.toFixed(1)}%"></div>
+              <!-- Open dot at recommended (dashed border) -->
+              <div class="ob-timing-hdot ob-timing-hdot--rec" style="left:${recPct.toFixed(1)}%"></div>
+              <!-- Open dot at submit-by -->
+              <div class="ob-timing-hdot" style="left:${subPct.toFixed(1)}%"></div>
+              <!-- Filled dot at live -->
               <div class="ob-timing-fdot" style="left:100%;background:${r.color};border-color:${r.color}"></div>
+              <!-- Label above solid section -->
               <div class="ob-timing-lead-lbl" style="left:${leadMidPct.toFixed(1)}%">${r.days}d lead</div>
+              <!-- Labels below line -->
               <div class="ob-timing-rec-lbl" style="left:${recPct.toFixed(1)}%"><span class="ob-timing-rec-tag">RECOMMENDED</span><br>${fmtDateShort(recDate)}</div>
               <div class="ob-timing-date-lbl" style="left:${subPct.toFixed(1)}%">${fmtDateShort(subDate)}</div>
             </div>
@@ -281,7 +297,7 @@ function buildReleaseTimingContent() {
       <div class="ob-timing-launch-row" style="margin-bottom:12px;">
         <span class="ob-timing-launch-tag">Launch</span>
         <input class="form-input ob-timing-date-input" id="ob-date" type="date" value="${escHtml(dateVal || '')}"
-               oninput="syncField('releaseDate', this.value); _refreshTimingContent()">
+               onchange="syncField('releaseDate', this.value); _refreshTimingContent()">
       </div>
       ${panelHtml}
       ${footerHtml}`;

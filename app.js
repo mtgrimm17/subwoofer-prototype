@@ -1088,6 +1088,12 @@ function _drawMap(container, W, activeCodes, primaryCodes) {
 
 function pickTiming(value) {
   state.formData.releaseTiming = value;
+  // Pre-fill launch date to 14 days from today when first selecting specific_date
+  if (value === 'specific_date' && !state.formData.releaseDate) {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    state.formData.releaseDate = d.toISOString().split('T')[0]; // YYYY-MM-DD
+  }
   // Update chip active state
   document.querySelectorAll('.ob-timing-chip').forEach(chip => {
     chip.classList.toggle('is-on', chip.dataset.timing === value);

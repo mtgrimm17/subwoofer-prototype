@@ -355,52 +355,171 @@ async function analyzeCQWithClaude() {
 
 /* ══════════════════════════════════════════════════════════════
    GAME SEARCH — find existing listing by title
+   Chain: iTunes App Store → Steam → Claude knowledge fallback
 ══════════════════════════════════════════════════════════════ */
 
-async function searchGameByTitle(title) {
-  if (!CLAUDE_API_KEY) throw new Error('NO_KEY');
-  if (!title || !title.trim()) throw new Error('NO_TITLE');
+/* ── Shared helpers ─────────────────────────────────────────── */
 
-  console.log('[Claude Search] Searching for:', title);
+function _fetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const id   = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
 
-  const prompt = `You are a game store expert with comprehensive knowledge of titles on Steam, iOS App Store, Google Play, Epic Games Store, and other major storefronts.
+function _normTitle(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
-Search your knowledge for a game with the EXACT title: "${title.trim()}"
+function _titleScore(query, candidate) {
+  const q = _normTitle(query);
+  const c = _normTitle(candidate);
+  if (!c || !q) return 0;
+  if (c === q)                               return 100;
+  if (c.startsWith(q) || q.startsWith(c))   return 85;
+  if (c.includes(q)   || q.includes(c))     return 70;
+  return 0;
+}
+
+function _bestMatch(query, items, getName) {
+  let best = null, bestScore = 0;
+  for (const item of items) {
+    const score = _titleScore(query, getName(item));
+    if (score > bestScore) { bestScore = score; best = item; }
+  }
+  return bestScore >= 70 ? { item: best, score: bestScore } : null;
+}
+
+function _stripHtml(html) {
+  return (html || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function _trimDesc(text, maxLen) {
+  maxLen = maxLen || 600;
+  const clean = _stripHtml(text);
+  if (!clean) return '';
+  if (clean.length <= maxLen) return clean;
+  const cut     = clean.substring(0, maxLen);
+  const lastDot = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  return lastDot > maxLen * 0.6 ? cut.substring(0, lastDot + 1) : cut + '…';
+}
+
+/* ── Source 1: iTunes App Store (CORS-friendly, no key needed) ── */
+
+async function _searchITunes(title) {
+  console.log('[Search] Trying iTunes App Store...');
+  const url = 'https://itunes.apple.com/search?term=' + encodeURIComponent(title)
+            + '&entity=software&media=software&limit=10&country=us';
+  const res = await _fetchWithTimeout(url, 7000);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!Array.isArray(data.results) || !data.results.length) return null;
+
+  // Prefer results in the Games category
+  const games = data.results.filter(r =>
+    r.primaryGenreName && r.primaryGenreName.toLowerCase().includes('game'));
+  const pool  = games.length ? games : data.results;
+
+  const match = _bestMatch(title, pool, r => r.trackName);
+  if (!match) return null;
+
+  const r    = match.item;
+  const desc = _trimDesc(r.description || r.longDescription || '');
+  if (!desc) return null;
+
+  console.log('[Search] iTunes hit:', r.trackName, '(score', match.score + ')');
+  return {
+    found:       true,
+    title:       r.trackName,
+    description: desc,
+    source:      'iOS App Store',
+    allStores:   ['iOS App Store'],
+    confidence:  match.score,
+  };
+}
+
+/* ── Source 2: Steam Store API (direct; silently skipped on CORS failure) ── */
+
+async function _searchSteam(title) {
+  console.log('[Search] Trying Steam...');
+
+  // Step 1: search by name
+  const searchUrl = 'https://store.steampowered.com/api/storesearch/?term='
+                  + encodeURIComponent(title) + '&l=english&cc=US';
+  const searchRes  = await _fetchWithTimeout(searchUrl, 7000);
+  if (!searchRes.ok) return null;
+  const searchData = await searchRes.json();
+  if (!Array.isArray(searchData.items) || !searchData.items.length) return null;
+
+  const match = _bestMatch(title, searchData.items, i => i.name);
+  if (!match) return null;
+  console.log('[Search] Steam search hit:', match.item.name, 'id:', match.item.id);
+
+  // Step 2: fetch app details for description
+  const detailUrl  = 'https://store.steampowered.com/api/appdetails?appids='
+                   + match.item.id + '&l=english';
+  const detailRes  = await _fetchWithTimeout(detailUrl, 7000);
+  if (!detailRes.ok) return null;
+  const detailData = await detailRes.json();
+  const appData    = detailData[match.item.id] && detailData[match.item.id].data;
+  if (!appData) return null;
+
+  const desc = _trimDesc(appData.short_description || appData.about_the_game || '');
+  if (!desc) return null;
+
+  console.log('[Search] Steam detail hit:', appData.name);
+  return {
+    found:       true,
+    title:       appData.name,
+    description: desc,
+    source:      'Steam',
+    allStores:   ['Steam'],
+    confidence:  match.score,
+  };
+}
+
+/* ── Source 3: Claude knowledge fallback ─────────────────────── */
+
+async function _searchClaudeKnowledge(title) {
+  // Gracefully degrade when no API key — don't throw, just return not found
+  if (!CLAUDE_API_KEY) {
+    console.warn('[Search] No Claude API key — skipping knowledge fallback.');
+    return { found: false, title: null, description: null, source: null, allStores: [], confidence: 0 };
+  }
+
+  console.log('[Search] Falling back to Claude knowledge...');
+
+  const prompt = `You are a game store database expert with knowledge of published game listings. Search your knowledge for a game titled: "${title}"
 
 Return ONLY a valid JSON object — no markdown fences, no explanation.
 
-If you find a game with this exact title (or a very close match), return:
+If you find this game:
 {
   "found": true,
-  "title": "<exact title as listed in store>",
-  "description": "<the actual store description for this game, verbatim or closely paraphrased — 2-4 sentences>",
-  "source": "<which store this came from, e.g. 'Steam', 'App Store', 'Google Play'>",
-  "confidence": <0-100 integer>
+  "title": "<exact store title>",
+  "description": "<3-5 sentences suitable for a store submission form>",
+  "source": "<store with the best description, e.g. 'PlayStation Store'>",
+  "allStores": ["<every store you know this game is on>"],
+  "confidence": <0-100>
 }
 
-If you do NOT find a game with this title, return:
+If not found or uncertain:
 {
   "found": false,
   "title": null,
   "description": null,
   "source": null,
+  "allStores": [],
   "confidence": 0
 }
 
-Rules:
-- Only return "found": true if you are genuinely confident this game exists in a major store
-- confidence 90-100 = you are certain this is a real game you know well
-- confidence 70-89 = you believe this is correct but have some uncertainty
-- confidence below 70 = do not return found: true; return found: false instead
-- The description should be a real, usable game description (not invented) — suitable to pre-fill a store submission form
-- Do NOT invent games that don't exist`;
+Rules: only return found:true if genuinely confident (confidence ≥ 70). Do NOT fabricate descriptions.`;
 
   const res = await fetch(CLAUDE_ENDPOINT, {
-    method: 'POST',
+    method:  'POST',
     headers: {
-      'x-api-key':                              CLAUDE_API_KEY,
-      'anthropic-version':                      '2023-06-01',
-      'content-type':                           'application/json',
+      'x-api-key':                                 CLAUDE_API_KEY,
+      'anthropic-version':                         '2023-06-01',
+      'content-type':                              'application/json',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
@@ -414,7 +533,7 @@ Rules:
     let rawBody = {};
     try { rawBody = await res.json(); } catch (_) {}
     const raw = rawBody.error?.message || '';
-    let msg = `Request failed (${res.status})`;
+    let msg = 'Request failed (' + res.status + ')';
     if (res.status === 429) msg = 'Rate limit reached — please retry in a moment.';
     else if (res.status === 401) msg = 'API key rejected.';
     else msg = raw || msg;
@@ -422,11 +541,37 @@ Rules:
   }
 
   const apiData = await res.json();
-  const text = apiData.content?.[0]?.text;
+  const text    = apiData.content && apiData.content[0] && apiData.content[0].text;
   if (!text) throw new Error('Empty response');
 
   const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   return JSON.parse(cleaned);
+}
+
+/* ── Orchestrator ────────────────────────────────────────────── */
+
+async function searchGameByTitle(title) {
+  if (!title || !title.trim()) throw new Error('NO_TITLE');
+  const t = title.trim();
+
+  // 1. iTunes App Store — real data, CORS-friendly, no key needed
+  try {
+    const result = await _searchITunes(t);
+    if (result) return result;
+  } catch (e) {
+    console.warn('[Search] iTunes failed:', e.message);
+  }
+
+  // 2. Steam — real data, may fail on CORS (silently skip)
+  try {
+    const result = await _searchSteam(t);
+    if (result) return result;
+  } catch (e) {
+    console.warn('[Search] Steam failed:', e.message);
+  }
+
+  // 3. Claude knowledge — needs API key; returns not-found gracefully if absent
+  return _searchClaudeKnowledge(t);
 }
 
 /* ── Apply CQ results to state ───────────────────────────────── */
