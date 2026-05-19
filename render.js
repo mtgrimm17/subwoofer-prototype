@@ -103,7 +103,7 @@ function buildGameDetailsTab() {
         <div class="char-count" id="ob-desc-count">0 / 4000</div>
       </div>
 
-      <div class="ob-section-label" style="margin-top:24px;"><span class="req-dot"></span>Platforms</div>
+      <div class="form-label" style="margin-top:24px;"><span class="req-dot"></span>Platforms</div>
       <div id="ob-plat-grid-wrap">${buildObPlatTilesHTML()}</div>
 
       <div class="ob-section-label" style="margin-top:24px;">Distribution</div>
@@ -132,7 +132,7 @@ function buildGameDetailsTab() {
 
       <div class="sw-tip-box" style="margin-bottom:12px;">
         <span class="sw-tip-icon-circle">!</span>
-        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is one of the best ways to increase traction and conversion in secondary markets.</span>
+        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is a great way to increase traction and conversion in secondary markets.</span>
       </div>
 
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
@@ -216,7 +216,7 @@ function buildReleaseTimingContent() {
             <div class="ob-timing-bar-line" style="width:${pct.toFixed(1)}%;background:${r.color}"></div>
             <div class="ob-timing-hdot" style="left:0"></div>
             <div class="ob-timing-fdot" style="left:${pct.toFixed(1)}%;background:${r.color};border-color:${r.color}"></div>
-            <div class="ob-timing-lead-lbl" style="left:${midPct.toFixed(1)}%">${r.days} days on average</div>
+            <div class="ob-timing-lead-lbl" style="left:${midPct.toFixed(1)}%">${r.days} day average</div>
             <div class="ob-timing-date-lbl" style="${dateLblStyle}">${liveDate}</div>
           </div>
         </div>`;
@@ -288,7 +288,7 @@ function buildReleaseTimingContent() {
           ${rows}
           <div class="ob-timing-live-label">LIVE &middot; ${fmtDateShort(liveDate)}</div>
         </div>`;
-      footerHtml = `<div class="ob-timing-footer"><strong>Recommended</strong> dates include each platform&rsquo;s published buffer for re-reviews &amp; propagation. Minimum submit by <strong>${minSubmitBy}</strong>.</div>`;
+      footerHtml = `<div class="ob-timing-footer"><strong>Recommended</strong> dates include each platform&rsquo;s published buffer for re-reviews &amp; propagation.</div>`;
     } else {
       panelHtml = `<div class="ob-timing-manual-msg" style="margin-top:4px;">Enter a launch date to see your submission timeline.</div>`;
     }

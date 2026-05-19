@@ -942,25 +942,22 @@ body {
   flex-shrink: 0;
 }
 
-/* ! badge — absolute, very corner of the chip, matching ai-badge placement */
+/* ! badge — inline after chip text */
 .sw-tip-chip-badge {
-  position: absolute;
-  top: -6px;
-  right: -5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: var(--panel);
+  background: transparent;
   border: 1px solid #4ade80;
   color: #4ade80;
   font-size: 8px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: default;
   line-height: 1;
-  z-index: 2;
+  flex-shrink: 0;
 }
 
 /* Always-visible Subwoofer tip box */
