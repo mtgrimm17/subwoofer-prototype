@@ -353,6 +353,82 @@ async function analyzeCQWithClaude() {
   return JSON.parse(cleaned);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   GAME SEARCH — find existing listing by title
+══════════════════════════════════════════════════════════════ */
+
+async function searchGameByTitle(title) {
+  if (!CLAUDE_API_KEY) throw new Error('NO_KEY');
+  if (!title || !title.trim()) throw new Error('NO_TITLE');
+
+  console.log('[Claude Search] Searching for:', title);
+
+  const prompt = `You are a game store expert with comprehensive knowledge of titles on Steam, iOS App Store, Google Play, Epic Games Store, and other major storefronts.
+
+Search your knowledge for a game with the EXACT title: "${title.trim()}"
+
+Return ONLY a valid JSON object — no markdown fences, no explanation.
+
+If you find a game with this exact title (or a very close match), return:
+{
+  "found": true,
+  "title": "<exact title as listed in store>",
+  "description": "<the actual store description for this game, verbatim or closely paraphrased — 2-4 sentences>",
+  "source": "<which store this came from, e.g. 'Steam', 'App Store', 'Google Play'>",
+  "confidence": <0-100 integer>
+}
+
+If you do NOT find a game with this title, return:
+{
+  "found": false,
+  "title": null,
+  "description": null,
+  "source": null,
+  "confidence": 0
+}
+
+Rules:
+- Only return "found": true if you are genuinely confident this game exists in a major store
+- confidence 90-100 = you are certain this is a real game you know well
+- confidence 70-89 = you believe this is correct but have some uncertainty
+- confidence below 70 = do not return found: true; return found: false instead
+- The description should be a real, usable game description (not invented) — suitable to pre-fill a store submission form
+- Do NOT invent games that don't exist`;
+
+  const res = await fetch(CLAUDE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'x-api-key':                              CLAUDE_API_KEY,
+      'anthropic-version':                      '2023-06-01',
+      'content-type':                           'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model:      CLAUDE_MODEL,
+      max_tokens: 600,
+      messages:   [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+    }),
+  });
+
+  if (!res.ok) {
+    let rawBody = {};
+    try { rawBody = await res.json(); } catch (_) {}
+    const raw = rawBody.error?.message || '';
+    let msg = `Request failed (${res.status})`;
+    if (res.status === 429) msg = 'Rate limit reached — please retry in a moment.';
+    else if (res.status === 401) msg = 'API key rejected.';
+    else msg = raw || msg;
+    throw new Error(msg);
+  }
+
+  const apiData = await res.json();
+  const text = apiData.content?.[0]?.text;
+  if (!text) throw new Error('Empty response');
+
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  return JSON.parse(cleaned);
+}
+
 /* ── Apply CQ results to state ───────────────────────────────── */
 function applyCQResults(result) {
   let applied = 0;

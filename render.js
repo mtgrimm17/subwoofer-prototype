@@ -2,6 +2,11 @@
    RENDER — pure functions that build UI from state
    ============================================================ */
 
+/* ── Shared: HTML escape helper ──────────────────────── */
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 /* ── Shared: platform icon SVG ───────────────────────── */
 
 // Icons that use multi-subpath "cutout" designs need evenodd winding rule.
@@ -76,16 +81,7 @@ function buildGameDetailsTab() {
   return `
     <div class="ob-form">
 
-      <div class="form-group">
-        <label class="form-label" for="ob-product-url" style="display:flex;align-items:center;gap:6px;">
-          Already have a product page live on any platform?
-          <span class="form-optional-tag">Optional</span>
-        </label>
-        <input class="form-input" id="ob-product-url" type="url" placeholder="Drop a link here to jump‑start the process"
-               oninput="syncField('productUrl', this.value)">
-      </div>
-
-      <div class="ob-section-label" style="margin-top:8px;">About your game</div>
+      <div class="ob-section-label" style="margin-top:0;">About your game</div>
 
       <div class="form-group">
         <label class="form-label" for="ob-title"><span class="req-dot"></span>Game Title</label>
@@ -93,6 +89,10 @@ function buildGameDetailsTab() {
                placeholder="e.g. Go Ape Ship!"
                oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30)">
         <div class="char-count" id="ob-title-count">0 / 30</div>
+      </div>
+
+      <div class="form-group" id="ob-already-live-wrap">
+        ${buildAlreadyLiveWidget()}
       </div>
 
       <div class="form-group">
@@ -209,6 +209,64 @@ const OB_REG_TIPS = {
 
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
+
+/* ── Already Live widget ─────────────────────────────── */
+function buildAlreadyLiveWidget() {
+  const al = state.formData.alreadyLive; // null | 'yes' | 'no'
+  const ls = state.liveSearch;
+
+  let resultHtml = '';
+  if (al === 'yes') {
+    if (!ls || ls.status === 'loading') {
+      const title = state.formData.title || 'your game';
+      resultHtml = `
+        <div class="ob-live-loading">
+          <div class="ob-live-spinner"></div>
+          <span>Searching stores for &ldquo;${escHtml(title)}&rdquo;&hellip;</span>
+        </div>`;
+    } else if (ls.status === 'done' && ls.confirmed) {
+      resultHtml = `
+        <div class="ob-live-confirmed">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13" aria-hidden="true">
+            <path d="M3 8l3.5 3.5L13 5" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Description imported from ${escHtml(ls.source || 'store listing')}.
+        </div>`;
+    } else if (ls.status === 'done' && ls.found) {
+      resultHtml = `
+        <div class="ob-live-found">
+          <div class="ob-live-found-header">
+            <span>✦</span> Found on ${escHtml(ls.source || 'store')}
+          </div>
+          <div class="ob-live-found-desc">${escHtml(ls.description || '')}</div>
+          <div class="ob-live-found-actions">
+            <button class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="confirmGameImport()">That&rsquo;s mine!</button>
+            <button class="btn btn-ghost" style="font-size:12px;padding:5px 14px;" onclick="rejectGameImport()">Not me</button>
+          </div>
+        </div>`;
+    } else if (ls.status === 'done' && !ls.found) {
+      resultHtml = `
+        <div class="ob-live-not-found">
+          We couldn&rsquo;t find &ldquo;${escHtml(state.formData.title || 'your game')}&rdquo; in our stores database — fill in the description below.
+        </div>`;
+    } else if (ls.status === 'error') {
+      resultHtml = `
+        <div class="ob-live-not-found">
+          Search unavailable — fill in the description below.
+        </div>`;
+    }
+  }
+
+  return `
+    <div class="ob-already-live">
+      <div class="ob-already-live-q">Already live on any store?</div>
+      <div class="ob-already-live-btns">
+        <button class="ob-yn-chip${al === 'yes' ? ' is-on' : ''}" onclick="setAlreadyLive('yes')">Yes</button>
+        <button class="ob-yn-chip${al === 'no'  ? ' is-on' : ''}" onclick="setAlreadyLive('no')">No</button>
+      </div>
+      ${resultHtml}
+    </div>`;
+}
 
 /* ── Country row list ── first 10 always visible, rest collapsible ── */
 function buildObCountryChips() {
@@ -467,7 +525,6 @@ function buildComplianceTab() {
 function hydrateGameDetailsTab() {
   const fd = state.formData;
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-  set('ob-product-url', fd.productUrl);
   set('ob-title', fd.title);
   set('ob-desc',  fd.description);
   set('ob-date',  fd.releaseDate);

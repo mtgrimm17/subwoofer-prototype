@@ -1092,6 +1092,93 @@ function pickTiming(radio) {
   if (dateRow) dateRow.style.display = radio.value === 'specific_date' ? 'block' : 'none';
 }
 
+/* ── Already Live — game search widget ──────────────────── */
+
+function _renderAlreadyLiveSection() {
+  const wrap = document.getElementById('ob-already-live-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = buildAlreadyLiveWidget();
+}
+
+function setAlreadyLive(answer) {
+  // Toggle off if same chip clicked again
+  if (state.formData.alreadyLive === answer) {
+    state.formData.alreadyLive = null;
+    state.liveSearch = null;
+    _renderAlreadyLiveSection();
+    return;
+  }
+
+  state.formData.alreadyLive = answer;
+  state.liveSearch = null;
+  _renderAlreadyLiveSection();
+
+  if (answer === 'yes') {
+    const title = (state.formData.title || '').trim();
+    if (!title) {
+      // No title yet — show a prompt to type the title first
+      state.liveSearch = { status: 'error', found: false, error: 'NO_TITLE' };
+      _renderAlreadyLiveSection();
+      // Override with custom message
+      const wrap = document.getElementById('ob-already-live-wrap');
+      const msg = wrap ? wrap.querySelector('.ob-live-not-found') : null;
+      if (msg) msg.textContent = 'Enter your game title above first — then we’ll search for it.';
+      return;
+    }
+
+    // Start loading
+    state.liveSearch = { status: 'loading', found: false };
+    _renderAlreadyLiveSection();
+
+    searchGameByTitle(title)
+      .then(result => {
+        state.liveSearch = {
+          status:      'done',
+          found:       !!result.found,
+          title:       result.title || null,
+          description: result.description || null,
+          source:      result.source || null,
+          confidence:  result.confidence || 0,
+          confirmed:   false,
+        };
+        _renderAlreadyLiveSection();
+      })
+      .catch(err => {
+        console.warn('[Already Live] Search failed:', err.message);
+        state.liveSearch = { status: 'error', found: false, error: err.message };
+        _renderAlreadyLiveSection();
+      });
+  }
+}
+
+function confirmGameImport() {
+  const ls = state.liveSearch;
+  if (!ls || !ls.found || !ls.description) return;
+
+  // Pre-populate the description field
+  state.formData.description = ls.description;
+  const descEl = document.getElementById('ob-desc');
+  if (descEl) {
+    descEl.value = ls.description;
+    charCount('ob-desc-count', ls.description, 4000);
+  }
+
+  // Mark as confirmed and re-render widget
+  ls.confirmed = true;
+  _renderAlreadyLiveSection();
+}
+
+function rejectGameImport() {
+  // Clear the search result but keep alreadyLive = 'yes'
+  // Let the user know we didn't find the right game
+  state.liveSearch = { status: 'done', found: false };
+  _renderAlreadyLiveSection();
+  // Show a "couldn't match" message
+  const wrap = document.getElementById('ob-already-live-wrap');
+  const msg = wrap ? wrap.querySelector('.ob-live-not-found') : null;
+  if (msg) msg.textContent = 'Got it — fill in the description below and we’ll work from that.';
+}
+
 /* ── Prompt drawer (debug) ───────────────────────────────── */
 
 function togglePromptDrawer(btn) {

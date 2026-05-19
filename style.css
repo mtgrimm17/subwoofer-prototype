@@ -421,6 +421,101 @@ body {
   padding: 2px 6px;
 }
 
+/* ── Already Live widget ──────────────────────────────── */
+.ob-already-live {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.ob-already-live-q {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.ob-already-live-btns {
+  display: flex;
+  gap: 7px;
+}
+.ob-yn-chip {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s;
+  font-family: inherit;
+}
+.ob-yn-chip:hover:not(.is-on) { color: var(--text); }
+.ob-yn-chip.is-on {
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+  color: var(--sel-color);
+}
+.ob-live-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 2px 0;
+}
+.ob-live-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--border);
+  border-top-color: var(--sel-color);
+  border-radius: 50%;
+  animation: ob-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes ob-spin { to { transform: rotate(360deg); } }
+.ob-live-found {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ob-live-found-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--sel-color);
+  font-weight: 600;
+}
+.ob-live-found-desc {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.55;
+  max-height: 78px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.ob-live-found-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 2px;
+}
+.ob-live-not-found {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 1px 0;
+}
+.ob-live-confirmed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--green);
+}
+
 /* Regulatory tooltip icon — warned state turns orange */
 .tooltip-icon.is-warned {
   border-color: var(--orange);
