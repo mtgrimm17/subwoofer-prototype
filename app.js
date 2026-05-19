@@ -1086,10 +1086,23 @@ function _drawMap(container, W, activeCodes, primaryCodes) {
   container.appendChild(svg.node());
 }
 
-function pickTiming(radio) {
-  state.formData.releaseTiming = radio.value;
-  const dateRow = document.getElementById('ob-release-date-row');
-  if (dateRow) dateRow.style.display = radio.value === 'specific_date' ? 'block' : 'none';
+function pickTiming(value) {
+  state.formData.releaseTiming = value;
+  // Update chip active state
+  document.querySelectorAll('.ob-timing-chip').forEach(chip => {
+    chip.classList.toggle('is-on', chip.dataset.timing === value);
+  });
+  // Re-render the content area
+  _refreshTimingContent();
+}
+
+function _refreshTimingContent() {
+  const content = document.getElementById('ob-timing-content');
+  if (!content) return;
+  content.innerHTML = buildReleaseTimingContent();
+  // Restore date value in newly created input (state already has it)
+  const dateInput = document.getElementById('ob-date');
+  if (dateInput && state.formData.releaseDate) dateInput.value = state.formData.releaseDate;
 }
 
 /* ── Already Live — game search widget ──────────────────── */

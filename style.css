@@ -2515,7 +2515,7 @@ select.form-input {
   margin-top: 8px; line-height: 1.5;
 }
 
-/* Option cards */
+/* Option cards (legacy — kept for non-onboarding uses) */
 .option-cards { display: flex; flex-direction: column; gap: 8px; }
 .option-card {
   border: 1px solid var(--border); border-radius: 8px;
@@ -2528,6 +2528,206 @@ select.form-input {
 .option-card input[type="radio"] { margin-top: 3px; flex-shrink: 0; accent-color: var(--green); }
 .option-card-title { font-size: 13px; font-weight: 600; color: var(--text); }
 .option-card-desc  { font-size: 12px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+
+/* ── Release Timing redesign ──────────────────────────── */
+.ob-timing-q {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.ob-timing-chips {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.ob-timing-chip {
+  padding: 7px 15px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s;
+}
+.ob-timing-chip:hover:not(.is-on) { color: var(--text); }
+.ob-timing-chip.is-on {
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+  color: var(--sel-color);
+}
+.ob-timing-manual-msg {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.ob-timing-manual-msg strong { color: var(--text); }
+
+/* Timeline panel */
+.ob-timing-panel {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 16px 10px;
+  overflow: visible;
+}
+.ob-timing-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.ob-timing-label {
+  width: 106px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+.ob-timing-plat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+/* Track: the horizontal timeline area */
+.ob-timing-track {
+  flex: 1;
+  position: relative;
+  height: 40px; /* room for lead label above + line + date label below */
+  overflow: visible;
+}
+.ob-timing-track--sd {
+  height: 54px; /* extra room for two-line RECOMMENDED label below */
+}
+/* Line variants */
+.ob-timing-bar-line {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+  left: 0;
+}
+.ob-timing-dash-line {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 0;
+  left: 0;
+  border-top: 2px dashed var(--border-hover);
+}
+.ob-timing-solid-line {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+}
+/* Dots */
+.ob-timing-hdot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--border-hover);
+  background: var(--panel-2);
+  z-index: 1;
+}
+.ob-timing-fdot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid;
+  z-index: 1;
+}
+/* Labels */
+.ob-timing-lead-lbl {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  line-height: 1;
+}
+.ob-timing-date-lbl {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.ob-timing-rec-lbl {
+  position: absolute;
+  bottom: -2px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.ob-timing-rec-tag {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+/* Ruler line at bottom of panel */
+.ob-timing-ruler {
+  display: flex;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  padding-left: 120px; /* align with track start */
+  font-size: 11px;
+  color: var(--text-dim);
+}
+/* "LIVE · Jun 10" label */
+.ob-timing-live-label {
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  margin-top: 2px;
+}
+/* Footer note below panel */
+.ob-timing-footer {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+.ob-timing-footer strong { color: var(--text); }
+/* "specific_date" LAUNCH row */
+.ob-timing-launch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ob-timing-launch-tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.ob-timing-date-input {
+  width: 160px;
+  flex-shrink: 0;
+}
 
 
 /* ============================================================

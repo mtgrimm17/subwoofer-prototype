@@ -649,15 +649,8 @@ function hydrateGameDetailsTab() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   set('ob-title', fd.title);
   set('ob-desc',  fd.description);
-  set('ob-date',  fd.releaseDate);
   if (fd.title)       charCount('ob-title-count', fd.title,       30);
   if (fd.description) charCount('ob-desc-count',  fd.description, 4000);
-
-  // Release timing
-  const radios = document.querySelectorAll('input[name="ob-release"]');
-  radios.forEach(r => { if (r.value === fd.releaseTiming) r.checked = true; });
-  const dateRow = document.getElementById('ob-release-date-row');
-  if (dateRow) dateRow.style.display = fd.releaseTiming === 'specific_date' ? 'block' : 'none';
 }
 
 function hydrateUploadAssetsTab() {
