@@ -138,34 +138,156 @@ function buildGameDetailsTab() {
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
 
       <div class="ob-section-label" style="margin-top:28px;">Release Timing</div>
-      <div class="option-cards" id="ob-release-timing">
-        <label class="option-card">
-          <input type="radio" name="ob-release" value="manual" onchange="pickTiming(this)">
-          <div>
-            <div class="option-card-title">I'll release manually</div>
-            <div class="option-card-desc">You control when each platform goes live after approval.</div>
-          </div>
-        </label>
-        <label class="option-card">
-          <input type="radio" name="ob-release" value="as_approved" onchange="pickTiming(this)">
-          <div>
-            <div class="option-card-title">As soon as approved</div>
-            <div class="option-card-desc">Each platform goes live automatically once it passes review.</div>
-          </div>
-        </label>
-        <label class="option-card">
-          <input type="radio" name="ob-release" value="specific_date" onchange="pickTiming(this)">
-          <div>
-            <div class="option-card-title">On a specific date</div>
-            <div class="option-card-desc">All platforms launch on the same day.</div>
-          </div>
-        </label>
+      <div class="ob-timing-q">When should this release go live?</div>
+      <div class="ob-timing-chips">
+        ${[
+          { v:'manual',        label:"I'll release manually" },
+          { v:'as_approved',   label:'As soon as approved'   },
+          { v:'specific_date', label:'On a specific date'    },
+        ].map(c => `<button class="ob-timing-chip${(fd.releaseTiming||'manual')===c.v?' is-on':''}" data-timing="${c.v}" onclick="pickTiming('${c.v}')">${c.label}</button>`).join('')}
       </div>
-      <div id="ob-release-date-row" class="form-group" style="display:none;margin-top:10px;">
-        <label class="form-label" for="ob-date">Target Release Date</label>
-        <input class="form-input" id="ob-date" type="date" oninput="syncField('releaseDate', this.value)">
+      <div id="ob-timing-content" style="margin-top:14px;">
+        ${buildReleaseTimingContent()}
       </div>
     </div>`;
+}
+
+/* ── Release Timing — platform review data & helpers ─── */
+
+const OB_PLATFORM_TIMING = {
+  ios:      { days: 2.2, color: '#60a5fa', label: 'App Store'   },
+  android:  { days: 4.3, color: '#4ade80', label: 'Google Play' },
+  steam:    { days: 7.1, color: '#38bdf8', label: 'Steam'       },
+  egs:      { days: 3.0, color: '#e2e2e2', label: 'Epic Games'  },
+  xbox:     { days: 5.0, color: '#22c55e', label: 'Xbox'        },
+  nintendo: { days: 5.0, color: '#ef4444', label: 'Nintendo'    },
+  psn:      { days: 4.0, color: '#818cf8', label: 'PlayStation' },
+};
+
+function fmtDateShort(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Add fractional days to a date (uses floor for display)
+function _addDays(base, days) {
+  return new Date(base.getTime() + days * 86400000);
+}
+
+function buildReleaseTimingContent() {
+  const fd = state.formData;
+  const rt = fd.releaseTiming || 'manual';
+
+  if (rt === 'manual') {
+    return `<div class="ob-timing-manual-msg">Each platform sits at <strong>Ready</strong> after review. You press go per platform.</div>`;
+  }
+
+  // Build sorted review data from active platforms
+  const reviewData = [...state.activePlatforms]
+    .filter(p => OB_PLATFORM_TIMING[p])
+    .map(p => ({ id: p, ...OB_PLATFORM_TIMING[p] }))
+    .sort((a, b) => a.days - b.days);
+
+  if (!reviewData.length) {
+    return `<div class="ob-timing-manual-msg">Select at least one platform above to see your submission timeline.</div>`;
+  }
+
+  if (rt === 'as_approved') {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const maxDays = Math.max(...reviewData.map(r => r.days));
+    const minDays = Math.min(...reviewData.map(r => r.days));
+    const stagger = (maxDays - minDays).toFixed(1);
+
+    const rows = reviewData.map(r => {
+      const pct    = (r.days / maxDays) * 100;
+      const midPct = pct / 2;
+      const liveDate = fmtDateShort(_addDays(today, r.days));
+      return `
+        <div class="ob-timing-row">
+          <div class="ob-timing-label">
+            <span class="ob-timing-plat-dot" style="background:${r.color}"></span>
+            <span>${r.label}</span>
+          </div>
+          <div class="ob-timing-track">
+            <div class="ob-timing-bar-line" style="width:${pct.toFixed(1)}%;background:${r.color}"></div>
+            <div class="ob-timing-hdot" style="left:0"></div>
+            <div class="ob-timing-fdot" style="left:${pct.toFixed(1)}%;background:${r.color};border-color:${r.color}"></div>
+            <div class="ob-timing-lead-lbl" style="left:${midPct.toFixed(1)}%">+${r.days}d</div>
+            <div class="ob-timing-date-lbl" style="left:${pct.toFixed(1)}%">${liveDate}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="ob-timing-panel">
+        ${rows}
+        <div class="ob-timing-ruler"><span>Today</span></div>
+      </div>
+      <div class="ob-timing-footer">Live dates stagger by up to <strong>${stagger}d</strong>. For a coordinated launch, pick a specific date.</div>`;
+  }
+
+  if (rt === 'specific_date') {
+    const dateVal  = fd.releaseDate;
+    const liveDate = dateVal ? new Date(dateVal + 'T00:00:00') : null;
+
+    let panelHtml  = '';
+    let footerHtml = '';
+
+    if (liveDate && !isNaN(liveDate)) {
+      // RECOMMENDED = LIVE − reviewDays × 2  (doubled buffer, matches published platform guidance)
+      // SUBMIT BY   = LIVE − reviewDays
+      const maxLead = Math.max(...reviewData.map(r => r.days * 2));
+      const spanDays = maxLead + 1; // +1d left-side breathing room
+
+      const rows = reviewData.map(r => {
+        const recDate    = _addDays(liveDate, -(r.days * 2));
+        const subDate    = _addDays(liveDate, -r.days);
+        const recPct     = ((spanDays - r.days * 2) / spanDays) * 100;
+        const subPct     = ((spanDays - r.days)     / spanDays) * 100;
+        const solidW     = 100 - subPct;
+        const leadMidPct = subPct + solidW / 2;
+
+        return `
+          <div class="ob-timing-row">
+            <div class="ob-timing-label">
+              <span class="ob-timing-plat-dot" style="background:${r.color}"></span>
+              <span>${r.label}</span>
+            </div>
+            <div class="ob-timing-track ob-timing-track--sd">
+              <div class="ob-timing-dash-line" style="width:${subPct.toFixed(1)}%"></div>
+              <div class="ob-timing-solid-line" style="left:${subPct.toFixed(1)}%;width:${solidW.toFixed(1)}%;background:${r.color}"></div>
+              <div class="ob-timing-hdot" style="left:${recPct.toFixed(1)}%"></div>
+              <div class="ob-timing-fdot" style="left:100%;background:${r.color};border-color:${r.color}"></div>
+              <div class="ob-timing-lead-lbl" style="left:${leadMidPct.toFixed(1)}%">${r.days}d lead</div>
+              <div class="ob-timing-rec-lbl" style="left:${recPct.toFixed(1)}%"><span class="ob-timing-rec-tag">RECOMMENDED</span><br>${fmtDateShort(recDate)}</div>
+              <div class="ob-timing-date-lbl" style="left:${subPct.toFixed(1)}%">${fmtDateShort(subDate)}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      // "Minimum submit by" = latest submit-by date (shortest review platform)
+      const minSubmitBy = fmtDateShort(_addDays(liveDate, -reviewData[0].days));
+
+      panelHtml = `
+        <div class="ob-timing-panel">
+          ${rows}
+          <div class="ob-timing-live-label">LIVE &middot; ${fmtDateShort(liveDate)}</div>
+        </div>`;
+      footerHtml = `<div class="ob-timing-footer"><strong>Recommended</strong> dates include each platform&rsquo;s published buffer for re-reviews &amp; propagation. Minimum submit by <strong>${minSubmitBy}</strong>.</div>`;
+    } else {
+      panelHtml = `<div class="ob-timing-manual-msg" style="margin-top:4px;">Enter a launch date to see your submission timeline.</div>`;
+    }
+
+    return `
+      <div class="ob-timing-launch-row" style="margin-bottom:12px;">
+        <span class="ob-timing-launch-tag">Launch</span>
+        <input class="form-input ob-timing-date-input" id="ob-date" type="date" value="${escHtml(dateVal || '')}"
+               oninput="syncField('releaseDate', this.value); _refreshTimingContent()">
+      </div>
+      ${panelHtml}
+      ${footerHtml}`;
+  }
+
+  return '';
 }
 
 /* ── Onboarding list helpers ─────────────────────────── */
