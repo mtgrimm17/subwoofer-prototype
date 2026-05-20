@@ -1139,6 +1139,7 @@ function _triggerScenarioSearch() {
         title:       result.title       || null,
         description: result.description || null,
         source:      result.source      || null,
+        allStores:   result.allStores   || [],
         confidence:  result.confidence  || 0,
         confirmed:   false,
       };
@@ -1180,6 +1181,27 @@ function confirmGameImport() {
   if (descEl) {
     descEl.value = ls.description;
     charCount('ob-desc-count', ls.description, 4000);
+  }
+
+  // Auto-activate platforms where the game was found
+  const storeToPid = { ios: 'ios', steam: 'steam', android: 'android' };
+  let platformsAdded = false;
+  (ls.allStores || []).forEach(storeId => {
+    const pid = storeToPid[storeId];
+    if (pid && !state.activePlatforms.has(pid)) {
+      state.activePlatforms.add(pid);
+      if (!state.platformStepStatus[pid]) {
+        state.platformStepStatus[pid] = makeEmptyPlatformSteps()[pid] || {};
+      }
+      platformsAdded = true;
+    }
+  });
+
+  // Re-render platform grid if any new platforms were added
+  if (platformsAdded) {
+    const gridWrap = document.getElementById('ob-plat-grid-wrap');
+    if (gridWrap) gridWrap.innerHTML = buildObPlatTilesHTML();
+    renderOnboardingFooter();
   }
 
   ls.confirmed = true;

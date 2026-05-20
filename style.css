@@ -427,14 +427,18 @@ body {
   flex-direction: column;
   gap: 10px;
 }
+.ob-scenario-prompt {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-bottom: 2px;
+}
 .ob-scenario-chips {
   display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
 }
 .ob-scenario-chip {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -445,8 +449,8 @@ body {
   cursor: pointer;
   transition: color 0.12s;
   font-family: inherit;
-  text-align: center;
-  white-space: nowrap;
+  text-align: left;
+  white-space: normal;
 }
 .ob-scenario-chip:hover:not(.is-on) { color: var(--text); }
 .ob-scenario-chip.is-on {
@@ -2749,24 +2753,25 @@ select.form-input {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 14px 20px 16px;
+  padding: 12px 18px 18px;
   margin-bottom: 20px;
-  overflow: hidden;
+  overflow: visible;
 }
 
-/* Header row */
-.dash-tl-header {
+/* Single horizontal bar */
+.dash-tl-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 16px;
+  flex-wrap: nowrap;
 }
-.dash-tl-header-left {
+
+/* Left: LAUNCH label + mode chips + optional date input */
+.dash-tl-left {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .dash-tl-launch-lbl {
   font-size: 10px;
@@ -2780,15 +2785,14 @@ select.form-input {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
 }
 .dash-tl-chip {
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
@@ -2802,17 +2806,18 @@ select.form-input {
   color: var(--sel-color);
 }
 .dash-tl-date-input {
-  width: 150px;
-  padding: 5px 10px;
-  font-size: 12px;
+  width: 130px;
+  padding: 4px 8px;
+  font-size: 11px;
   flex-shrink: 0;
 }
 
-/* Days to launch counter */
-.dash-tl-days {
+/* Center: days counter */
+.dash-tl-counter {
   display: flex;
   align-items: baseline;
   gap: 4px;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 .dash-tl-days-num {
@@ -2830,28 +2835,121 @@ select.form-input {
   text-transform: uppercase;
 }
 
-/* Timeline body */
-.dash-tl-body {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+/* Right: platform track grid */
+.dash-tl-right {
+  flex: 1;
+  min-width: 0;
 }
 
-/* Platform rows — wider label than onboarding (full store name) */
+/* Column header row (REC / SUBMIT BY / LIVE) */
+.dash-tl-col-hdrs {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.dash-tl-plat-spacer {
+  width: 42px;
+  flex-shrink: 0;
+}
+.dash-tl-track-hdrs {
+  flex: 1;
+  position: relative;
+  height: 16px;
+}
+.dash-tl-col-hdr {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.dash-tl-col-hdr--live {
+  transform: translateX(-100%);
+}
+
+/* Platform rows */
 .dash-tl-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 28px;
+  gap: 8px;
+  padding-bottom: 20px; /* room for date labels below track */
 }
-.dash-tl-plat-label {
-  width: 130px;
+.dash-tl-row:last-child { padding-bottom: 0; }
+.dash-tl-plat-name {
+  width: 42px;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* Track: the horizontal line area */
+.dash-tl-track {
+  flex: 1;
+  position: relative;
+  height: 8px; /* enough for dot centering */
+  overflow: visible;
+}
+
+/* Line segments */
+.dash-tl-faint-line {
+  position: absolute;
+  top: 50%; left: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--border);
+}
+.dash-tl-dash-line {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: repeating-linear-gradient(
+    to right,
+    var(--text-faint) 0, var(--text-faint) 3px,
+    transparent 3px, transparent 6px
+  );
+}
+.dash-tl-solid-line {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+/* Dots */
+.dash-tl-dot {
+  position: absolute;
+  top: 50%;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--text-dim);
+  background: var(--panel);
+  transform: translate(-50%, -50%);
+}
+.dash-tl-dot--rec {
+  border-style: dashed;
+  border-color: var(--text-faint);
+  background: transparent;
+}
+.dash-tl-dot--live {
+  width: 10px; height: 10px;
+}
+
+/* Date labels under track */
+.dash-tl-date-lbl {
+  position: absolute;
+  top: 12px;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 /* ============================================================

@@ -554,24 +554,44 @@ async function searchGameByTitle(title) {
   if (!title || !title.trim()) throw new Error('NO_TITLE');
   const t = title.trim();
 
-  // 1. iTunes App Store — real data, CORS-friendly, no key needed
-  try {
-    const result = await _searchITunes(t);
-    if (result) return result;
-  } catch (e) {
-    console.warn('[Search] iTunes failed:', e.message);
+  // Run iTunes and Steam in parallel
+  const [itunesSettled, steamSettled] = await Promise.allSettled([
+    _searchITunes(t),
+    _searchSteam(t),
+  ]);
+
+  if (itunesSettled.status === 'rejected') console.warn('[Search] iTunes failed:', itunesSettled.reason?.message);
+  if (steamSettled.status  === 'rejected') console.warn('[Search] Steam failed:',  steamSettled.reason?.message);
+
+  const itunes = itunesSettled.status === 'fulfilled' ? itunesSettled.value : null;
+  const steam  = steamSettled.status  === 'fulfilled' ? steamSettled.value  : null;
+
+  // Collect which platform IDs we actually found the game on
+  const allStores = [];
+  if (itunes?.found) allStores.push('ios');
+  if (steam?.found)  allStores.push('steam');
+
+  if (allStores.length === 0) {
+    // Neither store found it — fall back to Claude knowledge
+    return _searchClaudeKnowledge(t);
   }
 
-  // 2. Steam — real data, may fail on CORS (silently skip)
-  try {
-    const result = await _searchSteam(t);
-    if (result) return result;
-  } catch (e) {
-    console.warn('[Search] Steam failed:', e.message);
-  }
+  // Pick primary result for description (prefer Steam's short_description; tiebreak = higher confidence)
+  const primary = (steam?.found && (!itunes?.found || steam.confidence >= itunes.confidence))
+    ? steam : itunes;
 
-  // 3. Claude knowledge — needs API key; returns not-found gracefully if absent
-  return _searchClaudeKnowledge(t);
+  const sourceLabels = [];
+  if (itunes?.found) sourceLabels.push('iOS App Store');
+  if (steam?.found)  sourceLabels.push('Steam');
+
+  return {
+    found:       true,
+    title:       primary.title,
+    description: primary.description,
+    source:      sourceLabels.join(' & '),
+    allStores,
+    confidence:  primary.confidence,
+  };
 }
 
 /* ── Apply CQ results to state ───────────────────────────────── */

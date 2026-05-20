@@ -355,9 +355,9 @@ function buildScenarioWidget() {
   const needsSearch = gs === 'new_platform' || gs === 'update';
 
   const scenarios = [
-    { v: 'new',          label: 'Launching a new game'         },
-    { v: 'new_platform', label: 'Bringing to new platforms'    },
-    { v: 'update',       label: 'Updating an existing game'    },
+    { v: 'new',          label: 'Launching a new game'              },
+    { v: 'new_platform', label: 'Bringing a game to a new platform' },
+    { v: 'update',       label: 'Updating an existing game'         },
   ];
 
   const chips = scenarios.map(s => `
@@ -375,12 +375,16 @@ function buildScenarioWidget() {
           <span>Searching stores for &ldquo;${escHtml(title)}&rdquo;&hellip;</span>
         </div>`;
     } else if (ls.status === 'done' && ls.confirmed) {
+      const storeMap = { ios: 'iOS App Store', steam: 'Steam', android: 'Google Play' };
+      const storeNames = (ls.allStores || []).map(pid => storeMap[pid] || pid);
+      const sourceStr  = storeNames.length ? storeNames.join(' & ') : (ls.source || 'store listing');
+      const platNote   = storeNames.length ? ' — platforms pre-selected.' : '.';
       resultHtml = `
         <div class="ob-live-confirmed">
           <svg viewBox="0 0 16 16" fill="none" width="13" height="13" aria-hidden="true">
             <path d="M3 8l3.5 3.5L13 5" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Listing imported from ${escHtml(ls.source || 'store listing')}.
+          Found on ${escHtml(sourceStr)}${platNote}
         </div>`;
     } else if (ls.status === 'done' && ls.found) {
       resultHtml = `
@@ -409,6 +413,7 @@ function buildScenarioWidget() {
 
   return `
     <div class="ob-scenario">
+      <div class="ob-scenario-prompt">I am&hellip;</div>
       <div class="ob-scenario-chips">${chips}</div>
       ${resultHtml}
     </div>`;
@@ -824,13 +829,13 @@ function buildDashboardTimeline() {
   const fd = state.formData;
   const rt = fd.releaseTiming || 'manual';
 
-  // Only platforms that have review-time data
+  // Active platforms with timing data, sorted shortest → longest review time
   const reviewData = [...state.activePlatforms]
     .filter(p => OB_PLATFORM_TIMING[p])
-    .map(p => ({ id: p, ...OB_PLATFORM_TIMING[p], name: PLATFORMS[p]?.label || p }))
+    .map(p => ({ id: p, ...OB_PLATFORM_TIMING[p] }))
     .sort((a, b) => a.days - b.days);
 
-  /* ── Header: mode chips + optional date input ── */
+  /* ── Mode chips + optional date input ── */
   const modes = [
     { v: 'manual',        label: 'Manual'        },
     { v: 'as_approved',   label: 'When approved' },
@@ -840,104 +845,117 @@ function buildDashboardTimeline() {
     `<button class="dash-tl-chip${rt === m.v ? ' is-on' : ''}" onclick="dashPickTiming('${m.v}')">${m.label}</button>`
   ).join('');
 
-  const dateVal = fd.releaseDate || '';
+  const dateVal   = fd.releaseDate || '';
   const dateInput = rt === 'specific_date'
     ? `<input class="form-input dash-tl-date-input" type="date" value="${escHtml(dateVal)}" onchange="dashSetDate(this.value)">`
     : '';
 
   /* ── Days-to-launch counter ── */
-  let daysHtml = '';
+  let counterHtml = '';
   if (rt === 'specific_date' && dateVal) {
     const live  = new Date(dateVal + 'T00:00:00');
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const days  = Math.round((live - today) / 86400000);
     if (days >= 0) {
-      daysHtml = `<div class="dash-tl-days"><span class="dash-tl-days-num">${days}</span><span class="dash-tl-days-lbl"> DAYS TO LAUNCH</span></div>`;
+      counterHtml = `
+        <div class="dash-tl-counter">
+          <span class="dash-tl-days-num">${days}</span>
+          <span class="dash-tl-days-lbl">DAYS</span>
+        </div>`;
     }
   }
 
-  /* ── Timeline body ── */
-  let bodyHtml = '';
+  /* ── Right panel: platform track rows ── */
+  let rightHtml = '';
 
-  if (rt === 'as_approved' && reviewData.length) {
-    const today   = new Date(); today.setHours(0, 0, 0, 0);
-    const maxDays = Math.max(...reviewData.map(r => r.days));
-    const rows = reviewData.map(r => {
-      const pct          = (r.days / maxDays) * 100;
-      const midPct       = pct / 2;
-      const liveDateStr  = fmtDateShort(_addDays(today, r.days));
-      const isMaxBar     = r.days === maxDays;
-      const dateLblStyle = isMaxBar
-        ? 'right:0;transform:none;text-align:right;'
-        : `left:${pct.toFixed(1)}%;transform:translateX(-50%);`;
-      return `
-        <div class="dash-tl-row">
-          <div class="dash-tl-plat-label">
-            <span class="ob-timing-plat-dot" style="background:${r.color}"></span>
-            <span>${r.name}</span>
-          </div>
-          <div class="ob-timing-track">
-            <div class="ob-timing-bar-line" style="width:${pct.toFixed(1)}%;background:${r.color}"></div>
-            <div class="ob-timing-hdot" style="left:0"></div>
-            <div class="ob-timing-fdot" style="left:${pct.toFixed(1)}%;background:${r.color};border-color:${r.color}"></div>
-            <div class="ob-timing-lead-lbl" style="left:${midPct.toFixed(1)}%">${r.days} day average</div>
-            <div class="ob-timing-date-lbl" style="${dateLblStyle}">${liveDateStr}</div>
-          </div>
-        </div>`;
-    }).join('');
-    bodyHtml = `<div class="dash-tl-body">${rows}</div>`;
-  }
-
-  else if (rt === 'specific_date' && dateVal && reviewData.length) {
+  if (rt === 'specific_date' && dateVal && reviewData.length) {
     const liveDate = new Date(dateVal + 'T00:00:00');
     if (!isNaN(liveDate)) {
       const maxLead  = Math.max(...reviewData.map(r => r.days * 2));
       const spanDays = maxLead + 1;
+
+      // Column headers anchored at the FIRST (shortest) platform's dot positions
+      const first    = reviewData[0];
+      const hdrRec   = ((spanDays - first.days * 2) / spanDays * 100).toFixed(1);
+      const hdrSub   = ((spanDays - first.days)     / spanDays * 100).toFixed(1);
+
+      const colHeaders = `
+        <div class="dash-tl-col-hdrs">
+          <div class="dash-tl-plat-spacer"></div>
+          <div class="dash-tl-track-hdrs">
+            <span class="dash-tl-col-hdr" style="left:${hdrRec}%">REC</span>
+            <span class="dash-tl-col-hdr" style="left:${hdrSub}%">SUBMIT BY</span>
+            <span class="dash-tl-col-hdr dash-tl-col-hdr--live" style="left:100%">LIVE</span>
+          </div>
+        </div>`;
+
       const rows = reviewData.map(r => {
-        const recDate  = _addDays(liveDate, -(r.days * 2));
-        const subDate  = _addDays(liveDate, -r.days);
-        const recPct   = ((spanDays - r.days * 2) / spanDays) * 100;
-        const subPct   = ((spanDays - r.days)     / spanDays) * 100;
-        const solidW   = 100 - subPct;
-        const dashW    = subPct - recPct;
-        const leadMid  = subPct + solidW / 2;
+        const recDate = _addDays(liveDate, -(r.days * 2));
+        const subDate = _addDays(liveDate, -r.days);
+        const recPct  = ((spanDays - r.days * 2) / spanDays * 100).toFixed(1);
+        const subPct  = ((spanDays - r.days)     / spanDays * 100).toFixed(1);
+        const dashW   = (subPct - recPct).toFixed(1);
+        const solidW  = (100 - subPct).toFixed(1);
         return `
           <div class="dash-tl-row">
-            <div class="dash-tl-plat-label">
-              <span class="ob-timing-plat-dot" style="background:${r.color}"></span>
-              <span>${r.name}</span>
-            </div>
-            <div class="ob-timing-track ob-timing-track--sd">
-              <div class="ob-timing-faint-line" style="width:${recPct.toFixed(1)}%"></div>
-              <div class="ob-timing-dash-line" style="left:${recPct.toFixed(1)}%;width:${dashW.toFixed(1)}%"></div>
-              <div class="ob-timing-solid-line" style="left:${subPct.toFixed(1)}%;width:${solidW.toFixed(1)}%;background:${r.color}"></div>
-              <div class="ob-timing-hdot ob-timing-hdot--rec" style="left:${recPct.toFixed(1)}%"></div>
-              <div class="ob-timing-hdot" style="left:${subPct.toFixed(1)}%"></div>
-              <div class="ob-timing-fdot" style="left:100%;background:${r.color};border-color:${r.color}"></div>
-              <div class="ob-timing-lead-lbl" style="left:${leadMid.toFixed(1)}%">${r.days}d lead</div>
-              <div class="ob-timing-rec-lbl" style="left:${recPct.toFixed(1)}%"><span class="ob-timing-rec-tag">REC</span><br>${fmtDateShort(recDate)}</div>
-              <div class="ob-timing-date-lbl" style="left:${subPct.toFixed(1)}%">${fmtDateShort(subDate)}</div>
+            <div class="dash-tl-plat-name" style="color:${r.color}">${escHtml(r.label)}</div>
+            <div class="dash-tl-track">
+              <div class="dash-tl-faint-line" style="width:${recPct}%"></div>
+              <div class="dash-tl-dash-line"  style="left:${recPct}%;width:${dashW}%"></div>
+              <div class="dash-tl-solid-line" style="left:${subPct}%;width:${solidW}%;background:${r.color}"></div>
+              <div class="dash-tl-dot dash-tl-dot--rec"  style="left:${recPct}%"></div>
+              <div class="dash-tl-dot"                   style="left:${subPct}%;background:${r.color};border-color:${r.color}"></div>
+              <div class="dash-tl-dot dash-tl-dot--live" style="left:100%;background:${r.color};border-color:${r.color}"></div>
+              <div class="dash-tl-date-lbl" style="left:${recPct}%">${fmtDateShort(recDate)}</div>
+              <div class="dash-tl-date-lbl" style="left:${subPct}%">${fmtDateShort(subDate)}</div>
             </div>
           </div>`;
       }).join('');
-      bodyHtml = `
-        <div class="dash-tl-body">
-          ${rows}
-          <div class="ob-timing-live-label">LIVE &middot; ${fmtDateShort(liveDate)}</div>
-        </div>`;
+
+      rightHtml = `<div class="dash-tl-right">${colHeaders}${rows}</div>`;
     }
+  } else if (rt === 'as_approved' && reviewData.length) {
+    const today   = new Date(); today.setHours(0, 0, 0, 0);
+    const maxDays = Math.max(...reviewData.map(r => r.days));
+
+    const colHeaders = `
+      <div class="dash-tl-col-hdrs">
+        <div class="dash-tl-plat-spacer"></div>
+        <div class="dash-tl-track-hdrs">
+          <span class="dash-tl-col-hdr" style="left:0%">TODAY</span>
+          <span class="dash-tl-col-hdr dash-tl-col-hdr--live" style="left:100%">LIVE</span>
+        </div>
+      </div>`;
+
+    const rows = reviewData.map(r => {
+      const pct        = (r.days / maxDays * 100).toFixed(1);
+      const liveDateSt = fmtDateShort(_addDays(today, r.days));
+      return `
+        <div class="dash-tl-row">
+          <div class="dash-tl-plat-name" style="color:${r.color}">${escHtml(r.label)}</div>
+          <div class="dash-tl-track">
+            <div class="dash-tl-faint-line" style="width:100%"></div>
+            <div class="dash-tl-solid-line" style="width:${pct}%;background:${r.color}"></div>
+            <div class="dash-tl-dot dash-tl-dot--rec"  style="left:0%"></div>
+            <div class="dash-tl-dot dash-tl-dot--live" style="left:${pct}%;background:${r.color};border-color:${r.color}"></div>
+            <div class="dash-tl-date-lbl" style="left:${pct}%">${liveDateSt}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    rightHtml = `<div class="dash-tl-right">${colHeaders}${rows}</div>`;
   }
 
   return `
     <div class="dash-timeline" id="dash-timeline">
-      <div class="dash-tl-header">
-        <div class="dash-tl-header-left">
+      <div class="dash-tl-bar">
+        <div class="dash-tl-left">
           <span class="dash-tl-launch-lbl">LAUNCH</span>
           <div class="dash-tl-chips">${modeChips}${dateInput}</div>
         </div>
-        ${daysHtml}
+        ${counterHtml}
+        ${rightHtml}
       </div>
-      ${bodyHtml}
     </div>`;
 }
 
