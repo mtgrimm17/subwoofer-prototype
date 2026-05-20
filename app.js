@@ -1114,27 +1114,27 @@ function _refreshTimingContent() {
 /* ── Scenario widget — game search ───────────────────────── */
 
 function _renderScenarioSection() {
-  const wrap = document.getElementById(‘ob-scenario-wrap’);
+  const wrap = document.getElementById('ob-scenario-wrap');
   if (!wrap) return;
   wrap.innerHTML = buildScenarioWidget();
 }
 
 function _triggerScenarioSearch() {
-  const title = (state.formData.title || ‘’).trim();
+  const title = (state.formData.title || '').trim();
   if (!title) {
-    state.liveSearch = { status: ‘error’, found: false, error: ‘NO_TITLE’ };
+    state.liveSearch = { status: 'error', found: false, error: 'NO_TITLE' };
     _renderScenarioSection();
-    const wrap = document.getElementById(‘ob-scenario-wrap’);
-    const msg  = wrap ? wrap.querySelector(‘.ob-live-not-found’) : null;
-    if (msg) msg.textContent = "Enter your game title above first — then we’ll search for it.";
+    const wrap = document.getElementById('ob-scenario-wrap');
+    const msg  = wrap ? wrap.querySelector('.ob-live-not-found') : null;
+    if (msg) msg.textContent = "Enter your game title above first — then we'll search for it.";
     return;
   }
-  state.liveSearch = { status: ‘loading’, found: false };
+  state.liveSearch = { status: 'loading', found: false };
   _renderScenarioSection();
   searchGameByTitle(title)
     .then(result => {
       state.liveSearch = {
-        status:      ‘done’,
+        status:      'done',
         found:       !!result.found,
         title:       result.title       || null,
         description: result.description || null,
@@ -1145,8 +1145,8 @@ function _triggerScenarioSearch() {
       _renderScenarioSection();
     })
     .catch(err => {
-      console.warn(‘[Scenario Search] failed:’, err.message);
-      state.liveSearch = { status: ‘error’, found: false, error: err.message };
+      console.warn('[Scenario Search] failed:', err.message);
+      state.liveSearch = { status: 'error', found: false, error: err.message };
       _renderScenarioSection();
     });
 }
@@ -1165,7 +1165,7 @@ function setGameScenario(scenario) {
   _renderScenarioSection();
 
   // Scenarios that need a store search
-  if (scenario === ‘new_platform’ || scenario === ‘update’) {
+  if (scenario === 'new_platform' || scenario === 'update') {
     _triggerScenarioSearch();
   }
 }
@@ -1176,10 +1176,10 @@ function confirmGameImport() {
 
   // Pre-populate the description field
   state.formData.description = ls.description;
-  const descEl = document.getElementById(‘ob-desc’);
+  const descEl = document.getElementById('ob-desc');
   if (descEl) {
     descEl.value = ls.description;
-    charCount(‘ob-desc-count’, ls.description, 4000);
+    charCount('ob-desc-count', ls.description, 4000);
   }
 
   ls.confirmed = true;
@@ -1187,11 +1187,11 @@ function confirmGameImport() {
 }
 
 function rejectGameImport() {
-  state.liveSearch = { status: ‘done’, found: false };
+  state.liveSearch = { status: 'done', found: false };
   _renderScenarioSection();
-  const wrap = document.getElementById(‘ob-scenario-wrap’);
-  const msg  = wrap ? wrap.querySelector(‘.ob-live-not-found’) : null;
-  if (msg) msg.textContent = "Got it — fill in the description below and we’ll work from that.";
+  const wrap = document.getElementById('ob-scenario-wrap');
+  const msg  = wrap ? wrap.querySelector('.ob-live-not-found') : null;
+  if (msg) msg.textContent = "Got it — fill in the description below and we'll work from that.";
 }
 
 /* ── Dashboard timeline handlers ─────────────────────────── */
