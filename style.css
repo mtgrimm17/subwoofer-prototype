@@ -2742,6 +2742,119 @@ select.form-input {
 
 
 /* ============================================================
+   DASHBOARD TIMELINE
+   ============================================================ */
+
+.dash-timeline {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 20px 16px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+/* Header row */
+.dash-tl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dash-tl-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dash-tl-launch-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.dash-tl-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dash-tl-chip {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+.dash-tl-chip:hover:not(.is-on) { color: var(--text); }
+.dash-tl-chip.is-on {
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+  color: var(--sel-color);
+}
+.dash-tl-date-input {
+  width: 150px;
+  padding: 5px 10px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Days to launch counter */
+.dash-tl-days {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+.dash-tl-days-num {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dash-tl-days-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--green);
+  text-transform: uppercase;
+}
+
+/* Timeline body */
+.dash-tl-body {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Platform rows — wider label than onboarding (full store name) */
+.dash-tl-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.dash-tl-plat-label {
+  width: 130px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ============================================================
    ICON UPLOAD
    ============================================================ */
 

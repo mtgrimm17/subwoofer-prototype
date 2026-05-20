@@ -1126,7 +1126,7 @@ function _triggerScenarioSearch() {
     _renderScenarioSection();
     const wrap = document.getElementById(‘ob-scenario-wrap’);
     const msg  = wrap ? wrap.querySelector(‘.ob-live-not-found’) : null;
-    if (msg) msg.textContent = ‘Enter your game title above first — then we’ll search for it.’;
+    if (msg) msg.textContent = "Enter your game title above first — then we’ll search for it.";
     return;
   }
   state.liveSearch = { status: ‘loading’, found: false };
@@ -1191,7 +1191,30 @@ function rejectGameImport() {
   _renderScenarioSection();
   const wrap = document.getElementById(‘ob-scenario-wrap’);
   const msg  = wrap ? wrap.querySelector(‘.ob-live-not-found’) : null;
-  if (msg) msg.textContent = ‘Got it — fill in the description below and we’ll work from that.’;
+  if (msg) msg.textContent = "Got it — fill in the description below and we’ll work from that.";
+}
+
+/* ── Dashboard timeline handlers ─────────────────────────── */
+
+function _refreshDashTimeline() {
+  const wrap = document.getElementById('dash-timeline-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = buildDashboardTimeline();
+}
+
+function dashPickTiming(value) {
+  state.formData.releaseTiming = value;
+  if (value === 'specific_date' && !state.formData.releaseDate) {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    state.formData.releaseDate = d.toISOString().split('T')[0];
+  }
+  _refreshDashTimeline();
+}
+
+function dashSetDate(value) {
+  state.formData.releaseDate = value;
+  _refreshDashTimeline();
 }
 
 // Re-trigger search when title changes and a search scenario is already selected

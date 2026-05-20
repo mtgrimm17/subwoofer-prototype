@@ -818,6 +818,129 @@ function renderProjectBar() {
 }
 
 
+/* ── Dashboard Timeline ──────────────────────────────── */
+
+function buildDashboardTimeline() {
+  const fd = state.formData;
+  const rt = fd.releaseTiming || 'manual';
+
+  // Only platforms that have review-time data
+  const reviewData = [...state.activePlatforms]
+    .filter(p => OB_PLATFORM_TIMING[p])
+    .map(p => ({ id: p, ...OB_PLATFORM_TIMING[p], name: PLATFORMS[p]?.label || p }))
+    .sort((a, b) => a.days - b.days);
+
+  /* ── Header: mode chips + optional date input ── */
+  const modes = [
+    { v: 'manual',        label: 'Manual'        },
+    { v: 'as_approved',   label: 'When approved' },
+    { v: 'specific_date', label: 'On a date'     },
+  ];
+  const modeChips = modes.map(m =>
+    `<button class="dash-tl-chip${rt === m.v ? ' is-on' : ''}" onclick="dashPickTiming('${m.v}')">${m.label}</button>`
+  ).join('');
+
+  const dateVal = fd.releaseDate || '';
+  const dateInput = rt === 'specific_date'
+    ? `<input class="form-input dash-tl-date-input" type="date" value="${escHtml(dateVal)}" onchange="dashSetDate(this.value)">`
+    : '';
+
+  /* ── Days-to-launch counter ── */
+  let daysHtml = '';
+  if (rt === 'specific_date' && dateVal) {
+    const live  = new Date(dateVal + 'T00:00:00');
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days  = Math.round((live - today) / 86400000);
+    if (days >= 0) {
+      daysHtml = `<div class="dash-tl-days"><span class="dash-tl-days-num">${days}</span><span class="dash-tl-days-lbl"> DAYS TO LAUNCH</span></div>`;
+    }
+  }
+
+  /* ── Timeline body ── */
+  let bodyHtml = '';
+
+  if (rt === 'as_approved' && reviewData.length) {
+    const today   = new Date(); today.setHours(0, 0, 0, 0);
+    const maxDays = Math.max(...reviewData.map(r => r.days));
+    const rows = reviewData.map(r => {
+      const pct          = (r.days / maxDays) * 100;
+      const midPct       = pct / 2;
+      const liveDateStr  = fmtDateShort(_addDays(today, r.days));
+      const isMaxBar     = r.days === maxDays;
+      const dateLblStyle = isMaxBar
+        ? 'right:0;transform:none;text-align:right;'
+        : `left:${pct.toFixed(1)}%;transform:translateX(-50%);`;
+      return `
+        <div class="dash-tl-row">
+          <div class="dash-tl-plat-label">
+            <span class="ob-timing-plat-dot" style="background:${r.color}"></span>
+            <span>${r.name}</span>
+          </div>
+          <div class="ob-timing-track">
+            <div class="ob-timing-bar-line" style="width:${pct.toFixed(1)}%;background:${r.color}"></div>
+            <div class="ob-timing-hdot" style="left:0"></div>
+            <div class="ob-timing-fdot" style="left:${pct.toFixed(1)}%;background:${r.color};border-color:${r.color}"></div>
+            <div class="ob-timing-lead-lbl" style="left:${midPct.toFixed(1)}%">${r.days} day average</div>
+            <div class="ob-timing-date-lbl" style="${dateLblStyle}">${liveDateStr}</div>
+          </div>
+        </div>`;
+    }).join('');
+    bodyHtml = `<div class="dash-tl-body">${rows}</div>`;
+  }
+
+  else if (rt === 'specific_date' && dateVal && reviewData.length) {
+    const liveDate = new Date(dateVal + 'T00:00:00');
+    if (!isNaN(liveDate)) {
+      const maxLead  = Math.max(...reviewData.map(r => r.days * 2));
+      const spanDays = maxLead + 1;
+      const rows = reviewData.map(r => {
+        const recDate  = _addDays(liveDate, -(r.days * 2));
+        const subDate  = _addDays(liveDate, -r.days);
+        const recPct   = ((spanDays - r.days * 2) / spanDays) * 100;
+        const subPct   = ((spanDays - r.days)     / spanDays) * 100;
+        const solidW   = 100 - subPct;
+        const dashW    = subPct - recPct;
+        const leadMid  = subPct + solidW / 2;
+        return `
+          <div class="dash-tl-row">
+            <div class="dash-tl-plat-label">
+              <span class="ob-timing-plat-dot" style="background:${r.color}"></span>
+              <span>${r.name}</span>
+            </div>
+            <div class="ob-timing-track ob-timing-track--sd">
+              <div class="ob-timing-faint-line" style="width:${recPct.toFixed(1)}%"></div>
+              <div class="ob-timing-dash-line" style="left:${recPct.toFixed(1)}%;width:${dashW.toFixed(1)}%"></div>
+              <div class="ob-timing-solid-line" style="left:${subPct.toFixed(1)}%;width:${solidW.toFixed(1)}%;background:${r.color}"></div>
+              <div class="ob-timing-hdot ob-timing-hdot--rec" style="left:${recPct.toFixed(1)}%"></div>
+              <div class="ob-timing-hdot" style="left:${subPct.toFixed(1)}%"></div>
+              <div class="ob-timing-fdot" style="left:100%;background:${r.color};border-color:${r.color}"></div>
+              <div class="ob-timing-lead-lbl" style="left:${leadMid.toFixed(1)}%">${r.days}d lead</div>
+              <div class="ob-timing-rec-lbl" style="left:${recPct.toFixed(1)}%"><span class="ob-timing-rec-tag">REC</span><br>${fmtDateShort(recDate)}</div>
+              <div class="ob-timing-date-lbl" style="left:${subPct.toFixed(1)}%">${fmtDateShort(subDate)}</div>
+            </div>
+          </div>`;
+      }).join('');
+      bodyHtml = `
+        <div class="dash-tl-body">
+          ${rows}
+          <div class="ob-timing-live-label">LIVE &middot; ${fmtDateShort(liveDate)}</div>
+        </div>`;
+    }
+  }
+
+  return `
+    <div class="dash-timeline" id="dash-timeline">
+      <div class="dash-tl-header">
+        <div class="dash-tl-header-left">
+          <span class="dash-tl-launch-lbl">LAUNCH</span>
+          <div class="dash-tl-chips">${modeChips}${dateInput}</div>
+        </div>
+        ${daysHtml}
+      </div>
+      ${bodyHtml}
+    </div>`;
+}
+
 /* ── Dashboard ───────────────────────────────────────── */
 
 function buildConsolidatedBanner() {
@@ -885,6 +1008,10 @@ function renderDashboard() {
   const inactive = Object.keys(PLATFORMS).filter(pid => !state.activePlatforms.has(pid));
 
   let h = '';
+
+  if (active.length > 0) {
+    h += `<div id="dash-timeline-wrap">${buildDashboardTimeline()}</div>`;
+  }
 
   if (active.length === 0) {
     h += `
