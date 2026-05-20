@@ -1111,62 +1111,62 @@ function _refreshTimingContent() {
   if (dateInput && state.formData.releaseDate) dateInput.value = state.formData.releaseDate;
 }
 
-/* ── Already Live — game search widget ──────────────────── */
+/* ── Scenario widget — game search ───────────────────────── */
 
-function _renderAlreadyLiveSection() {
-  const wrap = document.getElementById('ob-already-live-wrap');
+function _renderScenarioSection() {
+  const wrap = document.getElementById(‘ob-scenario-wrap’);
   if (!wrap) return;
-  wrap.innerHTML = buildAlreadyLiveWidget();
+  wrap.innerHTML = buildScenarioWidget();
 }
 
-function setAlreadyLive(answer) {
+function _triggerScenarioSearch() {
+  const title = (state.formData.title || ‘’).trim();
+  if (!title) {
+    state.liveSearch = { status: ‘error’, found: false, error: ‘NO_TITLE’ };
+    _renderScenarioSection();
+    const wrap = document.getElementById(‘ob-scenario-wrap’);
+    const msg  = wrap ? wrap.querySelector(‘.ob-live-not-found’) : null;
+    if (msg) msg.textContent = ‘Enter your game title above first — then we’ll search for it.’;
+    return;
+  }
+  state.liveSearch = { status: ‘loading’, found: false };
+  _renderScenarioSection();
+  searchGameByTitle(title)
+    .then(result => {
+      state.liveSearch = {
+        status:      ‘done’,
+        found:       !!result.found,
+        title:       result.title       || null,
+        description: result.description || null,
+        source:      result.source      || null,
+        confidence:  result.confidence  || 0,
+        confirmed:   false,
+      };
+      _renderScenarioSection();
+    })
+    .catch(err => {
+      console.warn(‘[Scenario Search] failed:’, err.message);
+      state.liveSearch = { status: ‘error’, found: false, error: err.message };
+      _renderScenarioSection();
+    });
+}
+
+function setGameScenario(scenario) {
   // Toggle off if same chip clicked again
-  if (state.formData.alreadyLive === answer) {
-    state.formData.alreadyLive = null;
+  if (state.formData.gameScenario === scenario) {
+    state.formData.gameScenario = null;
     state.liveSearch = null;
-    _renderAlreadyLiveSection();
+    _renderScenarioSection();
     return;
   }
 
-  state.formData.alreadyLive = answer;
+  state.formData.gameScenario = scenario;
   state.liveSearch = null;
-  _renderAlreadyLiveSection();
+  _renderScenarioSection();
 
-  if (answer === 'yes') {
-    const title = (state.formData.title || '').trim();
-    if (!title) {
-      // No title yet — show a prompt to type the title first
-      state.liveSearch = { status: 'error', found: false, error: 'NO_TITLE' };
-      _renderAlreadyLiveSection();
-      // Override with custom message
-      const wrap = document.getElementById('ob-already-live-wrap');
-      const msg = wrap ? wrap.querySelector('.ob-live-not-found') : null;
-      if (msg) msg.textContent = 'Enter your game title above first — then we’ll search for it.';
-      return;
-    }
-
-    // Start loading
-    state.liveSearch = { status: 'loading', found: false };
-    _renderAlreadyLiveSection();
-
-    searchGameByTitle(title)
-      .then(result => {
-        state.liveSearch = {
-          status:      'done',
-          found:       !!result.found,
-          title:       result.title || null,
-          description: result.description || null,
-          source:      result.source || null,
-          confidence:  result.confidence || 0,
-          confirmed:   false,
-        };
-        _renderAlreadyLiveSection();
-      })
-      .catch(err => {
-        console.warn('[Already Live] Search failed:', err.message);
-        state.liveSearch = { status: 'error', found: false, error: err.message };
-        _renderAlreadyLiveSection();
-      });
+  // Scenarios that need a store search
+  if (scenario === ‘new_platform’ || scenario === ‘update’) {
+    _triggerScenarioSearch();
   }
 }
 
@@ -1176,26 +1176,34 @@ function confirmGameImport() {
 
   // Pre-populate the description field
   state.formData.description = ls.description;
-  const descEl = document.getElementById('ob-desc');
+  const descEl = document.getElementById(‘ob-desc’);
   if (descEl) {
     descEl.value = ls.description;
-    charCount('ob-desc-count', ls.description, 4000);
+    charCount(‘ob-desc-count’, ls.description, 4000);
   }
 
-  // Mark as confirmed and re-render widget
   ls.confirmed = true;
-  _renderAlreadyLiveSection();
+  _renderScenarioSection();
 }
 
 function rejectGameImport() {
-  // Clear the search result but keep alreadyLive = 'yes'
-  // Let the user know we didn't find the right game
-  state.liveSearch = { status: 'done', found: false };
-  _renderAlreadyLiveSection();
-  // Show a "couldn't match" message
-  const wrap = document.getElementById('ob-already-live-wrap');
-  const msg = wrap ? wrap.querySelector('.ob-live-not-found') : null;
-  if (msg) msg.textContent = 'Got it — fill in the description below and we’ll work from that.';
+  state.liveSearch = { status: ‘done’, found: false };
+  _renderScenarioSection();
+  const wrap = document.getElementById(‘ob-scenario-wrap’);
+  const msg  = wrap ? wrap.querySelector(‘.ob-live-not-found’) : null;
+  if (msg) msg.textContent = ‘Got it — fill in the description below and we’ll work from that.’;
+}
+
+// Re-trigger search when title changes and a search scenario is already selected
+let _titleSearchTimer = null;
+function _onTitleInputScenario(value) {
+  const gs = state.formData.gameScenario;
+  if (gs !== 'new_platform' && gs !== 'update') return;
+  // Don't re-search if already confirmed
+  if (state.liveSearch && state.liveSearch.confirmed) return;
+  clearTimeout(_titleSearchTimer);
+  if (!value || value.trim().length < 2) return;
+  _titleSearchTimer = setTimeout(() => _triggerScenarioSearch(), 800);
 }
 
 /* ── Prompt drawer (debug) ───────────────────────────────── */

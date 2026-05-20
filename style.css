@@ -421,22 +421,21 @@ body {
   padding: 2px 6px;
 }
 
-/* ── Already Live widget ──────────────────────────────── */
-.ob-already-live {
+/* ── Scenario widget ──────────────────────────────────── */
+.ob-scenario {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
 }
-.ob-already-live-q {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-.ob-already-live-btns {
+.ob-scenario-chips {
   display: flex;
   gap: 7px;
+  flex-wrap: wrap;
 }
-.ob-yn-chip {
-  padding: 6px 16px;
+.ob-scenario-chip {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--panel-2);
@@ -446,9 +445,11 @@ body {
   cursor: pointer;
   transition: color 0.12s;
   font-family: inherit;
+  text-align: center;
+  white-space: nowrap;
 }
-.ob-yn-chip:hover:not(.is-on) { color: var(--text); }
-.ob-yn-chip.is-on {
+.ob-scenario-chip:hover:not(.is-on) { color: var(--text); }
+.ob-scenario-chip.is-on {
   border-color: var(--sel-border);
   background: var(--sel-bg);
   color: var(--sel-color);

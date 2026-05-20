@@ -1337,7 +1337,7 @@ function makeBlankFormData() {
     title:                '',
     description:          '',
     price:                '',   // collected per-platform (iOS Business), kept here for store preview
-    alreadyLive:          null, // null | 'yes' | 'no' — whether user says game is already on a store
+    gameScenario:         null, // null | 'new' | 'new_platform' | 'update'
     supportUrl:           '',
     privacyUrl:           '',
     primaryLanguage:      'en',
@@ -1481,7 +1481,7 @@ const state = {
 
   cqSeen: false,
 
-  // Transient state for the "Already live?" game search widget
+  // Transient state for the game search widget (scenarios: new_platform, update)
   // { status: 'loading'|'done'|'error', found: bool, title, description, source, confidence, confirmed: bool, error: string }
   liveSearch: null,
 };

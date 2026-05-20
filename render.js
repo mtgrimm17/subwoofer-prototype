@@ -87,12 +87,12 @@ function buildGameDetailsTab() {
         <label class="form-label" for="ob-title"><span class="req-dot"></span>Game Title</label>
         <input class="form-input" id="ob-title" type="text" maxlength="50"
                placeholder="e.g. Go Ape Ship!"
-               oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30)">
+               oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
         <div class="char-count" id="ob-title-count">0 / 30</div>
       </div>
 
-      <div class="form-group" id="ob-already-live-wrap">
-        ${buildAlreadyLiveWidget()}
+      <div class="form-group" id="ob-scenario-wrap">
+        ${buildScenarioWidget()}
       </div>
 
       <div class="form-group">
@@ -348,13 +348,25 @@ const OB_REG_TIPS = {
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
-/* ── Already Live widget ─────────────────────────────── */
-function buildAlreadyLiveWidget() {
-  const al = state.formData.alreadyLive; // null | 'yes' | 'no'
+/* ── Scenario widget ─────────────────────────────────── */
+function buildScenarioWidget() {
+  const gs = state.formData.gameScenario; // null | 'new' | 'new_platform' | 'update'
   const ls = state.liveSearch;
+  const needsSearch = gs === 'new_platform' || gs === 'update';
+
+  const scenarios = [
+    { v: 'new',          label: 'Launching a new game'         },
+    { v: 'new_platform', label: 'Bringing to new platforms'    },
+    { v: 'update',       label: 'Updating an existing game'    },
+  ];
+
+  const chips = scenarios.map(s => `
+    <button class="ob-scenario-chip${gs === s.v ? ' is-on' : ''}"
+            onclick="setGameScenario('${s.v}')">${escHtml(s.label)}</button>
+  `).join('');
 
   let resultHtml = '';
-  if (al === 'yes') {
+  if (needsSearch) {
     if (!ls || ls.status === 'loading') {
       const title = state.formData.title || 'your game';
       resultHtml = `
@@ -368,7 +380,7 @@ function buildAlreadyLiveWidget() {
           <svg viewBox="0 0 16 16" fill="none" width="13" height="13" aria-hidden="true">
             <path d="M3 8l3.5 3.5L13 5" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Description imported from ${escHtml(ls.source || 'store listing')}.
+          Listing imported from ${escHtml(ls.source || 'store listing')}.
         </div>`;
     } else if (ls.status === 'done' && ls.found) {
       resultHtml = `
@@ -396,12 +408,8 @@ function buildAlreadyLiveWidget() {
   }
 
   return `
-    <div class="ob-already-live">
-      <div class="ob-already-live-q">Already live on any store?</div>
-      <div class="ob-already-live-btns">
-        <button class="ob-yn-chip${al === 'yes' ? ' is-on' : ''}" onclick="setAlreadyLive('yes')">Yes</button>
-        <button class="ob-yn-chip${al === 'no'  ? ' is-on' : ''}" onclick="setAlreadyLive('no')">No</button>
-      </div>
+    <div class="ob-scenario">
+      <div class="ob-scenario-chips">${chips}</div>
       ${resultHtml}
     </div>`;
 }
