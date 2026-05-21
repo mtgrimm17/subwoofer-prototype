@@ -378,24 +378,25 @@ function buildScenarioWidget() {
       const storeMap = { ios: 'iOS App Store', steam: 'Steam', android: 'Google Play' };
       const storeNames = (ls.allStores || []).map(pid => storeMap[pid] || pid);
       const sourceStr  = storeNames.length ? storeNames.join(' & ') : (ls.source || 'store listing');
-      const platNote   = storeNames.length ? ' — platforms pre-selected.' : '.';
+      const platNote   = storeNames.length ? ' &mdash; platforms pre-selected.' : '.';
       resultHtml = `
-        <div class="ob-live-confirmed">
-          <svg viewBox="0 0 16 16" fill="none" width="13" height="13" aria-hidden="true">
-            <path d="M3 8l3.5 3.5L13 5" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="sw-tip-box" style="margin-bottom:0;align-items:center;">
+          <svg viewBox="0 0 16 16" fill="none" width="14" height="14" aria-hidden="true" style="flex-shrink:0">
+            <path d="M3 8l3.5 3.5L13 5" stroke="#4ade80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Found on ${escHtml(sourceStr)}${platNote}
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Found on ${escHtml(sourceStr)}</strong>${platNote}</span>
         </div>`;
     } else if (ls.status === 'done' && ls.found) {
       resultHtml = `
-        <div class="ob-live-found">
-          <div class="ob-live-found-header">
-            <span>✦</span> Found on ${escHtml(ls.source || 'store')}
-          </div>
-          <div class="ob-live-found-desc">${escHtml(ls.description || '')}</div>
-          <div class="ob-live-found-actions">
-            <button class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="confirmGameImport()">That&rsquo;s mine!</button>
-            <button class="btn btn-ghost" style="font-size:12px;padding:5px 14px;" onclick="rejectGameImport()">Not me</button>
+        <div class="sw-tip-box" style="margin-bottom:0;">
+          <span class="sw-tip-icon-circle">!</span>
+          <div class="sw-tip-text">
+            <div><strong class="sw-tip-bold">Subwoofer Tip:</strong> We found this on ${escHtml(ls.source || 'the store')}.</div>
+            <div class="ob-live-found-desc" style="margin-top:6px;">${escHtml(ls.description || '')}</div>
+            <div class="ob-live-found-actions" style="margin-top:8px;">
+              <button class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="confirmGameImport()">That&rsquo;s mine!</button>
+              <button class="btn btn-ghost" style="font-size:12px;padding:5px 14px;" onclick="rejectGameImport()">Not me</button>
+            </div>
           </div>
         </div>`;
     } else if (ls.status === 'done' && !ls.found) {
