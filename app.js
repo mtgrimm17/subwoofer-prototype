@@ -939,9 +939,10 @@ function toggleObLangList(btn) {
 }
 
 async function initObDistMap() {
-  // Ensure selectedCountries is populated on first load
-  if (!state.formData.selectedCountries?.length) {
-    state.formData.selectedCountries = _obCountriesForPreset(state.formData.distributionPreset || 'everywhere');
+  // Populate selectedCountries from preset only if a preset is already chosen
+  const preset = state.formData.distributionPreset;
+  if (!state.formData.selectedCountries?.length && preset && preset !== 'custom') {
+    state.formData.selectedCountries = _obCountriesForPreset(preset);
     updateObLangRecs();
   }
 
@@ -1183,22 +1184,17 @@ function confirmGameImport() {
     charCount('ob-desc-count', ls.description, 4000);
   }
 
-  // Auto-activate platforms where the game was found
+  // Auto-activate platforms where the game was found — replace any prior auto-selection
   const storeToPid = { ios: 'ios', steam: 'steam', android: 'android' };
-  let platformsAdded = false;
-  (ls.allStores || []).forEach(storeId => {
-    const pid = storeToPid[storeId];
-    if (pid && !state.activePlatforms.has(pid)) {
+  const foundPids = (ls.allStores || []).map(s => storeToPid[s]).filter(Boolean);
+  if (foundPids.length) {
+    state.activePlatforms.clear();
+    foundPids.forEach(pid => {
       state.activePlatforms.add(pid);
       if (!state.platformStepStatus[pid]) {
         state.platformStepStatus[pid] = makeEmptyPlatformSteps()[pid] || {};
       }
-      platformsAdded = true;
-    }
-  });
-
-  // Re-render platform grid if any new platforms were added
-  if (platformsAdded) {
+    });
     const gridWrap = document.getElementById('ob-plat-grid-wrap');
     if (gridWrap) gridWrap.innerHTML = buildObPlatTilesHTML();
     renderOnboardingFooter();

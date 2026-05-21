@@ -1343,7 +1343,7 @@ function makeBlankFormData() {
     primaryLanguage:      'en',
     localized:            false,
     localizations:        [],   // languages the developer plans to localize into
-    distributionPreset:   'recommended', // recommended|global|minimize_regulatory|english_only|exclude_china
+    distributionPreset:   null, // null=unset|everywhere|english_only|minimize_regulation|custom
     selectedCountries:    [],            // initialized from preset on first use
     manualMarkets:        false,         // true when user is manually toggling countries
     localizationPreset:   'recommended', // recommended|primary_only|all_regions

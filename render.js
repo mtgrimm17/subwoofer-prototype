@@ -69,7 +69,7 @@ function renderOnboardingFooter() {
 function buildGameDetailsTab() {
   const fd = state.formData;
   const knownPresets = ['everywhere','english_only','minimize_regulation','custom'];
-  const dPreset = knownPresets.includes(fd.distributionPreset) ? fd.distributionPreset : 'everywhere';
+  const dPreset = knownPresets.includes(fd.distributionPreset) ? fd.distributionPreset : null;
 
   const distPresets = [
     { id:'everywhere',          label:'Everywhere' },
@@ -829,10 +829,16 @@ function buildDashboardTimeline() {
   const fd = state.formData;
   const rt = fd.releaseTiming || 'manual';
 
+  // Short display names for the compact timeline label column
+  const DASH_TL_LABEL = {
+    ios: 'Apple', android: 'Google', steam: 'Steam',
+    egs: 'Epic', xbox: 'Xbox', nintendo: 'Nintendo', psn: 'PSN',
+  };
+
   // Active platforms with timing data, sorted shortest → longest review time
   const reviewData = [...state.activePlatforms]
     .filter(p => OB_PLATFORM_TIMING[p])
-    .map(p => ({ id: p, ...OB_PLATFORM_TIMING[p] }))
+    .map(p => ({ id: p, ...OB_PLATFORM_TIMING[p], shortLabel: DASH_TL_LABEL[p] || OB_PLATFORM_TIMING[p].label }))
     .sort((a, b) => a.days - b.days);
 
   /* ── Mode chips + optional date input ── */
@@ -898,13 +904,13 @@ function buildDashboardTimeline() {
         const solidW  = (100 - subPct).toFixed(1);
         return `
           <div class="dash-tl-row">
-            <div class="dash-tl-plat-name" style="color:${r.color}">${escHtml(r.label)}</div>
+            <div class="dash-tl-plat-name" style="color:${r.color}">${escHtml(r.shortLabel)}</div>
             <div class="dash-tl-track">
               <div class="dash-tl-faint-line" style="width:${recPct}%"></div>
               <div class="dash-tl-dash-line"  style="left:${recPct}%;width:${dashW}%"></div>
               <div class="dash-tl-solid-line" style="left:${subPct}%;width:${solidW}%;background:${r.color}"></div>
               <div class="dash-tl-dot dash-tl-dot--rec"  style="left:${recPct}%"></div>
-              <div class="dash-tl-dot"                   style="left:${subPct}%;background:${r.color};border-color:${r.color}"></div>
+              <div class="dash-tl-dot dash-tl-dot--sub"  style="left:${subPct}%;border-color:${r.color}"></div>
               <div class="dash-tl-dot dash-tl-dot--live" style="left:100%;background:${r.color};border-color:${r.color}"></div>
               <div class="dash-tl-date-lbl" style="left:${recPct}%">${fmtDateShort(recDate)}</div>
               <div class="dash-tl-date-lbl" style="left:${subPct}%">${fmtDateShort(subDate)}</div>
@@ -932,7 +938,7 @@ function buildDashboardTimeline() {
       const liveDateSt = fmtDateShort(_addDays(today, r.days));
       return `
         <div class="dash-tl-row">
-          <div class="dash-tl-plat-name" style="color:${r.color}">${escHtml(r.label)}</div>
+          <div class="dash-tl-plat-name" style="color:${r.color}">${escHtml(r.shortLabel)}</div>
           <div class="dash-tl-track">
             <div class="dash-tl-faint-line" style="width:100%"></div>
             <div class="dash-tl-solid-line" style="width:${pct}%;background:${r.color}"></div>

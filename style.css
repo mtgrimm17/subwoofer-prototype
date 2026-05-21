@@ -2937,6 +2937,10 @@ select.form-input {
   border-color: var(--text-faint);
   background: transparent;
 }
+/* SUBMIT BY: open circle — border takes platform color, background stays panel */
+.dash-tl-dot--sub {
+  background: var(--panel);
+}
 .dash-tl-dot--live {
   width: 10px; height: 10px;
 }
