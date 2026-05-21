@@ -2922,24 +2922,25 @@ select.form-input {
   transform: translateY(-50%);
 }
 
-/* Dots */
+/* Dots — z-index:1 ensures they render above the line divs (same as ob-timing-hdot) */
 .dash-tl-dot {
   position: absolute;
   top: 50%;
   width: 8px; height: 8px;
   border-radius: 50%;
   border: 2px solid var(--text-dim);
-  background: var(--panel);
+  background: var(--panel);   /* opaque — hides any line passing through the center */
   transform: translate(-50%, -50%);
+  z-index: 1;
 }
-/* REC dot: SVG background gives clean dashed circle (CSS dashed borders fragment on small circles) */
+/* REC dot: dashed border, opaque background (mirrors ob-timing-hdot--rec exactly) */
 .dash-tl-dot--rec {
-  border: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='3' fill='none' stroke='%23555' stroke-width='1.5' stroke-dasharray='2 2'/%3E%3C/svg%3E") transparent center/contain no-repeat;
+  border-style: dashed;
+  border-color: var(--text-faint);
 }
-/* SUBMIT BY: open circle — border takes platform color, background stays panel */
+/* SUBMIT BY: open circle — platform color set via inline border shorthand */
 .dash-tl-dot--sub {
-  background: var(--panel);
+  /* background: var(--panel) inherited from base — no override needed */
 }
 .dash-tl-dot--live {
   width: 10px; height: 10px;

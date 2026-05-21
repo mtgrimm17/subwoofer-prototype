@@ -911,7 +911,7 @@ function buildDashboardTimeline() {
               <div class="dash-tl-dash-line"  style="left:${recPct}%;width:${dashW}%"></div>
               <div class="dash-tl-solid-line" style="left:${subPct}%;width:${solidW}%;background:${r.color}"></div>
               <div class="dash-tl-dot dash-tl-dot--rec"  style="left:${recPct}%"></div>
-              <div class="dash-tl-dot dash-tl-dot--sub"  style="left:${subPct}%;border-color:${r.color}"></div>
+              <div class="dash-tl-dot dash-tl-dot--sub"  style="left:${subPct}%;border:2px solid ${r.color}"></div>
               <div class="dash-tl-dot dash-tl-dot--live" style="left:100%;background:${r.color};border-color:${r.color}"></div>
               <div class="dash-tl-date-lbl" style="left:${recPct}%">${fmtDateShort(recDate)}</div>
               <div class="dash-tl-date-lbl" style="left:${subPct}%">${fmtDateShort(subDate)}</div>
