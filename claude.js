@@ -497,10 +497,21 @@ If you find this game:
   "found": true,
   "title": "<exact store title>",
   "description": "<3-5 sentences suitable for a store submission form>",
-  "source": "<store with the best description, e.g. 'PlayStation Store'>",
-  "allStores": ["<every store you know this game is on>"],
+  "source": "<human-readable store name, e.g. 'PlayStation Store'>",
+  "allStores": ["<platform IDs>"],
   "confidence": <0-100>
 }
+
+CRITICAL: In the allStores array, use ONLY these exact platform ID strings (lowercase):
+  "ios"       → Apple App Store / iOS
+  "android"   → Google Play Store
+  "steam"     → Steam (PC/Mac)
+  "nintendo"  → Nintendo Switch eShop
+  "psn"       → PlayStation Store (PS4/PS5)
+  "xbox"      → Xbox / Microsoft Store
+  "egs"       → Epic Games Store
+
+Example: a game on Switch and PlayStation would be: "allStores": ["nintendo", "psn"]
 
 If not found or uncertain:
 {

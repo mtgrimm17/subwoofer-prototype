@@ -137,18 +137,6 @@ function buildGameDetailsTab() {
 
       <div id="ob-lang-list-wrap">${buildObLangList()}</div>
 
-      <div class="ob-section-label" style="margin-top:28px;">Release Timing</div>
-      <div class="ob-timing-q">When should this release go live?</div>
-      <div class="ob-timing-chips">
-        ${[
-          { v:'manual',        label:"I'll release manually" },
-          { v:'as_approved',   label:'As soon as approved'   },
-          { v:'specific_date', label:'On a specific date'    },
-        ].map(c => `<button class="ob-timing-chip${(fd.releaseTiming||'manual')===c.v?' is-on':''}" data-timing="${c.v}" onclick="pickTiming('${c.v}')">${c.label}</button>`).join('')}
-      </div>
-      <div id="ob-timing-content" style="margin-top:14px;">
-        ${buildReleaseTimingContent()}
-      </div>
     </div>`;
 }
 
@@ -1357,28 +1345,169 @@ function renderStepModal() {
 }
 
 function buildStorePreviewSection() {
-  const fd   = state.formData;
-  const ups  = state.uploads;
-  const icon = ups.appIcon;
+  const fd    = state.formData;
+  const ups   = state.uploads;
+  const icon  = ups.appIcon;
   const shots = ups.screenshots || [];
 
+  const title    = escHtml(fd.title || 'Your Game Title');
+  const subtitle = fd.description
+    ? escHtml(fd.description.slice(0, 80) + (fd.description.length > 80 ? '…' : ''))
+    : 'Short tagline will appear here';
+  const price    = (fd.price && fd.price !== '0') ? `$${fd.price}` : 'GET';
+  const descFull = fd.description ? escHtml(fd.description) : 'Your game description will appear here. Fill in the description field above to see it reflected in this preview.';
+  const descShort = fd.description && fd.description.length > 220
+    ? escHtml(fd.description.slice(0, 220)) + '…'
+    : descFull;
+  const category = escHtml(fd.genre || 'Games');
+  const iapNote  = state.questionAnswers.inAppPurchases === 'yes' ? 'In-App Purchases' : '';
+
+  const iconHtml = icon
+    ? `<img src="${icon.dataUrl}" class="ias-icon" alt="App icon">`
+    : `<div class="ias-icon ias-icon-empty"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><rect x="8" y="16" width="32" height="20" rx="3" fill="#555"/><polygon points="24,6 36,16 12,16" fill="#666"/></svg></div>`;
+
+  // Screenshot strip — portrait frames
+  const shotHtml = shots.length > 0
+    ? shots.slice(0, 5).map(s =>
+        `<div class="ias-shot-frame"><img src="${s.dataUrl}" class="ias-shot-img" alt="Screenshot"></div>`
+      ).join('')
+    : [0,1,2].map(i =>
+        `<div class="ias-shot-frame ias-shot-empty"><span>${['Gameplay','Gameplay','Menu'][i]}</span></div>`
+      ).join('');
+
+  // Info grid rows
+  const infoRows = [
+    { label: 'Size',          value: '—'                             },
+    { label: 'Category',      value: category                        },
+    { label: 'Compatibility', value: 'iPhone, iPad'                  },
+    { label: 'Languages',     value: escHtml(fd.primaryLanguage || 'EN') },
+    { label: 'Age Rating',    value: '4+'                            },
+    { label: 'Price',         value: fd.price && fd.price !== '0' ? `$${fd.price}` : 'Free' },
+  ].map(r => `
+    <div class="ias-info-row">
+      <span class="ias-info-label">${r.label}</span>
+      <span class="ias-info-value">${r.value}</span>
+    </div>`).join('');
+
   return `
-    <div class="store-preview-wrap">
-      <div class="store-preview-app-row">
-        ${icon
-          ? `<img src="${icon.dataUrl}" class="store-preview-icon" alt="App icon">`
-          : `<div class="store-preview-icon store-preview-icon-empty"></div>`}
-        <div class="store-preview-app-meta">
-          <div class="store-preview-title">${fd.title || 'App Name'}</div>
-          <div class="store-preview-sub">${fd.description ? fd.description.slice(0, 90) + (fd.description.length > 90 ? '…' : '') : 'Short description'}</div>
-          <div class="store-preview-price">${fd.price && fd.price !== '0' ? `$${fd.price}` : 'Free'}</div>
-        </div>
+    <div class="ias-device-wrap">
+      <div class="ias-label-row">
+        <span class="ias-label-badge">
+          <svg viewBox="0 0 16 16" fill="none" width="11" height="11" style="margin-right:4px;vertical-align:-1px;"><path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5zm.75 10.25h-1.5v-5h1.5v5zm0-6.5h-1.5v-1.5h1.5v1.5z" fill="currentColor"/></svg>
+          App Store Preview
+        </span>
+        <span class="ias-label-note">Based on your submission data</span>
       </div>
-      ${shots.length > 0
-        ? `<div class="store-preview-shots">${shots.slice(0, 3).map(s => `<img src="${s.dataUrl}" class="store-preview-shot" alt="">`).join('')}</div>`
-        : `<div class="store-preview-shots-empty">No screenshots uploaded yet</div>`}
-      <div class="store-preview-note">Full App Store visual preview — privacy nutrition labels, age rating badge, and all submission data — coming soon.</div>
-    </div>`;
+
+      <div class="ias-page">
+
+        <!-- Header: icon + name + GET -->
+        <div class="ias-header">
+          ${iconHtml}
+          <div class="ias-header-meta">
+            <div class="ias-app-name">${title}</div>
+            <div class="ias-app-subtitle">${subtitle}</div>
+            ${iapNote ? `<div class="ias-iap-note">${iapNote}</div>` : ''}
+          </div>
+          <div class="ias-header-cta">
+            <button class="ias-get-btn">${price}</button>
+            <div class="ias-share-icon">
+              <svg viewBox="0 0 20 20" fill="none" width="18" height="18"><path d="M10 2v10M6 6l4-4 4 4M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rating row -->
+        <div class="ias-meta-strip">
+          <div class="ias-meta-cell">
+            <div class="ias-meta-top">—</div>
+            <div class="ias-meta-bot">Ratings</div>
+          </div>
+          <div class="ias-meta-divider"></div>
+          <div class="ias-meta-cell">
+            <div class="ias-meta-top">${escHtml(fd.ageRating || '#1')}</div>
+            <div class="ias-meta-bot">${category}</div>
+          </div>
+          <div class="ias-meta-divider"></div>
+          <div class="ias-meta-cell">
+            <div class="ias-meta-top">4+</div>
+            <div class="ias-meta-bot">Age</div>
+          </div>
+          <div class="ias-meta-divider"></div>
+          <div class="ias-meta-cell">
+            <div class="ias-meta-top">
+              <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M8 1l2.06 4.18L15 6.07l-3.5 3.41.83 4.83L8 12.04 3.67 14.3l.83-4.83L1 6.07l4.94-.89z"/></svg>
+            </div>
+            <div class="ias-meta-bot">Chart</div>
+          </div>
+        </div>
+
+        <!-- Screenshot row -->
+        <div class="ias-shots-scroll">
+          ${shotHtml}
+        </div>
+
+        <!-- Description -->
+        <div class="ias-section">
+          <div class="ias-desc-text" id="ias-desc-text">${descShort}</div>
+          ${fd.description && fd.description.length > 220
+            ? `<button class="ias-more-btn" onclick="
+                const el=document.getElementById('ias-desc-text');
+                const full=${JSON.stringify(descFull)};
+                if(this.textContent==='more'){el.innerHTML=full;this.textContent='less';}
+                else{el.innerHTML=${JSON.stringify(descShort)};this.textContent='more';}
+              ">more</button>`
+            : ''}
+          <div class="ias-dev-name">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style="margin-right:4px;vertical-align:-1px;"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg>
+            Developer
+          </div>
+        </div>
+
+        <div class="ias-section-divider"></div>
+
+        <!-- Ratings & Reviews stub -->
+        <div class="ias-section">
+          <div class="ias-section-head">Ratings &amp; Reviews</div>
+          <div class="ias-ratings-row">
+            <div class="ias-big-rating">—</div>
+            <div class="ias-stars-col">
+              ${[5,4,3,2,1].map(n => `
+                <div class="ias-star-row">
+                  <span class="ias-star-n">${n}</span>
+                  <div class="ias-star-bar"><div class="ias-star-fill" style="width:${n===5?'60%':n===4?'25%':n===3?'10%':'5%'}"></div></div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="ias-section-divider"></div>
+
+        <!-- Information grid -->
+        <div class="ias-section">
+          <div class="ias-section-head">Information</div>
+          <div class="ias-info-grid">
+            ${infoRows}
+          </div>
+        </div>
+
+        <div class="ias-section-divider"></div>
+
+        <!-- Privacy -->
+        <div class="ias-section">
+          <div class="ias-section-head">App Privacy</div>
+          <div class="ias-privacy-box">
+            <svg viewBox="0 0 24 24" fill="none" width="28" height="28"><path d="M12 2L4 6v6c0 5.5 3.5 10.7 8 12 4.5-1.3 8-6.5 8-12V6l-8-4z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+            <div>
+              <div class="ias-privacy-title">See Details</div>
+              <div class="ias-privacy-sub">Developer provided privacy information</div>
+            </div>
+            <svg viewBox="0 0 8 14" fill="none" width="7" height="12" style="margin-left:auto;flex-shrink:0;"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+
+      </div><!-- /ias-page -->
+    </div><!-- /ias-device-wrap -->`;
 }
 
 /* ── Submit Modal (non-iOS legacy) ──────────────────── */

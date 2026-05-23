@@ -1185,8 +1185,19 @@ function confirmGameImport() {
   }
 
   // Auto-activate platforms where the game was found — replace any prior auto-selection
-  const storeToPid = { ios: 'ios', steam: 'steam', android: 'android' };
-  const foundPids = (ls.allStores || []).map(s => storeToPid[s]).filter(Boolean);
+  // Handles both canonical IDs and human-readable names Claude knowledge may return
+  const storeToPid = {
+    'ios': 'ios', 'app store': 'ios', 'apple app store': 'ios', 'itunes': 'ios',
+    'android': 'android', 'google play': 'android', 'google play store': 'android',
+    'steam': 'steam',
+    'nintendo': 'nintendo', 'nintendo switch': 'nintendo', 'nintendo eshop': 'nintendo',
+    'nintendo switch eshop': 'nintendo', 'eshop': 'nintendo',
+    'psn': 'psn', 'playstation': 'psn', 'playstation store': 'psn',
+    'ps4': 'psn', 'ps5': 'psn', 'playstation 4': 'psn', 'playstation 5': 'psn',
+    'xbox': 'xbox', 'xbox one': 'xbox', 'xbox series x': 'xbox', 'microsoft store': 'xbox',
+    'egs': 'egs', 'epic': 'egs', 'epic games': 'egs', 'epic games store': 'egs',
+  };
+  const foundPids = (ls.allStores || []).map(s => storeToPid[(s || '').toLowerCase().trim()]).filter(Boolean);
   if (foundPids.length) {
     state.activePlatforms.clear();
     foundPids.forEach(pid => {
@@ -1230,9 +1241,11 @@ function dashPickTiming(value) {
   _refreshDashTimeline();
 }
 
+let _dashDateTimer = null;
 function dashSetDate(value) {
   state.formData.releaseDate = value;
-  _refreshDashTimeline();
+  clearTimeout(_dashDateTimer);
+  _dashDateTimer = setTimeout(() => _refreshDashTimeline(), 700);
 }
 
 // Re-trigger search when title changes and a search scenario is already selected
