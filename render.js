@@ -842,7 +842,7 @@ function buildDashboardTimeline() {
 
   const dateVal   = fd.releaseDate || '';
   const dateInput = rt === 'specific_date'
-    ? `<input class="form-input dash-tl-date-input" type="date" value="${escHtml(dateVal)}" onchange="dashSetDate(this.value)">`
+    ? `<input class="form-input dash-tl-date-input" type="date" value="${escHtml(dateVal)}" onblur="dashSetDate(this.value)">`
     : '';
 
   /* ── Days-to-launch counter ── */
@@ -1347,42 +1347,101 @@ function renderStepModal() {
 function buildStorePreviewSection() {
   const fd    = state.formData;
   const ups   = state.uploads;
+  const a     = state.iosSubmitAnswers;
   const icon  = ups.appIcon;
   const shots = ups.screenshots || [];
 
-  const title    = escHtml(fd.title || 'Your Game Title');
-  const subtitle = fd.description
-    ? escHtml(fd.description.slice(0, 80) + (fd.description.length > 80 ? '…' : ''))
-    : 'Short tagline will appear here';
-  const price    = (fd.price && fd.price !== '0') ? `$${fd.price}` : 'GET';
-  const descFull = fd.description ? escHtml(fd.description) : 'Your game description will appear here. Fill in the description field above to see it reflected in this preview.';
-  const descShort = fd.description && fd.description.length > 220
-    ? escHtml(fd.description.slice(0, 220)) + '…'
+  const title     = escHtml(fd.title || 'Your Game Title');
+  const category  = escHtml(fd.genre || 'Games');
+  const price     = (fd.price && fd.price !== '0') ? `$${fd.price}` : 'GET';
+  const priceText = (fd.price && fd.price !== '0') ? `$${fd.price}` : 'Free';
+  const iapNote   = (a.hasIAP === 'yes') ? 'In-App Purchases' : '';
+  const langCode  = (fd.primaryLanguage || 'EN').toUpperCase().slice(0, 2);
+  const version   = escHtml(fd.appVersion || '1.0');
+
+  // Subtitle = first sentence of description or placeholder
+  const descRaw   = fd.description || '';
+  const firstDot  = descRaw.search(/[.!?]/);
+  const subtitle  = escHtml(firstDot > 10 && firstDot < 120
+    ? descRaw.slice(0, firstDot + 1)
+    : descRaw.slice(0, 80) + (descRaw.length > 80 ? '…' : '') || 'Short subtitle');
+
+  const descFull  = descRaw ? escHtml(descRaw) : 'Your game description will appear here once you fill in the Description field in Game Details.';
+  const descShort = descRaw.length > 240
+    ? escHtml(descRaw.slice(0, 240)) + '…'
     : descFull;
-  const category = escHtml(fd.genre || 'Games');
-  const iapNote  = state.questionAnswers.inAppPurchases === 'yes' ? 'In-App Purchases' : '';
+
+  // Age rating from questionnaire
+  const ageRating = (function() {
+    const cat = a.ageCategory;
+    if (cat === 'made_for_kids') return '4+';
+    const intense = state.iosSubmitAnswers;
+    const hasAdult = intense.graphicSexual === 'frequent' || intense.extendedViolence === 'frequent';
+    const hasTeen  = intense.realisticViolence && intense.realisticViolence !== 'none';
+    return hasAdult ? '17+' : hasTeen ? '12+' : '4+';
+  })();
+
+  // Privacy section content
+  const privacyHtml = (function() {
+    if (a.collectsData === 'no') {
+      return `
+        <div class="ias-privacy-card ias-privacy-clean">
+          <svg viewBox="0 0 28 28" fill="none" width="32" height="32">
+            <circle cx="14" cy="14" r="13" stroke="#0a84ff" stroke-width="1.5"/>
+            <path d="M9 14l3.5 3.5L19 10" stroke="#0a84ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="ias-privacy-clean-title">Data Not Collected</div>
+          <div class="ias-privacy-clean-sub">The developer does not collect any data from this app.</div>
+        </div>`;
+    }
+    if (a.collectsData === 'yes' && Array.isArray(a.dataTypes) && a.dataTypes.length) {
+      const trackingTypes = a.dataTypes.filter(d => d.tracking === 'yes').map(d => d.id);
+      const label = trackingTypes.length ? 'Data Used to Track You' : 'Data Linked to You';
+      return `
+        <div class="ias-privacy-card ias-privacy-data">
+          <div class="ias-privacy-data-label">${label}</div>
+          <div class="ias-privacy-data-types">${a.dataTypes.slice(0, 4).map(d =>
+            `<span class="ias-privacy-tag">${escHtml(d.id.replace(/_/g, ' '))}</span>`
+          ).join('')}${a.dataTypes.length > 4 ? `<span class="ias-privacy-tag ias-privacy-tag-more">+${a.dataTypes.length - 4} more</span>` : ''}</div>
+        </div>`;
+    }
+    return `
+      <div class="ias-privacy-card ias-privacy-pending">
+        <div class="ias-privacy-pending-msg">Complete the Data Privacy step to populate this section.</div>
+      </div>`;
+  })();
+
+  // What's New section
+  const releaseNotes = fd.releaseNotes || '';
+  const notesHtml = releaseNotes
+    ? releaseNotes.split('\n').filter(l => l.trim()).map(l => `<div class="ias-wn-line">- ${escHtml(l.trim().replace(/^[-–•]\s*/, ''))}</div>`).join('')
+    : `<div class="ias-wn-line ias-wn-placeholder">Add release notes to your submission to populate this section.</div>`;
 
   const iconHtml = icon
     ? `<img src="${icon.dataUrl}" class="ias-icon" alt="App icon">`
-    : `<div class="ias-icon ias-icon-empty"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><rect x="8" y="16" width="32" height="20" rx="3" fill="#555"/><polygon points="24,6 36,16 12,16" fill="#666"/></svg></div>`;
+    : `<div class="ias-icon ias-icon-empty">
+        <svg viewBox="0 0 40 40" fill="none" width="24" height="24">
+          <rect x="4" y="14" width="32" height="22" rx="3" fill="#555"/>
+          <polygon points="20,3 32,14 8,14" fill="#666"/>
+        </svg>
+      </div>`;
 
-  // Screenshot strip — portrait frames
   const shotHtml = shots.length > 0
     ? shots.slice(0, 5).map(s =>
         `<div class="ias-shot-frame"><img src="${s.dataUrl}" class="ias-shot-img" alt="Screenshot"></div>`
       ).join('')
-    : [0,1,2].map(i =>
-        `<div class="ias-shot-frame ias-shot-empty"><span>${['Gameplay','Gameplay','Menu'][i]}</span></div>`
+    : ['Gameplay','Gameplay','Menu'].map(lbl =>
+        `<div class="ias-shot-frame ias-shot-empty"><span>${lbl}</span></div>`
       ).join('');
 
-  // Info grid rows
   const infoRows = [
-    { label: 'Size',          value: '—'                             },
-    { label: 'Category',      value: category                        },
-    { label: 'Compatibility', value: 'iPhone, iPad'                  },
-    { label: 'Languages',     value: escHtml(fd.primaryLanguage || 'EN') },
-    { label: 'Age Rating',    value: '4+'                            },
-    { label: 'Price',         value: fd.price && fd.price !== '0' ? `$${fd.price}` : 'Free' },
+    { label: 'Seller',        value: 'Your Company'      },
+    { label: 'Size',          value: '—'                 },
+    { label: 'Category',      value: category            },
+    { label: 'Compatibility', value: 'iPhone, iPad'      },
+    { label: 'Languages',     value: langCode            },
+    { label: 'Age Rating',    value: ageRating           },
+    { label: 'Copyright',     value: `© ${new Date().getFullYear()}` },
   ].map(r => `
     <div class="ias-info-row">
       <span class="ias-info-label">${r.label}</span>
@@ -1390,18 +1449,29 @@ function buildStorePreviewSection() {
     </div>`).join('');
 
   return `
+    <div class="ias-fields-block">
+      <div class="form-label">Version Number</div>
+      <input class="form-input" type="text" value="${escHtml(fd.appVersion || '1.0')}"
+             placeholder="e.g. 1.0"
+             oninput="syncField('appVersion', this.value)">
+      <div class="form-label" style="margin-top:12px;">What's New (Release Notes)</div>
+      <textarea class="form-input" rows="4"
+                placeholder="Describe what changed in this version..."
+                oninput="syncField('releaseNotes', this.value)">${escHtml(fd.releaseNotes || '')}</textarea>
+    </div>
+
     <div class="ias-device-wrap">
       <div class="ias-label-row">
         <span class="ias-label-badge">
           <svg viewBox="0 0 16 16" fill="none" width="11" height="11" style="margin-right:4px;vertical-align:-1px;"><path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5zm.75 10.25h-1.5v-5h1.5v5zm0-6.5h-1.5v-1.5h1.5v1.5z" fill="currentColor"/></svg>
           App Store Preview
         </span>
-        <span class="ias-label-note">Based on your submission data</span>
+        <span class="ias-label-note">Reflects your submission data</span>
       </div>
 
       <div class="ias-page">
 
-        <!-- Header: icon + name + GET -->
+        <!-- ── Header ── -->
         <div class="ias-header">
           ${iconHtml}
           <div class="ias-header-meta">
@@ -1411,13 +1481,10 @@ function buildStorePreviewSection() {
           </div>
           <div class="ias-header-cta">
             <button class="ias-get-btn">${price}</button>
-            <div class="ias-share-icon">
-              <svg viewBox="0 0 20 20" fill="none" width="18" height="18"><path d="M10 2v10M6 6l4-4 4 4M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
           </div>
         </div>
 
-        <!-- Rating row -->
+        <!-- ── Meta strip ── -->
         <div class="ias-meta-strip">
           <div class="ias-meta-cell">
             <div class="ias-meta-top">—</div>
@@ -1425,89 +1492,88 @@ function buildStorePreviewSection() {
           </div>
           <div class="ias-meta-divider"></div>
           <div class="ias-meta-cell">
-            <div class="ias-meta-top">${escHtml(fd.ageRating || '#1')}</div>
-            <div class="ias-meta-bot">${category}</div>
-          </div>
-          <div class="ias-meta-divider"></div>
-          <div class="ias-meta-cell">
-            <div class="ias-meta-top">4+</div>
+            <div class="ias-meta-top ias-meta-age">${ageRating}</div>
             <div class="ias-meta-bot">Age</div>
           </div>
           <div class="ias-meta-divider"></div>
           <div class="ias-meta-cell">
-            <div class="ias-meta-top">
-              <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M8 1l2.06 4.18L15 6.07l-3.5 3.41.83 4.83L8 12.04 3.67 14.3l.83-4.83L1 6.07l4.94-.89z"/></svg>
-            </div>
-            <div class="ias-meta-bot">Chart</div>
+            <div class="ias-meta-top">${priceText}</div>
+            <div class="ias-meta-bot">Price</div>
+          </div>
+          <div class="ias-meta-divider"></div>
+          <div class="ias-meta-cell ias-meta-cell-wide">
+            <div class="ias-meta-top">${category}</div>
+            <div class="ias-meta-bot">Category</div>
           </div>
         </div>
 
-        <!-- Screenshot row -->
+        <!-- ── Screenshots ── -->
         <div class="ias-shots-scroll">
           ${shotHtml}
         </div>
+        <div class="ias-device-compat">
+          <svg viewBox="0 0 20 20" fill="none" width="14" height="14"><rect x="2" y="4" width="10" height="13" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="14" y="6" width="4" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+          <span>iPhone, iPad</span>
+          <svg viewBox="0 0 8 14" fill="none" width="6" height="10" style="margin-left:auto;"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
 
-        <!-- Description -->
+        <!-- ── Description ── -->
         <div class="ias-section">
-          <div class="ias-desc-text" id="ias-desc-text">${descShort}</div>
-          ${fd.description && fd.description.length > 220
-            ? `<button class="ias-more-btn" onclick="
-                const el=document.getElementById('ias-desc-text');
-                const full=${JSON.stringify(descFull)};
+          <div class="ias-desc-text" id="ias-desc-text">${descShort}${descRaw.length > 240
+            ? ` <button class="ias-more-btn" onclick="
+                var el=document.getElementById('ias-desc-text');
+                var full=${JSON.stringify(descFull + ' ')};
+                var short=${JSON.stringify(descShort + ' ')};
                 if(this.textContent==='more'){el.innerHTML=full;this.textContent='less';}
-                else{el.innerHTML=${JSON.stringify(descShort)};this.textContent='more';}
-              ">more</button>`
-            : ''}
-          <div class="ias-dev-name">
-            <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style="margin-right:4px;vertical-align:-1px;"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg>
-            Developer
+                else{el.innerHTML=short;this.textContent='more';}
+              ">more</button>` : ''}</div>
+          <div class="ias-dev-row">
+            <span class="ias-dev-name">Developer</span>
+            <svg viewBox="0 0 8 14" fill="none" width="5" height="9"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
         </div>
 
         <div class="ias-section-divider"></div>
 
-        <!-- Ratings & Reviews stub -->
+        <!-- ── What's New ── -->
         <div class="ias-section">
-          <div class="ias-section-head">Ratings &amp; Reviews</div>
-          <div class="ias-ratings-row">
-            <div class="ias-big-rating">—</div>
-            <div class="ias-stars-col">
-              ${[5,4,3,2,1].map(n => `
-                <div class="ias-star-row">
-                  <span class="ias-star-n">${n}</span>
-                  <div class="ias-star-bar"><div class="ias-star-fill" style="width:${n===5?'60%':n===4?'25%':n===3?'10%':'5%'}"></div></div>
-                </div>`).join('')}
-            </div>
+          <div class="ias-section-head-row">
+            <span class="ias-section-head">What's New</span>
+            <svg viewBox="0 0 8 14" fill="none" width="5" height="9"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="ias-wn-version">Version ${version}</div>
+          <div class="ias-wn-notes">${notesHtml}</div>
+          <div class="ias-wn-edit-hint">
+            <svg viewBox="0 0 16 16" fill="none" width="11" height="11"><path d="M11 2.5a1.5 1.5 0 012 2L5.5 12 3 12.5l.5-2.5L11 2.5z" stroke="currentColor" stroke-width="1.3"/></svg>
+            Edit in submission details
           </div>
         </div>
 
         <div class="ias-section-divider"></div>
 
-        <!-- Information grid -->
+        <!-- ── App Privacy ── -->
+        <div class="ias-section">
+          <div class="ias-section-head-row">
+            <span class="ias-section-head">App Privacy</span>
+            <svg viewBox="0 0 8 14" fill="none" width="5" height="9"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          ${privacyHtml}
+          <div class="ias-privacy-footer">Privacy practices may vary based on features you use or your age.</div>
+        </div>
+
+        <div class="ias-section-divider"></div>
+
+        <!-- ── Information ── -->
         <div class="ias-section">
           <div class="ias-section-head">Information</div>
-          <div class="ias-info-grid">
-            ${infoRows}
-          </div>
-        </div>
-
-        <div class="ias-section-divider"></div>
-
-        <!-- Privacy -->
-        <div class="ias-section">
-          <div class="ias-section-head">App Privacy</div>
-          <div class="ias-privacy-box">
-            <svg viewBox="0 0 24 24" fill="none" width="28" height="28"><path d="M12 2L4 6v6c0 5.5 3.5 10.7 8 12 4.5-1.3 8-6.5 8-12V6l-8-4z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
-            <div>
-              <div class="ias-privacy-title">See Details</div>
-              <div class="ias-privacy-sub">Developer provided privacy information</div>
-            </div>
-            <svg viewBox="0 0 8 14" fill="none" width="7" height="12" style="margin-left:auto;flex-shrink:0;"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
+          <div class="ias-info-grid">${infoRows}</div>
+          <div class="ias-info-link">Developer Website <svg viewBox="0 0 8 14" fill="none" width="5" height="9" style="margin-left:auto;"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="ias-info-link">Privacy Policy <svg viewBox="0 0 8 14" fill="none" width="5" height="9" style="margin-left:auto;"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         </div>
 
       </div><!-- /ias-page -->
-    </div><!-- /ias-device-wrap -->`;
+    </div><!-- /ias-device-wrap -->
+  `;
 }
 
 /* ── Submit Modal (non-iOS legacy) ──────────────────── */

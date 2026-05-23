@@ -625,7 +625,6 @@ const PLATFORMS = {
       { id: 'privacy',       label: 'Data Privacy',      hasInference: false },
       { id: 'contentRating', label: 'Content Rating',    hasInference: true  },
       { id: 'business',      label: 'Business',          hasInference: true  },
-      { id: 'distribution',  label: 'Distribution',      hasInference: false },
       { id: 'storePreview',  label: 'Store Page Preview',hasInference: false },
     ],
   },
@@ -942,7 +941,6 @@ const IOS_SECTIONS = [
   { id: 'privacy',       label: 'Data Privacy'      },
   { id: 'contentRating', label: 'Content Rating'    },
   { id: 'business',      label: 'Business'          },
-  { id: 'distribution',  label: 'Distribution'      },
   { id: 'storePreview',  label: 'Store Page Preview'},
 ];
 
@@ -1350,6 +1348,8 @@ function makeBlankFormData() {
     releaseTiming:        'manual',
     releaseDate:          '',
     trailerUrl:           '',
+    appVersion:           '1.0',
+    releaseNotes:         '',
   };
 }
 

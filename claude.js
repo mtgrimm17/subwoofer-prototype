@@ -561,45 +561,69 @@ Rules: only return found:true if genuinely confident (confidence ≥ 70). Do NOT
 
 /* ── Orchestrator ────────────────────────────────────────────── */
 
+// Canonical ID lookup shared between searchGameByTitle and confirmGameImport
+const STORE_NAME_TO_PID = {
+  'ios': 'ios', 'app store': 'ios', 'apple app store': 'ios', 'itunes': 'ios',
+  'android': 'android', 'google play': 'android', 'google play store': 'android',
+  'steam': 'steam',
+  'nintendo': 'nintendo', 'nintendo switch': 'nintendo', 'nintendo eshop': 'nintendo',
+  'nintendo switch eshop': 'nintendo', 'eshop': 'nintendo',
+  'psn': 'psn', 'playstation': 'psn', 'playstation store': 'psn',
+  'ps4': 'psn', 'ps5': 'psn', 'playstation 4': 'psn', 'playstation 5': 'psn',
+  'xbox': 'xbox', 'xbox one': 'xbox', 'xbox series x': 'xbox', 'microsoft store': 'xbox',
+  'egs': 'egs', 'epic': 'egs', 'epic games': 'egs', 'epic games store': 'egs',
+};
+
 async function searchGameByTitle(title) {
   if (!title || !title.trim()) throw new Error('NO_TITLE');
   const t = title.trim();
 
-  // Run iTunes and Steam in parallel
-  const [itunesSettled, steamSettled] = await Promise.allSettled([
+  // Run all three sources in parallel — Claude knowledge fills store gaps iTunes/Steam can't cover
+  const [itunesSettled, steamSettled, claudeSettled] = await Promise.allSettled([
     _searchITunes(t),
     _searchSteam(t),
+    _searchClaudeKnowledge(t),
   ]);
 
   if (itunesSettled.status === 'rejected') console.warn('[Search] iTunes failed:', itunesSettled.reason?.message);
   if (steamSettled.status  === 'rejected') console.warn('[Search] Steam failed:',  steamSettled.reason?.message);
+  if (claudeSettled.status === 'rejected') console.warn('[Search] Claude failed:', claudeSettled.reason?.message);
 
   const itunes = itunesSettled.status === 'fulfilled' ? itunesSettled.value : null;
   const steam  = steamSettled.status  === 'fulfilled' ? steamSettled.value  : null;
+  const claude = claudeSettled.status === 'fulfilled' ? claudeSettled.value : null;
 
-  // Collect which platform IDs we actually found the game on
-  const allStores = [];
-  if (itunes?.found) allStores.push('ios');
-  if (steam?.found)  allStores.push('steam');
-
-  if (allStores.length === 0) {
-    // Neither store found it — fall back to Claude knowledge
-    return _searchClaudeKnowledge(t);
+  // Merge all platform IDs from every source
+  const storeSet = new Set();
+  if (itunes?.found) storeSet.add('ios');
+  if (steam?.found)  storeSet.add('steam');
+  if (claude?.found && Array.isArray(claude.allStores)) {
+    claude.allStores.forEach(s => {
+      const pid = STORE_NAME_TO_PID[(s || '').toLowerCase().trim()] || s;
+      if (pid) storeSet.add(pid);
+    });
   }
 
-  // Pick primary result for description (prefer Steam's short_description; tiebreak = higher confidence)
-  const primary = (steam?.found && (!itunes?.found || steam.confidence >= itunes.confidence))
-    ? steam : itunes;
+  const allStores = [...storeSet];
+
+  // Nothing found anywhere
+  if (!itunes?.found && !steam?.found && !claude?.found) {
+    return { found: false, title: null, description: null, source: null, allStores: [], confidence: 0 };
+  }
+
+  // Prefer real store description (Steam > iTunes) over Claude knowledge
+  const primary = steam?.found ? steam : itunes?.found ? itunes : claude;
 
   const sourceLabels = [];
   if (itunes?.found) sourceLabels.push('iOS App Store');
   if (steam?.found)  sourceLabels.push('Steam');
+  if (claude?.found && !itunes?.found && !steam?.found) sourceLabels.push(claude.source || 'Claude Knowledge');
 
   return {
     found:       true,
     title:       primary.title,
     description: primary.description,
-    source:      sourceLabels.join(' & '),
+    source:      sourceLabels.join(' & ') || 'Store',
     allStores,
     confidence:  primary.confidence,
   };

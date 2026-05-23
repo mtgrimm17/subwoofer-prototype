@@ -1914,6 +1914,11 @@ body {
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* ── iOS App Store Preview ─────────────────────────────── */
+.ias-fields-block {
+  padding: 4px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
 .ias-device-wrap { padding: 4px 0 12px; }
 
 .ias-label-row {
@@ -1929,7 +1934,6 @@ body {
 }
 .ias-label-note { font-size: 11px; color: var(--text-faint); }
 
-/* The "phone screen" page */
 .ias-page {
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -1938,7 +1942,7 @@ body {
   font-family: -apple-system, 'SF Pro Display', 'Inter', sans-serif;
 }
 
-/* Header row */
+/* Header */
 .ias-header {
   display: flex; align-items: flex-start; gap: 12px;
   padding: 16px 16px 12px;
@@ -1964,110 +1968,132 @@ body {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .ias-iap-note { font-size: 10px; color: var(--text-faint); }
-.ias-header-cta {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  flex-shrink: 0; padding-top: 4px;
-}
+.ias-header-cta { flex-shrink: 0; padding-top: 6px; }
 .ias-get-btn {
   background: #0a84ff; color: #fff;
   font-size: 13px; font-weight: 700;
   border: none; border-radius: 20px;
   padding: 6px 18px; cursor: default;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.2px; white-space: nowrap;
 }
-.ias-share-icon { color: #0a84ff; line-height: 1; }
 
 /* Meta strip */
 .ias-meta-strip {
   display: flex; align-items: center;
   border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  margin: 0 0 0; padding: 8px 16px;
-  gap: 0;
+  padding: 8px 12px; gap: 0;
 }
-.ias-meta-cell {
-  flex: 1; text-align: center;
-}
+.ias-meta-cell { flex: 1; text-align: center; min-width: 0; }
+.ias-meta-cell-wide { flex: 1.4; }
 .ias-meta-top {
-  font-size: 13px; font-weight: 700; color: var(--text-dim);
-  line-height: 1.3; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--text-dim);
+  line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ias-meta-bot { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
-.ias-meta-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+.ias-meta-age { font-size: 14px; }
+.ias-meta-bot { font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+.ias-meta-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; margin: 0 4px; }
 
-/* Screenshot strip */
+/* Screenshots */
 .ias-shots-scroll {
   display: flex; gap: 8px;
-  padding: 14px 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  padding: 14px 16px 10px;
+  overflow-x: auto; scrollbar-width: none;
 }
 .ias-shots-scroll::-webkit-scrollbar { display: none; }
 .ias-shot-frame {
-  flex-shrink: 0;
-  width: 130px; height: 230px;
+  flex-shrink: 0; width: 130px; height: 230px;
   border-radius: 12px; overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--panel-3);
+  border: 1px solid var(--border); background: var(--panel-3);
 }
 .ias-shot-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ias-shot-empty {
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: var(--text-faint);
-  background: var(--panel-3);
   width: 100%; height: 100%;
+}
+
+/* Device compat row */
+.ias-device-compat {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 16px 14px; font-size: 12px; color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
 }
 
 /* Sections */
 .ias-section { padding: 14px 16px; }
 .ias-section-head {
-  font-size: 14px; font-weight: 700; color: var(--text);
-  margin-bottom: 10px;
+  font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px;
 }
+.ias-section-head-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; color: var(--text-faint);
+}
+.ias-section-head-row .ias-section-head { margin-bottom: 0; }
 .ias-section-divider { height: 1px; background: var(--border); }
 
+/* Description */
 .ias-desc-text {
   font-size: 13px; color: var(--text-dim); line-height: 1.6;
-  white-space: pre-wrap; word-break: break-word;
+  word-break: break-word;
 }
 .ias-more-btn {
   background: none; border: none; color: #0a84ff;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  padding: 0; margin-top: 2px;
+  font-size: 13px; font-weight: 500; cursor: pointer; padding: 0;
 }
-.ias-dev-name {
-  font-size: 12px; color: var(--text-faint); margin-top: 10px;
-  display: flex; align-items: center;
+.ias-dev-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; color: var(--text-faint);
+}
+.ias-dev-name { font-size: 12px; color: #0a84ff; }
+
+/* What's New */
+.ias-wn-version { font-size: 12px; color: var(--text-faint); margin-bottom: 8px; }
+.ias-wn-notes   { font-size: 13px; color: var(--text-dim); line-height: 1.7; }
+.ias-wn-line    { margin-bottom: 2px; }
+.ias-wn-placeholder { color: var(--text-faint); font-style: italic; }
+.ias-wn-edit-hint {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text-faint); margin-top: 10px;
 }
 
-/* Ratings */
-.ias-ratings-row { display: flex; gap: 16px; align-items: center; }
-.ias-big-rating  { font-size: 48px; font-weight: 700; color: var(--text); line-height: 1; min-width: 60px; }
-.ias-stars-col   { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.ias-star-row    { display: flex; align-items: center; gap: 5px; }
-.ias-star-n      { font-size: 10px; color: var(--text-faint); width: 8px; text-align: right; }
-.ias-star-bar    { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.ias-star-fill   { height: 100%; background: var(--text-dim); border-radius: 2px; }
+/* Privacy */
+.ias-privacy-card {
+  border-radius: 12px; overflow: hidden; margin-bottom: 10px;
+  border: 1px solid var(--border); background: var(--panel-3);
+}
+.ias-privacy-clean {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 20px 16px; text-align: center;
+}
+.ias-privacy-clean-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 8px 0 4px; }
+.ias-privacy-clean-sub   { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+.ias-privacy-data { padding: 14px; }
+.ias-privacy-data-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.ias-privacy-data-types { display: flex; flex-wrap: wrap; gap: 5px; }
+.ias-privacy-tag {
+  font-size: 11px; color: var(--text-dim);
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 2px 8px; text-transform: capitalize;
+}
+.ias-privacy-tag-more { color: var(--text-faint); }
+.ias-privacy-pending { padding: 14px; }
+.ias-privacy-pending-msg { font-size: 12px; color: var(--text-faint); font-style: italic; }
+.ias-privacy-footer { font-size: 11px; color: var(--text-faint); line-height: 1.4; margin-top: 4px; }
 
 /* Info grid */
-.ias-info-grid { display: flex; flex-direction: column; gap: 0; }
+.ias-info-grid { display: flex; flex-direction: column; }
 .ias-info-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 0; border-bottom: 1px solid var(--border);
-  font-size: 13px;
+  padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px;
 }
 .ias-info-row:last-child { border-bottom: none; }
 .ias-info-label { color: var(--text-faint); }
 .ias-info-value { color: var(--text-dim); font-weight: 500; text-align: right; }
-
-/* Privacy box */
-.ias-privacy-box {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px; border: 1px solid var(--border);
-  border-radius: 10px; background: var(--panel-3);
-  color: var(--text-dim);
+.ias-info-link {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 0; border-top: 1px solid var(--border);
+  font-size: 13px; color: #0a84ff;
 }
-.ias-privacy-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.ias-privacy-sub   { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 
 .card-task {
   display: flex;
