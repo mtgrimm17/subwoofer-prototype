@@ -3276,11 +3276,12 @@ select.form-input {
 
 .question-card {
   background: var(--panel-2); border: 1px solid var(--border);
+  border-left: 3px solid rgba(251, 146, 60, 0.5);
   border-radius: 10px; padding: 14px 16px; margin-bottom: 8px;
   display: flex; align-items: flex-start; gap: 16px;
   transition: border-color 0.15s;
 }
-.question-card.is-answered { border-color: rgba(74, 222, 128, 0.25); }
+.question-card.is-answered { border-color: var(--border); border-left-color: var(--border); }
 
 .question-body { flex: 1; min-width: 0; }
 
@@ -3703,10 +3704,6 @@ select.form-input {
 .ios-q-row[data-answered="0"] {
   border-left-color: rgba(251, 146, 60, 0.5);
   background: rgba(251, 146, 60, 0.03);
-}
-/* Answered — blue left bar */
-.ios-q-row[data-answered="1"] {
-  border-left-color: rgba(96, 165, 250, 0.35);
 }
 .ios-q-row:last-child { margin-bottom: 0; }
 .ios-q-row-intensity { align-items: center; margin-bottom: 4px; }

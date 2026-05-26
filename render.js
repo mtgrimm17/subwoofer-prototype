@@ -1289,11 +1289,13 @@ function renderStepModal() {
         </div>`;
     } else if (state.claudeCache && inferenceStatus !== 'error') {
       inferenceBanner = `
-        <div class="ai-banner ai-banner-done" style="flex-wrap:wrap;">
-          <span class="ai-banner-icon">✦</span>
-          <div class="ai-banner-text" style="flex:1;">Subwoofer pre-populated answers based on the information you provided. Please review these answers before saving.</div>
+        <div class="sw-tip-box" style="flex-wrap:wrap;margin-bottom:0;">
+          <span class="sw-tip-icon-circle" style="font-size:10px;">✦</span>
+          <div class="sw-tip-text" style="flex:1;min-width:0;">
+            <strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided. Review before saving.
+          </div>
           <button class="ai-see-prompt-btn" onclick="togglePromptDrawer(this)">See prompt</button>
-          <div class="ai-prompt-drawer" style="flex-basis:100%;">${(state.claudeLastPrompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+          <div class="ai-prompt-drawer" style="flex-basis:100%;margin-top:4px;">${(state.claudeLastPrompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         </div>`;
     } else if (inferenceStatus === 'error') {
       inferenceBanner = `
@@ -1716,8 +1718,13 @@ function buildPrivacyMatrix(a) {
     { id: 'used_tracking',   label: 'Used for Tracking' },
   ];
 
-  const expanded       = state.privacyMatrixExpanded;
+  const expanded        = state.privacyMatrixExpanded;
   const selectedTypeIds = new Set(Object.keys(a.dataPerType));
+
+  // Does any non-common type exist at all? (determines whether expand UI is shown)
+  const hasExtraTypes = IOS_DATA_TYPES.some(group =>
+    group.types.some(t => !t.common && !selectedTypeIds.has(t.id))
+  );
 
   // Header row
   const purposeHeaders = cols.map(c =>
@@ -1727,15 +1734,16 @@ function buildPrivacyMatrix(a) {
 
   // Build rows — show only common types by default; always show selected types
   let bodyHtml = '';
-  let hasHiddenTypes = false;
 
   IOS_DATA_TYPES.forEach(group => {
     const visibleTypes = group.types.filter(t => expanded || t.common || selectedTypeIds.has(t.id));
-    const hasHidden    = group.types.some(t => !expanded && !t.common && !selectedTypeIds.has(t.id));
-    if (hasHidden) hasHiddenTypes = true;
     if (visibleTypes.length === 0) return;
 
-    bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
+    // Only show group header in expanded view (collapsed view keeps it clean)
+    if (expanded) {
+      bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
+    }
+
     visibleTypes.forEach(t => {
       const isOn = !!a.dataPerType[t.id];
       const td   = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
@@ -1763,8 +1771,8 @@ function buildPrivacyMatrix(a) {
 
       bodyHtml += `
         <tr class="prv-data-row ${isOn ? 'is-on' : ''}" onclick="togglePrivacyDataType('${t.id}')">
-          <td class="prv-type-cell tooltip-anchor" data-tip="${t.desc}">
-            <span class="prv-type-name">${t.label}</span>
+          <td class="prv-type-cell">
+            <span class="prv-type-name tooltip-anchor" data-tip="${t.desc}">${t.label}</span>
           </td>
           ${purposeCells}
           ${metaCells}
@@ -1772,18 +1780,17 @@ function buildPrivacyMatrix(a) {
     });
   });
 
-  const selectedCount  = Object.keys(a.dataPerType).length;
-  const colCount       = 1 + cols.length + META_COLS.length;
+  const selectedCount = Object.keys(a.dataPerType).length;
 
-  // "Expand" alert — only shown when collapsed and there are hidden types
-  const alertHtml = (!expanded && hasHiddenTypes) ? `
+  // Alert shown in collapsed view when extra types exist
+  const alertHtml = (!expanded && hasExtraTypes) ? `
     <div class="prv-expand-alert">
       Do you collect data not listed here? If so,
       <button class="prv-expand-link" onclick="togglePrivacyMatrix()">expand the data types list</button>.
     </div>` : '';
 
-  // Expand / collapse toggle row
-  const expandBtnHtml = hasHiddenTypes ? `
+  // Expand / collapse toggle — shown whenever extra types exist
+  const expandBtnHtml = hasExtraTypes ? `
     <button class="prv-expand-btn" onclick="togglePrivacyMatrix()">
       ${expanded
         ? `${_chevUp} Show fewer data types`
@@ -1860,11 +1867,6 @@ function buildContentRatingSection() {
     </div>` : '';
 
   return `
-    <div class="ios-rating-progress">
-      ${answeredQ} / ${totalQ} questions answered
-      ${rating ? ` · Estimated rating: <strong>${rating}</strong>` : ''}
-    </div>
-
     <div class="ios-content-step-label">Features</div>
     ${iosYNRow(yq('parentalControls').label,    'parentalControls',    '', yq('parentalControls').tooltip)}
     ${iosYNRow(yq('ageAssurance').label,         'ageAssurance',        '', yq('ageAssurance').tooltip)}
