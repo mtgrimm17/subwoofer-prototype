@@ -1021,7 +1021,8 @@ function computeIOSSectionRisk(sectionId) {
   }
 
   if (sectionId === 'privacy') {
-    if (!a.privacyPolicyUrl.trim()) return 'HIGH';
+    const url = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    if (!url) return 'HIGH';
     return evalFields(['collectsData']);
   }
 
@@ -1054,12 +1055,13 @@ function isIOSSectionComplete(sectionId) {
   const a = state.iosSubmitAnswers;
 
   if (sectionId === 'privacy') {
-    if (!a.privacyPolicyUrl.trim()) return false;
+    // Accept URL from either the step modal field or the onboarding field
+    const url = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    if (!url) return false;
     if (a.collectsData === null) return false;
     if (a.collectsData === 'yes') {
       const types = Object.entries(a.dataPerType);
       if (types.length === 0) return false;
-      // Each selected type needs at least one purpose checked
       for (const [, t] of types) {
         if (t.purposes.length === 0) return false;
       }
