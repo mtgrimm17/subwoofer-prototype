@@ -1449,17 +1449,6 @@ function buildStorePreviewSection() {
     </div>`).join('');
 
   return `
-    <div class="ias-fields-block">
-      <div class="form-label">Version Number</div>
-      <input class="form-input" type="text" value="${escHtml(fd.appVersion || '1.0')}"
-             placeholder="e.g. 1.0"
-             oninput="syncField('appVersion', this.value)">
-      <div class="form-label" style="margin-top:12px;">What's New (Release Notes)</div>
-      <textarea class="form-input" rows="4"
-                placeholder="Describe what changed in this version..."
-                oninput="syncField('releaseNotes', this.value)">${escHtml(fd.releaseNotes || '')}</textarea>
-    </div>
-
     <div class="ias-device-wrap">
       <div class="ias-label-row">
         <span class="ias-label-badge">
