@@ -62,7 +62,10 @@ function toggleOnboardingPlatform(pid) {
   }
   // Re-render just the platform tiles section in-place (platform is now in Game Details tab)
   const gridWrap = document.getElementById('ob-plat-grid-wrap');
-  if (gridWrap) gridWrap.innerHTML = buildObPlatTilesHTML();
+  if (gridWrap) {
+    gridWrap.innerHTML = buildObPlatTilesHTML();
+    gridWrap.classList.toggle('is-req-empty', state.activePlatforms.size === 0);
+  }
   renderOnboardingFooter();
 }
 
@@ -809,6 +812,11 @@ function _refreshObDistSection() {
   document.querySelectorAll('.ob-preset-pill[data-preset]').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.preset === state.formData.distributionPreset);
   });
+  // Update required-empty indicator on preset group
+  const presetGroup = document.getElementById('ob-dist-preset-group');
+  if (presetGroup) {
+    presetGroup.classList.toggle('is-req-empty', !state.formData.distributionPreset);
+  }
 }
 
 function _refreshCountrySummary() {

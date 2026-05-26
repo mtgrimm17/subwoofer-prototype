@@ -83,8 +83,8 @@ function buildGameDetailsTab() {
 
       <div class="ob-section-label" style="margin-top:0;">About your game</div>
 
+      <label class="form-label" for="ob-title">Game Title</label>
       <div class="form-group">
-        <label class="form-label" for="ob-title"><span class="req-dot"></span>Game Title</label>
         <input class="form-input" id="ob-title" type="text" maxlength="50" required
                placeholder="e.g. Go Ape Ship!"
                oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
@@ -95,16 +95,16 @@ function buildGameDetailsTab() {
         ${buildScenarioWidget()}
       </div>
 
+      <label class="form-label" for="ob-desc">Description</label>
       <div class="form-group">
-        <label class="form-label" for="ob-desc"><span class="req-dot"></span>Description</label>
-        <textarea class="form-input" id="ob-desc" rows="5"
+        <textarea class="form-input" id="ob-desc" rows="5" required
                   placeholder="Tell players what makes your game worth their time..."
                   oninput="syncField('description', this.value); charCount('ob-desc-count', this.value, 4000)"></textarea>
         <div class="char-count" id="ob-desc-count">0 / 4000</div>
       </div>
 
-      <div class="form-label" style="margin-top:24px;"><span class="req-dot"></span>Platforms</div>
-      <div id="ob-plat-grid-wrap">${buildObPlatTilesHTML()}</div>
+      <div class="form-label" style="margin-top:24px;">Platforms</div>
+      <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
 
       <div class="ob-section-label" style="margin-top:24px;">Distribution</div>
 
@@ -112,7 +112,7 @@ function buildGameDetailsTab() {
 
       <span class="ob-dist-question">Where do you intend to make the game available?</span>
 
-      <div class="ob-presets-row" style="margin-bottom:10px;">
+      <div id="ob-dist-preset-group" class="ob-req-group ${!dPreset ? 'is-req-empty' : ''}" style="margin-bottom:10px;">
         <div class="ob-preset-pills">
           ${distPresets.map(p => `
             <button class="ob-preset-pill ${dPreset === p.id ? 'is-active' : ''}"
@@ -557,7 +557,7 @@ function buildObLangList() {
     <div class="loc-picker">
       <div class="loc-row">
         <div class="loc-label-col">
-          <div class="loc-label"><span class="req-dot"></span>PRIMARY</div>
+          <div class="loc-label">PRIMARY</div>
         </div>
         <div class="loc-control-col">
           <div class="loc-primary-wrap" id="loc-primary-wrap">
@@ -601,18 +601,20 @@ function buildUploadAssetsTab() {
     <div class="ob-form">
       <div class="ob-section-label">Screenshots</div>
       <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
-      <div class="asset-dropzone" id="ob-screenshot-dropzone"
-           onclick="document.getElementById('ob-screenshot-input').click()"
-           ondragover="event.preventDefault(); this.classList.add('is-over')"
-           ondragleave="this.classList.remove('is-over')"
-           ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
-        <div class="asset-dropzone-icon">↑</div>
-        <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
-        <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
-        <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
-               onchange="handleScreenshotFiles(this.files); this.value=''">
+      <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
+        <div class="asset-dropzone" id="ob-screenshot-dropzone"
+             onclick="document.getElementById('ob-screenshot-input').click()"
+             ondragover="event.preventDefault(); this.classList.add('is-over')"
+             ondragleave="this.classList.remove('is-over')"
+             ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
+          <div class="asset-dropzone-icon">↑</div>
+          <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
+          <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
+          <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
+                 onchange="handleScreenshotFiles(this.files); this.value=''">
+        </div>
+        <div class="asset-grid" id="ob-screenshot-grid"></div>
       </div>
-      <div class="asset-grid" id="ob-screenshot-grid"></div>
 
 
       <div class="ob-section-label" style="margin-top:24px;">Trailer <span class="form-section-note">Optional</span></div>
@@ -643,8 +645,8 @@ function buildComplianceTab() {
     <div class="ob-form">
       <div class="ob-section-label">Links</div>
 
+      <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
       <div class="form-group">
-        <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
         <input class="form-input" id="ob-privacy" type="url" required placeholder="https://yourgame.com/privacy"
                oninput="syncField('privacyUrl', this.value)">
       </div>
@@ -705,6 +707,9 @@ function hydrateComplianceTab() {
 function renderOnboardingScreenshotGrid() {
   const grid = document.getElementById('ob-screenshot-grid');
   if (!grid) return;
+  // Sync required-empty indicator on wrapper
+  const reqWrap = document.getElementById('ob-screenshot-req-wrap');
+  if (reqWrap) reqWrap.classList.toggle('is-req-empty', !state.uploads.screenshots.length);
   if (!state.uploads.screenshots.length) { grid.innerHTML = ''; return; }
   grid.innerHTML = state.uploads.screenshots.map(shot => `
     <div class="asset-thumb">
@@ -741,11 +746,12 @@ function renderComplianceQuestions() {
   let h = '';
   for (const q of QUESTIONS) {
     const answer = state.questionAnswers[q.id];
+    const tipText = escHtml(q.label + (q.desc ? ' ' + q.desc : ''));
+    const ttHTML = `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tipText}</span></span>`;
     h += `
-      <div class="question-card ${answer !== null ? 'is-answered' : ''}">
-        <div class="question-body">
-          <div class="question-text">${q.label}</div>
-          <div class="question-desc">${q.desc}</div>
+      <div class="ios-q-row" data-answered="${answer !== null ? '1' : '0'}">
+        <div class="ios-q-left">
+          <div class="ios-q-label">${escHtml(q.title)}${ttHTML}</div>
         </div>
         <div class="question-yn">
           <button class="yn-btn yn-yes ${answer === 'yes' ? 'is-selected' : ''}"

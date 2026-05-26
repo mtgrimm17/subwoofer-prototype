@@ -31,6 +31,7 @@ const LANG_COUNTRY_CODES = {
 const QUESTIONS = [
   {
     id: 'violence',
+    title: 'Violence or Combat',
     label: 'Does your game contain violence or combat?',
     desc: 'Includes fighting, weapons, blood, or characters being harmed.',
     keywords: ['fight','combat','shoot','war','battle','gun','weapon','blood','kill',
@@ -39,18 +40,21 @@ const QUESTIONS = [
   },
   {
     id: 'sexualContent',
+    title: 'Sexual or Mature Content',
     label: 'Does your game contain sexual or mature content?',
     desc: 'Includes nudity, sexual themes, or suggestive material.',
     keywords: ['adult','sexual','nude','nudity','erotic','mature content','18+'],
   },
   {
     id: 'strongLanguage',
+    title: 'Strong Language',
     label: 'Does your game contain strong language?',
     desc: 'Includes profanity, slurs, or offensive language in dialogue, text, or audio.',
     keywords: ['profanity','crude language','explicit language','strong language','adult language'],
   },
   {
     id: 'dataCollection',
+    title: 'Data Collection',
     label: 'Does your game collect data from users?',
     desc: 'Includes accounts, analytics, gameplay data, device info, or third-party SDKs.',
     keywords: ['account','sign in','sign up','login','analytics','leaderboard',
@@ -58,6 +62,7 @@ const QUESTIONS = [
   },
   {
     id: 'inAppPurchases',
+    title: 'In-App Purchases',
     label: 'Does your game include in-app purchases?',
     desc: 'Includes upgrades, cosmetics, subscriptions, or virtual currency.',
     keywords: ['purchase','buy','shop','store','premium','subscription','dlc','paid',

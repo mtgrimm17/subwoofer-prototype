@@ -937,9 +937,9 @@ body {
    ├── alert-icon-circle   17px red circle with "!" icon
    └── (uses sw-tip-text / sw-tip-bold classes with red overrides)
 
-   ios-q-row[data-answered="0"]   Amber left bar — unanswered iOS question row
-   question-card (no .is-answered) Amber left border — unanswered onboarding compliance card
-   form-group:has(input[required]:placeholder-shown)  Amber left bar — empty required text field
+   ios-q-row[data-answered="0"]          Amber left bar — unanswered YES/NO question row (iOS steps + compliance)
+   form-group:has(input[required]:...)  Amber left bar — empty required text field (label must be OUTSIDE form-group)
+   ob-req-group.is-req-empty            Amber left bar — empty required non-text field (chips, dropzones); toggled via JS
 
    yn-btn.is-selected      Blue (--sel-*) — neutral, no green/magenta semantic color
    intensity-btn.is-sel-*  Blue (--sel-*) — same
@@ -2487,9 +2487,19 @@ body {
 
 .form-group { margin-bottom: 16px; }
 
-/* Required-field bar: amber left edge when the input is still empty (placeholder visible) */
+/* Required-field bar: amber left edge when the input is still empty (placeholder visible).
+   NOTE: Labels must be outside .form-group so the bar only spans the answer element. */
 .form-group:has(input[required]:placeholder-shown),
 .form-group:has(textarea[required]:placeholder-shown) {
+  border-left: 3px solid rgba(251, 146, 60, 0.5);
+  padding-left: 8px;
+  margin-left: -11px;
+  border-radius: 0 4px 4px 0;
+  background: rgba(251, 146, 60, 0.02);
+}
+
+/* Non-text required groups (chips, dropzones) — bar shown via JS-toggled class */
+.ob-req-group.is-req-empty {
   border-left: 3px solid rgba(251, 146, 60, 0.5);
   padding-left: 8px;
   margin-left: -11px;
