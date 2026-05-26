@@ -427,19 +427,15 @@ body {
   flex-direction: column;
   gap: 10px;
 }
-.ob-scenario-prompt {
-  font-size: 11px;
-  color: var(--text-faint);
-  margin-bottom: 2px;
-}
 .ob-scenario-chips {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 .ob-scenario-chip {
-  width: 100%;
-  padding: 8px 12px;
+  flex: 1;
+  padding: 7px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--panel-2);
@@ -447,10 +443,10 @@ body {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.12s;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
   font-family: inherit;
-  text-align: left;
-  white-space: normal;
+  text-align: center;
+  white-space: nowrap;
 }
 .ob-scenario-chip:hover:not(.is-on) { color: var(--text); }
 .ob-scenario-chip.is-on {
@@ -926,6 +922,28 @@ body {
 .ob-plat-hint-ok {
   color: #30d158;
 }
+
+/* ═══════════════════════════════════════════════════════
+   CANONICAL UI COMPONENTS — reuse these everywhere
+   ═══════════════════════════════════════════════════════
+
+   sw-tip-box              Green informational box (Subwoofer Tips & AI pre-pop banner)
+   ├── sw-tip-icon-circle  17px green circle with icon text (use "!" or "✦")
+   ├── sw-tip-text         Body text (color: text-dim)
+   ├── sw-tip-bold         Bold label inside tip text (color: sw-tip-color green)
+   └── ai-see-prompt-btn   Subtle green button inside AI tip box (no underline)
+
+   alert-box               Red/magenta rejection-risk warning (same structure as sw-tip-box)
+   ├── alert-icon-circle   17px red circle with "!" icon
+   └── (uses sw-tip-text / sw-tip-bold classes with red overrides)
+
+   ios-q-row[data-answered="0"]   Amber left bar — unanswered iOS question row
+   question-card (no .is-answered) Amber left border — unanswered onboarding compliance card
+   form-group:has(input[required]:placeholder-shown)  Amber left bar — empty required text field
+
+   yn-btn.is-selected      Blue (--sel-*) — neutral, no green/magenta semantic color
+   intensity-btn.is-sel-*  Blue (--sel-*) — same
+   ═══════════════════════════════════════════════════════ */
 
 /* ─── Subwoofer tip system ────────────────────────────── */
 
@@ -2469,6 +2487,16 @@ body {
 
 .form-group { margin-bottom: 16px; }
 
+/* Required-field bar: amber left edge when the input is still empty (placeholder visible) */
+.form-group:has(input[required]:placeholder-shown),
+.form-group:has(textarea[required]:placeholder-shown) {
+  border-left: 3px solid rgba(251, 146, 60, 0.5);
+  padding-left: 8px;
+  margin-left: -11px;
+  border-radius: 0 4px 4px 0;
+  background: rgba(251, 146, 60, 0.02);
+}
+
 .form-label {
   display: block;
   font-size: 10px; font-weight: 700;
@@ -3365,12 +3393,19 @@ select.form-input {
   border-radius: 14px;
   width: 100%;
   max-width: 640px;
+}
+/* Privacy step needs wider modal for the data matrix */
+.submit-modal.submit-modal-wide {
+  max-width: 920px;
+}
+.submit-modal {
   height: clamp(560px, 88vh, 860px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.6);
   overflow: hidden;
   animation: modalIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: max-width 0.2s ease;
 }
 
 .submit-modal-header {
@@ -4070,29 +4105,7 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   margin-bottom: 4px;
 }
 
-/* "Do you collect data not listed here?" alert */
-.prv-expand-alert {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-bottom: 8px;
-  padding: 6px 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-.prv-expand-link {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--sel-color);
-  font-size: inherit;
-  font-family: inherit;
-  text-decoration: underline;
-  padding: 0;
-}
-.prv-expand-link:hover { opacity: 0.8; }
-
-/* Expand / collapse toggle below the matrix */
+/* Expand / collapse toggle above the matrix */
 .prv-expand-btn {
   display: flex;
   align-items: center;
@@ -4319,16 +4332,18 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--text-dim);
+  color: var(--sw-tip-color);
   font-family: inherit;
   font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
   padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color 0.12s;
+  align-self: flex-start;
+  margin-top: 1px;
+  opacity: 0.75;
+  transition: opacity 0.12s;
 }
-.ai-see-prompt-btn:hover { color: var(--text); }
+.ai-see-prompt-btn:hover { opacity: 1; }
 
 .ai-prompt-drawer {
   display: none;

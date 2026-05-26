@@ -85,7 +85,7 @@ function buildGameDetailsTab() {
 
       <div class="form-group">
         <label class="form-label" for="ob-title"><span class="req-dot"></span>Game Title</label>
-        <input class="form-input" id="ob-title" type="text" maxlength="50"
+        <input class="form-input" id="ob-title" type="text" maxlength="50" required
                placeholder="e.g. Go Ape Ship!"
                oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
         <div class="char-count" id="ob-title-count">0 / 30</div>
@@ -343,9 +343,9 @@ function buildScenarioWidget() {
   const needsSearch = gs === 'new_platform' || gs === 'update';
 
   const scenarios = [
-    { v: 'new',          label: 'Launching a new game'              },
-    { v: 'new_platform', label: 'Bringing a game to a new platform' },
-    { v: 'update',       label: 'Updating an existing game'         },
+    { v: 'new',          label: 'New Game'     },
+    { v: 'new_platform', label: 'New Platform' },
+    { v: 'update',       label: 'New Update'   },
   ];
 
   const chips = scenarios.map(s => `
@@ -402,7 +402,6 @@ function buildScenarioWidget() {
 
   return `
     <div class="ob-scenario">
-      <div class="ob-scenario-prompt">I am&hellip;</div>
       <div class="ob-scenario-chips">${chips}</div>
       ${resultHtml}
     </div>`;
@@ -646,7 +645,7 @@ function buildComplianceTab() {
 
       <div class="form-group">
         <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
-        <input class="form-input" id="ob-privacy" type="url" placeholder="https://yourgame.com/privacy"
+        <input class="form-input" id="ob-privacy" type="url" required placeholder="https://yourgame.com/privacy"
                oninput="syncField('privacyUrl', this.value)">
       </div>
 
@@ -1273,6 +1272,8 @@ function renderStepModal() {
   const modal = document.getElementById('submit-modal');
   if (!modal) return;
   const { platformId, stepId, inferenceStatus, inferenceError } = state.stepModal || {};
+  // Privacy section needs extra width for the data matrix
+  modal.className = 'submit-modal' + (stepId === 'privacy' ? ' submit-modal-wide' : '');
   if (!platformId || !stepId) return;
 
   const p    = PLATFORMS[platformId];
@@ -1782,19 +1783,12 @@ function buildPrivacyMatrix(a) {
 
   const selectedCount = Object.keys(a.dataPerType).length;
 
-  // Alert shown in collapsed view when extra types exist
-  const alertHtml = (!expanded && hasExtraTypes) ? `
-    <div class="prv-expand-alert">
-      Do you collect data not listed here? If so,
-      <button class="prv-expand-link" onclick="togglePrivacyMatrix()">expand the data types list</button>.
-    </div>` : '';
-
-  // Expand / collapse toggle — shown whenever extra types exist
-  const expandBtnHtml = hasExtraTypes ? `
+  // Single toggle button — above the table when collapsed, same position when expanded
+  const toggleBtnHtml = hasExtraTypes ? `
     <button class="prv-expand-btn" onclick="togglePrivacyMatrix()">
       ${expanded
-        ? `${_chevUp} Show fewer data types`
-        : `${_chevDown} See additional data types`}
+        ? `${_chevUp} Show common data types for game developers`
+        : `${_chevDown} Show all data types`}
     </button>` : '';
 
   return `
@@ -1804,7 +1798,7 @@ function buildPrivacyMatrix(a) {
         ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} selected</span>` : ''}
       </div>
       <div class="prv-matrix-hint">Click a row to select it, then check how that data is used.</div>
-      ${alertHtml}
+      ${toggleBtnHtml}
       <div class="prv-matrix-wrap">
         <table class="prv-matrix">
           <thead>
@@ -1817,7 +1811,6 @@ function buildPrivacyMatrix(a) {
           <tbody>${bodyHtml}</tbody>
         </table>
       </div>
-      ${expandBtnHtml}
       ${Object.values(a.dataPerType).some(t => t.tracking === 'yes') ?
         `<div class="dist-tip-box" style="margin-top:10px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
