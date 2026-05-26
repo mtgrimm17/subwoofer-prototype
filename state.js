@@ -736,7 +736,7 @@ function platformStepCount(platformId) {
 // Full Apple App Privacy data type taxonomy (matches App Store Connect questionnaire)
 const IOS_DATA_TYPES = [
   { group: 'Contact Info', types: [
-    { id: 'name',            label: 'Name',                   desc: 'Including first or last name' },
+    { id: 'name',            label: 'Name',                   desc: 'Including first or last name', common: true },
     { id: 'email',           label: 'Email Address',          desc: 'Including but not limited to a hashed email address', common: true },
     { id: 'phone',           label: 'Phone Number',           desc: 'Including but not limited to a hashed phone number' },
     { id: 'address',         label: 'Physical Address',       desc: 'Such as a home address, physical address, or mailing address' },
@@ -1467,6 +1467,9 @@ const state = {
 
   // Whether the user has visited Store Page Preview (makes it count as complete)
   iosStorePreviewSeen: false,
+
+  // Whether the privacy matrix is showing all types (default: collapsed to common only)
+  privacyMatrixExpanded: false,
 
   // Claude AI UI state (not persisted)
   claudeUI: {},

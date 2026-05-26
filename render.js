@@ -1655,7 +1655,7 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
   const noBtn  = `<button class="${noClass}"  onclick="answerIOSField('${fieldId}','no')">NO${aiInferenceBadge(fieldId, 'no')}</button>`;
 
   return `
-    <div class="ios-q-row">
+    <div class="ios-q-row" data-answered="${val !== null ? '1' : '0'}">
       <div class="ios-q-left">
         <div class="ios-q-label">${label}${ttHTML}</div>
       </div>
@@ -1673,7 +1673,7 @@ function iosIntensityRow(label, fieldId, tooltip) {
   function iClass(v, base) { return `intensity-btn ${val === v ? base + aiInferenceClass(fieldId, v) : ''}`; }
 
   return `
-    <div class="ios-q-row ios-q-row-intensity">
+    <div class="ios-q-row ios-q-row-intensity" data-answered="${val !== null ? '1' : '0'}">
       <div class="ios-q-label ios-q-label-sm">${label}${ttHTML}</div>
       <div class="intensity-group">
         <button class="${iClass('none',       'is-sel-none')}"       onclick="answerIOSField('${fieldId}','none')">None${aiInferenceBadge(fieldId, 'none')}</button>
@@ -1716,19 +1716,29 @@ function buildPrivacyMatrix(a) {
     { id: 'used_tracking',   label: 'Used for Tracking' },
   ];
 
+  const expanded       = state.privacyMatrixExpanded;
+  const selectedTypeIds = new Set(Object.keys(a.dataPerType));
+
   // Header row
   const purposeHeaders = cols.map(c =>
     `<th class="prv-col-hd" title="${c.desc}">${c.label}</th>`).join('');
   const metaHeaders = META_COLS.map(c =>
     `<th class="prv-col-hd prv-meta-col">${c.label}</th>`).join('');
 
-  // Data rows — all types always visible
+  // Build rows — show only common types by default; always show selected types
   let bodyHtml = '';
+  let hasHiddenTypes = false;
+
   IOS_DATA_TYPES.forEach(group => {
+    const visibleTypes = group.types.filter(t => expanded || t.common || selectedTypeIds.has(t.id));
+    const hasHidden    = group.types.some(t => !expanded && !t.common && !selectedTypeIds.has(t.id));
+    if (hasHidden) hasHiddenTypes = true;
+    if (visibleTypes.length === 0) return;
+
     bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
-    group.types.forEach(t => {
+    visibleTypes.forEach(t => {
       const isOn = !!a.dataPerType[t.id];
-      const td = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
+      const td   = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
       const purposeCells = cols.map(c => {
         const checked = td.purposes.includes(c.id);
         return `<td class="prv-check-cell">
@@ -1741,7 +1751,7 @@ function buildPrivacyMatrix(a) {
       }).join('');
       const metaCells = META_COLS.map(c => {
         const isChecked = c.id === 'linked_identity' ? td.identity === 'yes' : td.tracking === 'yes';
-        const field = c.id === 'linked_identity' ? 'identity' : 'tracking';
+        const field     = c.id === 'linked_identity' ? 'identity' : 'tracking';
         return `<td class="prv-check-cell prv-meta-col">
           <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
                  data-type="${t.id}" data-meta="${field}"
@@ -1753,7 +1763,7 @@ function buildPrivacyMatrix(a) {
 
       bodyHtml += `
         <tr class="prv-data-row ${isOn ? 'is-on' : ''}" onclick="togglePrivacyDataType('${t.id}')">
-          <td class="prv-type-cell" title="${t.desc}">
+          <td class="prv-type-cell tooltip-anchor" data-tip="${t.desc}">
             <span class="prv-type-name">${t.label}</span>
           </td>
           ${purposeCells}
@@ -1762,7 +1772,23 @@ function buildPrivacyMatrix(a) {
     });
   });
 
-  const selectedCount = Object.keys(a.dataPerType).length;
+  const selectedCount  = Object.keys(a.dataPerType).length;
+  const colCount       = 1 + cols.length + META_COLS.length;
+
+  // "Expand" alert — only shown when collapsed and there are hidden types
+  const alertHtml = (!expanded && hasHiddenTypes) ? `
+    <div class="prv-expand-alert">
+      Do you collect data not listed here? If so,
+      <button class="prv-expand-link" onclick="togglePrivacyMatrix()">expand the data types list</button>.
+    </div>` : '';
+
+  // Expand / collapse toggle row
+  const expandBtnHtml = hasHiddenTypes ? `
+    <button class="prv-expand-btn" onclick="togglePrivacyMatrix()">
+      ${expanded
+        ? `${_chevUp} Show fewer data types`
+        : `${_chevDown} See additional data types`}
+    </button>` : '';
 
   return `
     <div class="ios-subsection">
@@ -1771,6 +1797,7 @@ function buildPrivacyMatrix(a) {
         ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} selected</span>` : ''}
       </div>
       <div class="prv-matrix-hint">Click a row to select it, then check how that data is used.</div>
+      ${alertHtml}
       <div class="prv-matrix-wrap">
         <table class="prv-matrix">
           <thead>
@@ -1783,6 +1810,7 @@ function buildPrivacyMatrix(a) {
           <tbody>${bodyHtml}</tbody>
         </table>
       </div>
+      ${expandBtnHtml}
       ${Object.values(a.dataPerType).some(t => t.tracking === 'yes') ?
         `<div class="dist-tip-box" style="margin-top:10px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>

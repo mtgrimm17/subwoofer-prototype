@@ -3314,10 +3314,10 @@ select.form-input {
 }
 .yn-btn:hover { border-color: var(--border-hover); color: var(--text-dim); }
 
-.yn-btn.yn-yes.is-selected { background: var(--green-soft); border-color: var(--green); color: var(--green); }
-.yn-btn.yn-yes.is-selected:hover { background: rgba(74, 222, 128, 0.3); }
-.yn-btn.yn-no.is-selected  { background: var(--magenta-soft); border-color: var(--magenta); color: var(--magenta); }
-.yn-btn.yn-no.is-selected:hover { background: rgba(255, 59, 118, 0.3); }
+.yn-btn.yn-yes.is-selected { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
+.yn-btn.yn-yes.is-selected:hover { background: var(--sel-bg-strong); }
+.yn-btn.yn-no.is-selected  { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
+.yn-btn.yn-no.is-selected:hover { background: var(--sel-bg-strong); }
 
 /* AI inference confidence states
    ai-certain  (≥90%): full opacity + badge — AI is sure, show the answer clearly
@@ -3693,6 +3693,20 @@ select.form-input {
   display: flex; align-items: flex-start;
   justify-content: space-between; gap: 14px;
   margin-bottom: 10px;
+  border-left: 3px solid transparent;
+  padding-left: 8px;
+  margin-left: -11px;
+  border-radius: 0 4px 4px 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+/* Unanswered — amber left bar + faint background */
+.ios-q-row[data-answered="0"] {
+  border-left-color: rgba(251, 146, 60, 0.5);
+  background: rgba(251, 146, 60, 0.03);
+}
+/* Answered — blue left bar */
+.ios-q-row[data-answered="1"] {
+  border-left-color: rgba(96, 165, 250, 0.35);
 }
 .ios-q-row:last-child { margin-bottom: 0; }
 .ios-q-row-intensity { align-items: center; margin-bottom: 4px; }
@@ -3718,9 +3732,9 @@ select.form-input {
   transition: all 0.12s; white-space: nowrap; text-align: center;
 }
 .intensity-btn:hover { border-color: var(--border-hover); color: var(--text-dim); }
-.intensity-btn.is-sel-none       { background: var(--green-soft);   border-color: var(--green);   color: var(--green); }
-.intensity-btn.is-sel-infrequent { background: var(--orange-soft);  border-color: var(--orange);  color: var(--orange); }
-.intensity-btn.is-sel-frequent   { background: var(--magenta-soft); border-color: var(--magenta); color: var(--magenta); }
+.intensity-btn.is-sel-none       { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
+.intensity-btn.is-sel-infrequent { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
+.intensity-btn.is-sel-frequent   { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
 
 /* ── Multi-select chips (data types, IAP types, regions) */
 
@@ -4058,6 +4072,45 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   color: var(--text-faint);
   margin-bottom: 4px;
 }
+
+/* "Do you collect data not listed here?" alert */
+.prv-expand-alert {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.prv-expand-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--sel-color);
+  font-size: inherit;
+  font-family: inherit;
+  text-decoration: underline;
+  padding: 0;
+}
+.prv-expand-link:hover { opacity: 0.8; }
+
+/* Expand / collapse toggle below the matrix */
+.prv-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 6px 0;
+  margin-top: 4px;
+  transition: color 0.12s;
+}
+.prv-expand-btn:hover { color: var(--text); }
 
 .prv-count-badge {
   display: inline-block;

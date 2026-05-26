@@ -473,6 +473,11 @@ function updateIOSTextField(field, value) {
 
 /* ── Privacy matrix handlers ─────────────────────────── */
 
+function togglePrivacyMatrix() {
+  state.privacyMatrixExpanded = !state.privacyMatrixExpanded;
+  reRenderStepModal();
+}
+
 function togglePrivacyDataType(typeId) {
   // Clicking a row (but not a checkbox inside it) toggles selection
   const perType = state.iosSubmitAnswers.dataPerType;
