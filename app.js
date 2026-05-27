@@ -67,6 +67,7 @@ function toggleOnboardingPlatform(pid) {
     gridWrap.classList.toggle('is-req-empty', state.activePlatforms.size === 0);
   }
   renderOnboardingFooter();
+  updateObSectionStates();
 }
 
 function prevOnboardingTab() {
@@ -707,6 +708,31 @@ function roundPrice(inputEl) {
   state.formData['price'] = result;
 }
 
+/* ── Onboarding section rail predicates ──────────────── */
+
+// Returns true when all required fields for a given section are filled.
+// Called by updateObSectionStates() to drive the amber rail + header tint.
+const OB_SECTION_ANSWERED = {
+  about:        () => !!(state.formData.title?.trim()) &&
+                      !!(state.formData.description?.trim()) &&
+                      !!state.formData.gameScenario,
+  platforms:    () => state.activePlatforms.size > 0,
+  distribution: () => !!state.formData.distributionPreset,
+  localization: () => !!state.formData.primaryLanguage,  // defaults to 'en' — always answered
+  screenshots:  () => state.uploads.screenshots.length > 0,
+  privacy_url:  () => !!(state.formData.privacyUrl?.trim()),
+  compliance:   () => QUESTIONS.every(q => state.questionAnswers[q.id] !== null),
+  // Optional sections — never shown as unanswered
+  trailer:      () => true,
+};
+
+function updateObSectionStates() {
+  for (const [id, pred] of Object.entries(OB_SECTION_ANSWERED)) {
+    const el = document.getElementById('ob-sec-' + id);
+    if (el) el.classList.toggle('is-unanswered', !pred());
+  }
+}
+
 function syncField(field, value) {
   state.formData[field] = value;
   if (field === 'title') {
@@ -716,6 +742,8 @@ function syncField(field, value) {
     const curEl = document.getElementById('projectItemCurrent');
     if (curEl) curEl.textContent = value || 'My Game';
   }
+  // Update section rails reactively
+  updateObSectionStates();
 }
 
 function charCount(countId, value, max) {
@@ -817,6 +845,7 @@ function _refreshObDistSection() {
   if (presetGroup) {
     presetGroup.classList.toggle('is-req-empty', !state.formData.distributionPreset);
   }
+  updateObSectionStates();
 }
 
 function _refreshCountrySummary() {
@@ -1178,6 +1207,7 @@ function setGameScenario(scenario) {
   state.formData.gameScenario = scenario;
   state.liveSearch = null;
   _renderScenarioSection();
+  updateObSectionStates();
 
   // Scenarios that need a store search
   if (scenario === 'new_platform' || scenario === 'update') {
@@ -1441,13 +1471,9 @@ function computeInferences() {
 function answerQuestion(key, value) {
   state.questionAnswers[key]  = value;
   state.questionInferred[key] = false;
-  // Re-render just the compliance tab body in-place
-  const body = document.getElementById('ob-body');
-  if (body) {
-    const html = buildComplianceTab();
-    body.innerHTML = html;
-    hydrateComplianceTab();
-  }
+  // Re-render just the compliance questions list in-place (faster than full tab)
+  renderComplianceQuestions();
+  updateObSectionStates();
 }
 
 /* ── Project bar dropdowns ───────────────────────────── */

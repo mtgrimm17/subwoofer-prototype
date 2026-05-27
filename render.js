@@ -44,6 +44,8 @@ function renderOnboardingBody() {
   renderOnboardingScreenshotGrid();
   renderOnboardingFeaturePreview();
   hydrateComplianceTab();
+  // Set amber rail state for all sections based on current form values
+  updateObSectionStates();
 }
 
 function renderOnboardingFooter() {
@@ -81,61 +83,79 @@ function buildGameDetailsTab() {
   return `
     <div class="ob-form">
 
-      <div class="ob-section-label" style="margin-top:0;">About your game</div>
+      <!-- ── About your game ── -->
+      <div class="ob-section" id="ob-sec-about">
+        <div class="ob-section-hdr">About your game</div>
 
-      <label class="form-label" for="ob-title">Game Title</label>
-      <div class="form-group">
-        <input class="form-input" id="ob-title" type="text" maxlength="50" required
-               placeholder="e.g. Go Ape Ship!"
-               oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
-        <div class="char-count" id="ob-title-count">0 / 30</div>
-      </div>
+        <label class="form-label" for="ob-title">Game Title</label>
+        <div class="form-group">
+          <input class="form-input" id="ob-title" type="text" maxlength="50" required
+                 placeholder="e.g. Go Ape Ship!"
+                 oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
+          <div class="char-count" id="ob-title-count">0 / 30</div>
+        </div>
 
-      <div class="form-group" id="ob-scenario-wrap">
-        ${buildScenarioWidget()}
-      </div>
+        <div class="form-group" id="ob-scenario-wrap">
+          ${buildScenarioWidget()}
+        </div>
 
-      <label class="form-label" for="ob-desc">Description</label>
-      <div class="form-group">
-        <textarea class="form-input" id="ob-desc" rows="5" required
-                  placeholder="Tell players what makes your game worth their time..."
-                  oninput="syncField('description', this.value); charCount('ob-desc-count', this.value, 4000)"></textarea>
-        <div class="char-count" id="ob-desc-count">0 / 4000</div>
-      </div>
-
-      <div class="form-label" style="margin-top:24px;">Platforms</div>
-      <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
-
-      <div class="ob-section-label" style="margin-top:24px;">Distribution</div>
-
-      <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
-
-      <span class="ob-dist-question">Where do you intend to make the game available?</span>
-
-      <div id="ob-dist-preset-group" class="ob-req-group ${!dPreset ? 'is-req-empty' : ''}" style="margin-bottom:10px;">
-        <div class="ob-preset-pills">
-          ${distPresets.map(p => `
-            <button class="ob-preset-pill ${dPreset === p.id ? 'is-active' : ''}"
-                    data-preset="${p.id}"
-                    onclick="setObDistPreset('${p.id}')">${p.label}</button>`).join('')}
+        <label class="form-label" for="ob-desc">Description</label>
+        <div class="form-group">
+          <textarea class="form-input" id="ob-desc" rows="5" required
+                    placeholder="Tell players what makes your game worth their time..."
+                    oninput="syncField('description', this.value); charCount('ob-desc-count', this.value, 4000)"></textarea>
+          <div class="char-count" id="ob-desc-count">0 / 4000</div>
         </div>
       </div>
 
-      <div class="sw-tip-box" style="margin-bottom:10px;">
-        <span class="sw-tip-icon-circle">!</span>
-        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
+      <div class="ob-sec-divider"></div>
+
+      <!-- ── Platforms ── -->
+      <div class="ob-section" id="ob-sec-platforms">
+        <div class="ob-section-hdr">Platforms</div>
+        <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
       </div>
 
-      <div id="ob-country-list-wrap">${buildObCountryChips()}</div>
+      <div class="ob-sec-divider"></div>
 
-      <div class="ob-section-label" style="margin-top:28px;">Localization</div>
+      <!-- ── Distribution ── -->
+      <div class="ob-section" id="ob-sec-distribution">
+        <div class="ob-section-hdr">Distribution</div>
 
-      <div class="sw-tip-box" style="margin-bottom:12px;">
-        <span class="sw-tip-icon-circle">!</span>
-        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is a great way to increase traction and conversion in secondary markets.</span>
+        <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
+
+        <span class="ob-dist-question">Where do you intend to make the game available?</span>
+
+        <div id="ob-dist-preset-group" class="ob-req-group ${!dPreset ? 'is-req-empty' : ''}" style="margin-bottom:10px;">
+          <div class="ob-preset-pills">
+            ${distPresets.map(p => `
+              <button class="ob-preset-pill ${dPreset === p.id ? 'is-active' : ''}"
+                      data-preset="${p.id}"
+                      onclick="setObDistPreset('${p.id}')">${p.label}</button>`).join('')}
+          </div>
+        </div>
+
+        <div class="sw-tip-box" style="margin-bottom:10px;">
+          <span class="sw-tip-icon-circle">!</span>
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
+        </div>
+
+        <div id="ob-country-list-wrap">${buildObCountryChips()}</div>
       </div>
 
-      <div id="ob-lang-list-wrap">${buildObLangList()}</div>
+      <div class="ob-sec-divider"></div>
+
+      <!-- ── Localization ── -->
+      <div class="ob-section" id="ob-sec-localization">
+        <div class="ob-section-hdr">Localization</div>
+
+        <div class="sw-tip-box" style="margin-bottom:12px;">
+          <span class="sw-tip-icon-circle">!</span>
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is a great way to increase traction and conversion in secondary markets.</span>
+        </div>
+
+        <div id="ob-lang-list-wrap">${buildObLangList()}</div>
+      </div>
 
     </div>`;
 }
@@ -599,43 +619,52 @@ function buildUploadAssetsTab() {
   const hasAndroid = state.activePlatforms.has('android');
   return `
     <div class="ob-form">
-      <div class="ob-section-label">Screenshots</div>
-      <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
-      <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
-        <div class="asset-dropzone" id="ob-screenshot-dropzone"
-             onclick="document.getElementById('ob-screenshot-input').click()"
+
+      <!-- ── Screenshots ── -->
+      <div class="ob-section" id="ob-sec-screenshots">
+        <div class="ob-section-hdr">Screenshots</div>
+        <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
+        <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
+          <div class="asset-dropzone" id="ob-screenshot-dropzone"
+               onclick="document.getElementById('ob-screenshot-input').click()"
+               ondragover="event.preventDefault(); this.classList.add('is-over')"
+               ondragleave="this.classList.remove('is-over')"
+               ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
+            <div class="asset-dropzone-icon">↑</div>
+            <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
+            <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
+            <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
+                   onchange="handleScreenshotFiles(this.files); this.value=''">
+          </div>
+          <div class="asset-grid" id="ob-screenshot-grid"></div>
+        </div>
+      </div>
+
+      <div class="ob-sec-divider"></div>
+
+      <!-- ── Trailer (optional) ── -->
+      <div class="ob-section" id="ob-sec-trailer">
+        <div class="ob-section-hdr">Trailer <span class="form-optional-tag">Optional</span></div>
+        <div class="asset-guidance">A short gameplay trailer (60–90 seconds) shown on your store pages. Upload a video file or link a YouTube video below.</div>
+        <div class="asset-dropzone asset-dropzone-sm" id="ob-trailer-dropzone"
+             onclick="document.getElementById('ob-trailer-input').click()"
              ondragover="event.preventDefault(); this.classList.add('is-over')"
              ondragleave="this.classList.remove('is-over')"
-             ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
+             ondrop="handleTrailerDrop(event); this.classList.remove('is-over')">
           <div class="asset-dropzone-icon">↑</div>
-          <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
-          <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
-          <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
-                 onchange="handleScreenshotFiles(this.files); this.value=''">
+          <div class="asset-dropzone-label">Drop video file here, or click to browse</div>
+          <div class="asset-dropzone-hint">MP4 · Max 500 MB</div>
+          <input type="file" id="ob-trailer-input" accept="video/*" style="display:none"
+                 onchange="handleTrailerFiles(this.files); this.value=''">
         </div>
-        <div class="asset-grid" id="ob-screenshot-grid"></div>
+        <div id="ob-trailer-file-info" style="display:none;"></div>
+        <div class="asset-url-row">
+          <label class="form-label" style="margin-bottom:6px;">Or paste a YouTube URL</label>
+          <input class="form-input" id="ob-trailer-url" type="url" placeholder="https://youtube.com/watch?v=..."
+                 oninput="syncField('trailerUrl', this.value)">
+        </div>
       </div>
 
-
-      <div class="ob-section-label" style="margin-top:24px;">Trailer <span class="form-section-note">Optional</span></div>
-      <div class="asset-guidance">A short gameplay trailer (60–90 seconds) shown on your store pages. Upload a video file or link a YouTube video below.</div>
-      <div class="asset-dropzone asset-dropzone-sm" id="ob-trailer-dropzone"
-           onclick="document.getElementById('ob-trailer-input').click()"
-           ondragover="event.preventDefault(); this.classList.add('is-over')"
-           ondragleave="this.classList.remove('is-over')"
-           ondrop="handleTrailerDrop(event); this.classList.remove('is-over')">
-        <div class="asset-dropzone-icon">↑</div>
-        <div class="asset-dropzone-label">Drop video file here, or click to browse</div>
-        <div class="asset-dropzone-hint">MP4 · Max 500 MB</div>
-        <input type="file" id="ob-trailer-input" accept="video/*" style="display:none"
-               onchange="handleTrailerFiles(this.files); this.value=''">
-      </div>
-      <div id="ob-trailer-file-info" style="display:none;"></div>
-      <div class="asset-url-row">
-        <label class="form-label" style="margin-bottom:6px;">Or paste a YouTube URL</label>
-        <input class="form-input" id="ob-trailer-url" type="url" placeholder="https://youtube.com/watch?v=..."
-               oninput="syncField('trailerUrl', this.value)">
-      </div>
     </div>`;
 }
 
@@ -643,20 +672,29 @@ function buildUploadAssetsTab() {
 function buildComplianceTab() {
   return `
     <div class="ob-form">
-      <div class="ob-section-label">Links</div>
 
-      <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
-      <div class="form-group">
-        <input class="form-input" id="ob-privacy" type="url" required placeholder="https://yourgame.com/privacy"
-               oninput="syncField('privacyUrl', this.value)">
+      <!-- ── Links ── -->
+      <div class="ob-section" id="ob-sec-privacy_url">
+        <div class="ob-section-hdr">Links</div>
+
+        <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
+        <div class="form-group">
+          <input class="form-input" id="ob-privacy" type="url" required placeholder="https://yourgame.com/privacy"
+                 oninput="syncField('privacyUrl', this.value)">
+        </div>
       </div>
 
-      <div class="ob-section-label" style="margin-top:20px;">Compliance Questions</div>
-      <div class="asset-guidance">
-        Answer once — Subwoofer uses your responses to pre-fill content declarations, age rating questionnaires, and privacy disclosures across every platform you submit to.
+      <div class="ob-sec-divider"></div>
+
+      <!-- ── Compliance Questions ── -->
+      <div class="ob-section" id="ob-sec-compliance">
+        <div class="ob-section-hdr">Compliance Questions</div>
+        <div class="asset-guidance">
+          Answer once — Subwoofer uses your responses to pre-fill content declarations, age rating questionnaires, and privacy disclosures across every platform you submit to.
+        </div>
+        <div id="ob-questions-list"></div>
       </div>
 
-      <div id="ob-questions-list"></div>
     </div>`;
 }
 
@@ -707,9 +745,10 @@ function hydrateComplianceTab() {
 function renderOnboardingScreenshotGrid() {
   const grid = document.getElementById('ob-screenshot-grid');
   if (!grid) return;
-  // Sync required-empty indicator on wrapper
+  // Sync required-empty indicator on wrapper, and section rail
   const reqWrap = document.getElementById('ob-screenshot-req-wrap');
   if (reqWrap) reqWrap.classList.toggle('is-req-empty', !state.uploads.screenshots.length);
+  updateObSectionStates();
   if (!state.uploads.screenshots.length) { grid.innerHTML = ''; return; }
   grid.innerHTML = state.uploads.screenshots.map(shot => `
     <div class="asset-thumb">

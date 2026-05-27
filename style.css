@@ -945,6 +945,52 @@ body {
    intensity-btn.is-sel-*  Blue (--sel-*) — same
    ═══════════════════════════════════════════════════════ */
 
+/* ─── Onboarding section rail ────────────────────────── */
+
+/* Each major section in the onboarding form. The 2px border-left acts as the
+   amber "unanswered" rail; transparent when all required fields are filled.
+   margin/padding math keeps inner content at the same x as the rest of the form:
+     ob-body padding-left(28) − margin-left(14) + border(2) + padding-left(12) = 28px ✓
+   Inner elements (form-group bars, ios-q-row bars) shift to x=17px; this rail sits
+   at x=14px — 3px further left, so they never visually overlap. */
+.ob-section {
+  border-left: 2px solid transparent;
+  margin-left: -14px;
+  padding-left: 12px;
+  padding-top: 20px;
+  padding-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.ob-section:first-child { padding-top: 0; }
+
+.ob-section.is-unanswered {
+  border-left-color: rgba(251, 146, 60, 0.5);
+}
+
+/* Section header — uppercase label, tints amber when section is unanswered */
+.ob-section-hdr {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s;
+}
+.ob-section.is-unanswered .ob-section-hdr {
+  color: rgba(251, 146, 60, 0.65);
+}
+
+/* Hairline divider between sections */
+.ob-sec-divider {
+  height: 1px;
+  background: var(--border);
+  margin-left: -14px;
+}
+
 /* ─── Subwoofer tip system ────────────────────────────── */
 
 /* Subwoofer tip icon — ! version of tooltip-icon */
