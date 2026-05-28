@@ -21,6 +21,69 @@ function platformIcon(id, size = 20) {
 
 /* ── Onboarding ──────────────────────────────────────── */
 
+/* ── Tab icons: dot-grid SVGs (5×5, cell=3px, gap=1.5px, step=4.5) ── */
+function _dotGridSVG(cells) {
+  const s = 4.5, w = 3, r = 0.75;
+  const rects = cells.map(([c, row]) =>
+    `<rect x="${(c*s).toFixed(1)}" y="${(row*s).toFixed(1)}" width="${w}" height="${w}" rx="${r}"/>`
+  ).join('');
+  return `<svg width="20" height="20" viewBox="0 0 22 22" fill="currentColor" aria-hidden="true">${rects}</svg>`;
+}
+
+// About — document/ID card
+const OB_TAB_ICON_ABOUT = _dotGridSVG([
+  [0,0],[1,0],[2,0],[3,0],[4,0],
+  [0,1],[4,1],
+  [0,2],[1,2],[4,2],
+  [0,3],[1,3],[4,3],
+  [0,4],[1,4],[2,4],[3,4],[4,4],
+]);
+// Distribution — globe (circle with meridian/equator)
+const OB_TAB_ICON_DISTRIBUTION = _dotGridSVG([
+  [1,0],[2,0],[3,0],
+  [0,1],[2,1],[4,1],
+  [0,2],[1,2],[2,2],[3,2],[4,2],
+  [0,3],[2,3],[4,3],
+  [1,4],[2,4],[3,4],
+]);
+// Assets — stacked layers
+const OB_TAB_ICON_ASSETS = _dotGridSVG([
+  [1,0],[2,0],[3,0],
+  [0,1],[1,1],[2,1],[3,1],[4,1],
+  [1,2],[2,2],[3,2],
+  [0,3],[1,3],[2,3],[3,3],[4,3],
+  [1,4],[2,4],[3,4],
+]);
+// Compliance — shield
+const OB_TAB_ICON_COMPLIANCE = _dotGridSVG([
+  [1,0],[2,0],[3,0],
+  [0,1],[1,1],[2,1],[3,1],[4,1],
+  [0,2],[2,2],[4,2],
+  [1,3],[2,3],[3,3],
+  [2,4],
+]);
+
+const OB_TAB_DEFS = [
+  { label: 'About',        icon: () => OB_TAB_ICON_ABOUT        },
+  { label: 'Distribution', icon: () => OB_TAB_ICON_DISTRIBUTION },
+  { label: 'Assets',       icon: () => OB_TAB_ICON_ASSETS       },
+  { label: 'Compliance',   icon: () => OB_TAB_ICON_COMPLIANCE   },
+];
+
+/* Returns 0–1 completion fraction for a given tab index */
+function getTabProgress(tabIdx) {
+  const tabSections = [
+    ['about', 'platforms'],   // About
+    ['distribution'],         // Distribution (localization defaults to en, always answered)
+    ['screenshots'],          // Assets
+    ['privacy_url', 'compliance'], // Compliance
+  ];
+  const ids = tabSections[tabIdx] || [];
+  if (!ids.length) return 0;
+  const answered = ids.filter(id => OB_SECTION_ANSWERED[id]?.()).length;
+  return answered / ids.length;
+}
+
 function renderOnboarding() {
   renderOnboardingTabs();
   renderOnboardingBody();
@@ -28,17 +91,30 @@ function renderOnboarding() {
 }
 
 function renderOnboardingTabs() {
-  const tabs = document.querySelectorAll('.ob-tab');
-  tabs.forEach((t, i) => t.classList.toggle('is-active', i === state.onboardingTab));
+  const tabsEl = document.getElementById('ob-tabs');
+  if (!tabsEl) return;
+  tabsEl.innerHTML = OB_TAB_DEFS.map((def, i) => {
+    const isActive = i === state.onboardingTab;
+    const progress = getTabProgress(i);
+    return `
+      <button class="ob-tab${isActive ? ' is-active' : ''}"
+              style="--tab-progress:${progress.toFixed(3)}"
+              onclick="setOnboardingTab(${i})"
+              aria-selected="${isActive}">
+        <span class="ob-tab-icon">${def.icon()}</span>
+        <span>${def.label}</span>
+      </button>`;
+  }).join('');
 }
 
 function renderOnboardingBody() {
   const el = document.getElementById('ob-body');
   if (!el) return;
-  if (state.onboardingTab === 0) { el.innerHTML = buildGameDetailsTab(); requestAnimationFrame(() => initObDistMap()); }
-  if (state.onboardingTab === 1) el.innerHTML = buildUploadAssetsTab();
-  if (state.onboardingTab === 2) el.innerHTML = buildComplianceTab();
-  // After rendering, hydrate form fields from state
+  if (state.onboardingTab === 0) el.innerHTML = buildAboutTab();
+  if (state.onboardingTab === 1) { el.innerHTML = buildDistributionTab(); requestAnimationFrame(() => initObDistMap()); }
+  if (state.onboardingTab === 2) el.innerHTML = buildAssetsTab();
+  if (state.onboardingTab === 3) el.innerHTML = buildComplianceTab();
+  // Hydrate form fields from state (each helper is a no-op if its elements aren't in the DOM)
   hydrateGameDetailsTab();
   hydrateUploadAssetsTab();
   renderOnboardingScreenshotGrid();
@@ -51,14 +127,14 @@ function renderOnboardingBody() {
 function renderOnboardingFooter() {
   const el = document.getElementById('ob-footer');
   if (!el) return;
-  const isLast  = state.onboardingTab === 2;
+  const isLast  = state.onboardingTab === 3;
   const isFirst = state.onboardingTab === 0;
   const hasPlat = state.activePlatforms.size > 0;
   el.innerHTML = `
     <div class="ob-footer-inner">
       <button class="btn btn-ghost" onclick="prevOnboardingTab()" ${isFirst ? 'style="visibility:hidden"' : ''}>← Back</button>
       <div class="ob-step-dots">
-        ${[0,1,2].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
+        ${[0,1,2,3].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
       </div>
       <button class="btn btn-primary" onclick="${isLast ? 'completeOnboarding()' : 'nextOnboardingTab()'}"
         ${isLast && !hasPlat ? 'disabled title="Select at least one platform to continue"' : ''}>
@@ -67,19 +143,8 @@ function renderOnboardingFooter() {
     </div>`;
 }
 
-/* Tab 1: Game Details */
-function buildGameDetailsTab() {
-  const fd = state.formData;
-  const knownPresets = ['everywhere','english_only','minimize_regulation','custom'];
-  const dPreset = knownPresets.includes(fd.distributionPreset) ? fd.distributionPreset : null;
-
-  const distPresets = [
-    { id:'everywhere',          label:'Everywhere' },
-    { id:'english_only',        label:'English only' },
-    { id:'minimize_regulation', label:'Minimize regulation' },
-    { id:'custom',              label:'Custom' },
-  ];
-
+/* Tab 0: About */
+function buildAboutTab() {
   return `
     <div class="ob-form">
 
@@ -116,7 +181,24 @@ function buildGameDetailsTab() {
         <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
       </div>
 
-      <div class="ob-sec-divider"></div>
+    </div>`;
+}
+
+/* Tab 1: Distribution */
+function buildDistributionTab() {
+  const fd = state.formData;
+  const knownPresets = ['everywhere','english_only','minimize_regulation','custom'];
+  const dPreset = knownPresets.includes(fd.distributionPreset) ? fd.distributionPreset : null;
+
+  const distPresets = [
+    { id:'everywhere',          label:'Everywhere' },
+    { id:'english_only',        label:'English only' },
+    { id:'minimize_regulation', label:'Minimize regulation' },
+    { id:'custom',              label:'Custom' },
+  ];
+
+  return `
+    <div class="ob-form">
 
       <!-- ── Distribution ── -->
       <div class="ob-section" id="ob-sec-distribution">
@@ -614,8 +696,8 @@ function buildObLangList() {
     </div>`;
 }
 
-/* Tab 2: Upload Assets */
-function buildUploadAssetsTab() {
+/* Tab 2: Assets */
+function buildAssetsTab() {
   const hasAndroid = state.activePlatforms.has('android');
   return `
     <div class="ob-form">
@@ -668,7 +750,7 @@ function buildUploadAssetsTab() {
     </div>`;
 }
 
-/* Tab 3: Compliance */
+/* Tab 3: Compliance (unchanged) */
 function buildComplianceTab() {
   return `
     <div class="ob-form">
@@ -698,7 +780,7 @@ function buildComplianceTab() {
     </div>`;
 }
 
-/* buildPlatformSelectTab() removed — platforms are now in buildGameDetailsTab() */
+/* buildPlatformSelectTab() removed — platforms are in buildAboutTab() */
 
 /* Hydration helpers — fill form fields from state after render */
 function hydrateGameDetailsTab() {

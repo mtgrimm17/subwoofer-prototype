@@ -43,7 +43,7 @@ function setOnboardingTab(idx) {
 }
 
 function nextOnboardingTab() {
-  if (state.onboardingTab < 2) {
+  if (state.onboardingTab < 3) {
     state.onboardingTab++;
     renderOnboarding();
     const body = document.getElementById('ob-body');

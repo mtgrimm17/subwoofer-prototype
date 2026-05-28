@@ -127,59 +127,70 @@ body {
   line-height: 1.5;
 }
 
-/* Tabs */
+/* Tabs — full-width, centered, Variant B style */
 .ob-tabs {
   display: flex;
   gap: 0;
-  padding: 0 28px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .ob-tab {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px 11px;
-  font-size: 13px;
-  font-weight: 500;
+  gap: 7px;
+  padding: 16px 8px 13px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-faint);
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s;
   font-family: inherit;
   white-space: nowrap;
-  margin-bottom: -1px;
+  position: relative;
+  overflow: hidden;
 }
 
 .ob-tab:hover { color: var(--text-dim); }
+.ob-tab.is-active { color: var(--text); }
 
-.ob-tab.is-active {
-  color: var(--text);
-  border-bottom-color: var(--green);
+/* Baseline underline track */
+.ob-tab::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: rgba(255,255,255,0.05);
+}
+.ob-tab.is-active::before { background: var(--blue-soft); }
+
+/* Progress fill bar — width driven by --tab-progress CSS custom property */
+.ob-tab::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 2px;
+  width: calc(var(--tab-progress, 0) * 100%);
+  background: var(--blue);
+  transition: width 0.5s cubic-bezier(0.34, 1.16, 0.64, 1);
 }
 
-.ob-tab-num {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--panel-3);
-  color: var(--text-dim);
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  flex-shrink: 0;
-  transition: background 0.2s, color 0.2s;
+/* Tab icon (dot-grid SVG) */
+.ob-tab-icon {
+  opacity: 0.35;
+  transition: opacity 0.15s;
 }
+.ob-tab:hover .ob-tab-icon { opacity: 0.6; }
+.ob-tab.is-active .ob-tab-icon { opacity: 1; }
 
-.ob-tab.is-active .ob-tab-num {
-  background: var(--green);
-  color: var(--bg);
-}
+/* Number badge removed in v0.84 — tabs use icons instead */
+.ob-tab-num { display: none; }
 
 /* Body */
 .ob-body {
@@ -978,6 +989,20 @@ body {
 
 .ob-section.is-unanswered::before {
   background: rgba(251, 146, 60, 0.5);
+}
+
+/* Spotlight / dim — when one section has keyboard/click focus, others recede.
+   :focus-within catches text inputs, selects, and clicked buttons alike.
+   Hover a dimmed section to preview it at full opacity. */
+.ob-form:focus-within .ob-section {
+  transition: opacity 0.25s;
+}
+.ob-form:focus-within .ob-section:not(:focus-within) {
+  opacity: 0.42;
+}
+.ob-form:focus-within .ob-section:not(:focus-within):hover {
+  opacity: 1;
+  transition: opacity 0.12s;
 }
 
 /* Section header — uppercase label, tints amber when section is unanswered */
