@@ -937,9 +937,9 @@ body {
    ├── alert-icon-circle   17px red circle with "!" icon
    └── (uses sw-tip-text / sw-tip-bold classes with red overrides)
 
-   ios-q-row[data-answered="0"]          Amber left bar — unanswered YES/NO question row (iOS steps + compliance)
-   form-group:has(input[required]:...)  Amber left bar — empty required text field (label must be OUTSIDE form-group)
-   ob-req-group.is-req-empty            Amber left bar — empty required non-text field (chips, dropzones); toggled via JS
+   ios-q-row[data-answered="0"]          Amber left bar — unanswered YES/NO row in Content Rating step modals
+                                        (suppressed inside .ob-section — section rail is sole indicator there)
+   ob-section.is-unanswered             Amber left rail — section with unanswered required fields (onboarding form, v0.81+)
 
    yn-btn.is-selected      Blue (--sel-*) — neutral, no green/magenta semantic color
    intensity-btn.is-sel-*  Blue (--sel-*) — same
@@ -2533,25 +2533,8 @@ body {
 
 .form-group { margin-bottom: 16px; }
 
-/* Required-field bar: amber left edge when the input is still empty (placeholder visible).
-   NOTE: Labels must be outside .form-group so the bar only spans the answer element. */
-.form-group:has(input[required]:placeholder-shown),
-.form-group:has(textarea[required]:placeholder-shown) {
-  border-left: 3px solid rgba(251, 146, 60, 0.5);
-  padding-left: 8px;
-  margin-left: -11px;
-  border-radius: 0 4px 4px 0;
-  background: rgba(251, 146, 60, 0.02);
-}
-
-/* Non-text required groups (chips, dropzones) — bar shown via JS-toggled class */
-.ob-req-group.is-req-empty {
-  border-left: 3px solid rgba(251, 146, 60, 0.5);
-  padding-left: 8px;
-  margin-left: -11px;
-  border-radius: 0 4px 4px 0;
-  background: rgba(251, 146, 60, 0.02);
-}
+/* Required-field bars removed — section rail (.ob-section.is-unanswered) is the sole
+   amber indicator in the onboarding form. Per-field bars were superseded by v0.81. */
 
 .form-label {
   display: block;
@@ -3795,6 +3778,12 @@ select.form-input {
 .ios-q-row[data-answered="0"] {
   border-left-color: rgba(251, 146, 60, 0.5);
   background: rgba(251, 146, 60, 0.03);
+}
+/* Within ob-section the section rail is the sole amber indicator —
+   suppress individual row bars to prevent double-rail stacking */
+.ob-section .ios-q-row[data-answered="0"] {
+  border-left-color: transparent;
+  background: transparent;
 }
 .ios-q-row:last-child { margin-bottom: 0; }
 .ios-q-row-intensity { align-items: center; margin-bottom: 4px; }
