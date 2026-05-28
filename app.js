@@ -714,8 +714,7 @@ function roundPrice(inputEl) {
 // Called by updateObSectionStates() to drive the amber rail + header tint.
 const OB_SECTION_ANSWERED = {
   about:        () => !!(state.formData.title?.trim()) &&
-                      !!(state.formData.description?.trim()) &&
-                      !!state.formData.gameScenario,
+                      !!(state.formData.description?.trim()),
   platforms:    () => state.activePlatforms.size > 0,
   distribution: () => !!state.formData.distributionPreset,
   localization: () => !!state.formData.primaryLanguage,  // defaults to 'en' — always answered
@@ -1281,15 +1280,21 @@ function dashSetDate(value) {
   _refreshDashTimeline();
 }
 
-// Re-trigger search when title changes and a search scenario is already selected
+// Debounce-search on every title keystroke (no scenario gate)
 let _titleSearchTimer = null;
 function _onTitleInputScenario(value) {
-  const gs = state.formData.gameScenario;
-  if (gs !== 'new_platform' && gs !== 'update') return;
-  // Don't re-search if already confirmed
+  // Don't re-search if user already confirmed a match
   if (state.liveSearch && state.liveSearch.confirmed) return;
   clearTimeout(_titleSearchTimer);
-  if (!value || value.trim().length < 2) return;
+  const trimmed = (value || '').trim();
+  if (trimmed.length < 3) {
+    // Clear stale result when title is too short
+    if (state.liveSearch) {
+      state.liveSearch = null;
+      _renderScenarioSection();
+    }
+    return;
+  }
   _titleSearchTimer = setTimeout(() => _triggerScenarioSearch(), 800);
 }
 

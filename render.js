@@ -160,7 +160,7 @@ function buildAboutTab() {
           <div class="char-count" id="ob-title-count">0 / 30</div>
         </div>
 
-        <div class="form-group" id="ob-scenario-wrap">
+        <div id="ob-scenario-wrap">
           ${buildScenarioWidget()}
         </div>
 
@@ -438,9 +438,67 @@ const OB_REG_TIPS = {
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
-/* ── Scenario widget ─────────────────────────────────── */
+/* ── Store search result widget ──────────────────────── */
 function buildScenarioWidget() {
-  const gs = state.formData.gameScenario; // null | 'new' | 'new_platform' | 'update'
+  const ls = state.liveSearch;
+
+  // Loading
+  if (ls && ls.status === 'loading') {
+    const title = state.formData.title || 'your game';
+    return `
+      <div class="ob-live-loading">
+        <div class="ob-live-spinner"></div>
+        <span>Searching stores for &ldquo;${escHtml(title)}&rdquo;&hellip;</span>
+      </div>`;
+  }
+
+  // Confirmed import — compact success note
+  if (ls && ls.status === 'done' && ls.confirmed) {
+    const storeLabels = { ios: 'App Store', steam: 'Steam', android: 'Google Play', egs: 'Epic', xbox: 'Xbox', nintendo: 'Nintendo', psn: 'PlayStation' };
+    const stores = (ls.allStores || []).map(pid => storeLabels[pid] || pid);
+    return `
+      <div class="ob-search-confirm">
+        <svg viewBox="0 0 16 16" fill="none" width="13" height="13" aria-hidden="true" style="flex-shrink:0">
+          <path d="M3 8l3.5 3.5L13 5" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Imported from ${escHtml(stores.join(' · '))} — description and platforms filled in.</span>
+      </div>`;
+  }
+
+  // Found — result card
+  if (ls && ls.status === 'done' && ls.found) {
+    const storeLabels = { ios: 'App Store', steam: 'Steam', android: 'Google Play', egs: 'Epic', xbox: 'Xbox', nintendo: 'Nintendo', psn: 'PlayStation' };
+    const stores = (ls.allStores || []).map(pid => storeLabels[pid] || pid);
+    const desc = ls.description
+      ? (ls.description.length > 220 ? ls.description.slice(0, 220) + '…' : ls.description)
+      : '';
+    return `
+      <div class="ob-search-result">
+        <div class="ob-search-result-name">${escHtml(ls.title || state.formData.title || '')}</div>
+        ${desc ? `<div class="ob-search-result-desc">${escHtml(desc)}</div>` : ''}
+        ${stores.length ? `
+          <div class="ob-search-result-stores">
+            ${stores.map(n => `<span class="ob-search-store-chip">${escHtml(n)}</span>`).join('')}
+          </div>` : ''}
+        <div class="ob-search-result-actions">
+          <button class="btn btn-primary" onclick="confirmGameImport()">That&rsquo;s it!</button>
+          <button class="btn btn-ghost" onclick="rejectGameImport()">Nope</button>
+        </div>
+      </div>`;
+  }
+
+  // Not found — quiet note
+  if (ls && ls.status === 'done' && !ls.found) {
+    return `<div class="ob-live-not-found">Couldn&rsquo;t find &ldquo;${escHtml(state.formData.title || 'your game')}&rdquo; in stores — fill in the description below.</div>`;
+  }
+
+  // No result yet (null) or error — show nothing
+  return '';
+}
+
+/* ── Scenario widget (dead code, kept to avoid reference errors) ── */
+function _legacyScenarioWidget_unused() {
+  const gs = state.formData.gameScenario;
   const ls = state.liveSearch;
   const needsSearch = gs === 'new_platform' || gs === 'update';
 
