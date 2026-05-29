@@ -277,8 +277,8 @@ body {
 /* Completion-state borders: preset pills in an empty group get amber outline;
    the active pill switches to white border */
 .ob-q[data-answered="0"] .ob-preset-pill:not(.is-active) {
-  border-color: rgba(245, 163, 66, 0.5);
-  background: rgba(245, 163, 66, 0.02);
+  border-color: rgba(251, 146, 60, 0.5);
+  background: rgba(251, 146, 60, 0.02);
   transition: border-color 0.25s, background 0.25s;
 }
 .ob-preset-pill.is-active { border-color: rgba(245, 245, 245, 0.7) !important; }
@@ -977,8 +977,8 @@ body {
 /* Completion-state borders: platform tiles in an empty group get amber outline;
    selected tile switches to white border (glow kept for visual delight) */
 .ob-q[data-answered="0"] .ob-plat-tile:not(.is-on) {
-  border-color: rgba(245, 163, 66, 0.5);
-  background: rgba(245, 163, 66, 0.02);
+  border-color: rgba(251, 146, 60, 0.5);
+  background: rgba(251, 146, 60, 0.02);
   transition: border-color 0.25s, background 0.25s;
 }
 .ob-plat-tile.is-on { border-color: rgba(245, 245, 245, 0.7) !important; }
@@ -2787,13 +2787,13 @@ body {
 .form-input {
   width: 100%;
   padding: 9px 12px;
-  border: 1.5px solid #f5a342;
+  border: 1.5px solid #fb923c;
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   color: var(--text);
   /* Incomplete default: amber border + very faint amber fill */
-  background: rgba(245, 163, 66, 0.04);
+  background: rgba(251, 146, 60, 0.04);
   transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
 }
 /* Complete: white border + normal dark fill */
@@ -2804,8 +2804,8 @@ body {
 /* Focus: brighten the current state — no new color introduced */
 .form-input:focus {
   outline: none;
-  border-color: #ffb74d;
-  box-shadow: 0 0 0 2px rgba(245, 163, 66, 0.18);
+  border-color: #fc9f50;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.18);
 }
 .form-input.is-complete:focus {
   border-color: rgba(245, 245, 245, 1);
@@ -3572,8 +3572,8 @@ select.form-input {
 
 /* yn-btn — in an unanswered row all unselected buttons get amber outline */
 .ios-q-row[data-answered="0"] .yn-btn:not(.is-selected) {
-  border-color: rgba(245, 163, 66, 0.55);
-  background: rgba(245, 163, 66, 0.03);
+  border-color: rgba(251, 146, 60, 0.55);
+  background: rgba(251, 146, 60, 0.03);
   transition: border-color 0.25s, background 0.25s;
 }
 /* Selected yn-btn → white border (completion signal); blue fill kept */
@@ -4008,8 +4008,8 @@ select.form-input {
 
 /* intensity-btn — amber outline in unanswered row; white border when selected */
 .ios-q-row[data-answered="0"] .intensity-btn:not(.is-sel-none):not(.is-sel-infrequent):not(.is-sel-frequent) {
-  border-color: rgba(245, 163, 66, 0.55);
-  background: rgba(245, 163, 66, 0.03);
+  border-color: rgba(251, 146, 60, 0.55);
+  background: rgba(251, 146, 60, 0.03);
   transition: border-color 0.25s, background 0.25s;
 }
 .intensity-btn.is-sel-none,
