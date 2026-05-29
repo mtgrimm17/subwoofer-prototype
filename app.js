@@ -491,6 +491,7 @@ function togglePrivacyMatrix() {
 // Fires on blur (focus-out) — not on every keystroke
 function updatePrivacyDescription(val) {
   state.iosSubmitAnswers.privacyDescription = val;
+  _setInputComplete('ob-prv-nlp-textarea', !!(val?.trim()));
   if (!val || val.trim().length < 20) return;
   _triggerPrivacyAI();
 }
@@ -831,6 +832,12 @@ const OB_Q_ANSWERED = {
   privacy_url:  () => !!(state.formData.privacyUrl?.trim()),
 };
 
+// Toggle is-complete on a specific input element (used for text inputs/textareas)
+function _setInputComplete(id, isComplete) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('is-complete', isComplete);
+}
+
 function updateObSectionStates() {
   // Per-question rails — each individual field gets its own amber indicator
   for (const [id, pred] of Object.entries(OB_Q_ANSWERED)) {
@@ -842,6 +849,11 @@ function updateObSectionStates() {
     const el = document.getElementById('ob-sec-' + id);
     if (el) el.classList.toggle('is-unanswered', !pred());
   }
+  // Sync is-complete on text inputs — correct after any tab render
+  _setInputComplete('ob-title',            !!(state.formData.title?.trim()));
+  _setInputComplete('ob-desc',             !!(state.formData.description?.trim()));
+  _setInputComplete('ob-privacy-url',      !!(state.formData.privacyUrl?.trim()));
+  _setInputComplete('ob-prv-nlp-textarea', !!(state.iosSubmitAnswers?.privacyDescription?.trim()));
 }
 
 function syncField(field, value) {
@@ -853,6 +865,9 @@ function syncField(field, value) {
     const curEl = document.getElementById('projectItemCurrent');
     if (curEl) curEl.textContent = value || 'My Game';
   }
+  // Live is-complete on the typed input — immediate feedback as user types/clears
+  const FIELD_INPUT_MAP = { title: 'ob-title', description: 'ob-desc', privacyUrl: 'ob-privacy-url' };
+  if (FIELD_INPUT_MAP[field]) _setInputComplete(FIELD_INPUT_MAP[field], !!(value?.trim()));
   // Update section rails reactively
   updateObSectionStates();
 }
