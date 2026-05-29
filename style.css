@@ -2787,7 +2787,7 @@ body {
 .form-input {
   width: 100%;
   padding: 9px 12px;
-  border: 1.5px solid #fb923c;
+  border: 1.5px solid rgba(251, 146, 60, 0.5);
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
@@ -2804,8 +2804,8 @@ body {
 /* Focus: brighten the current state — no new color introduced */
 .form-input:focus {
   outline: none;
-  border-color: #fc9f50;
-  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.18);
+  border-color: rgba(251, 146, 60, 0.8);
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.15);
 }
 .form-input.is-complete:focus {
   border-color: rgba(245, 245, 245, 1);
