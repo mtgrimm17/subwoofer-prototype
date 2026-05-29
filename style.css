@@ -1090,19 +1090,6 @@ body {
 /* Rail-only variant — kept for large upload zones; no semantic difference now that backgrounds are removed */
 .ob-q--rail-only::before { content: none; }
 
-/* Spotlight / dim — both mouse hover and keyboard focus */
-.ob-form:focus-within .ob-section,
-.ob-form:has(.ob-section:hover) .ob-section {
-  transition: opacity 0.22s;
-}
-.ob-form:focus-within .ob-section:not(:focus-within),
-.ob-form:has(.ob-section:hover) .ob-section:not(:hover) {
-  opacity: 0.42;
-}
-.ob-form:focus-within .ob-section:not(:focus-within):hover {
-  opacity: 1;
-  transition: opacity 0.12s;
-}
 
 /* Section header — uppercase label, tints amber when section is unanswered */
 .ob-section-hdr {
@@ -2787,13 +2774,13 @@ body {
 .form-input {
   width: 100%;
   padding: 9px 12px;
-  border: 1.5px solid rgba(251, 146, 60, 0.5);
+  border: 1px solid rgba(251, 146, 60, 0.4);
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   color: var(--text);
   /* Incomplete default: amber border + very faint amber fill */
-  background: rgba(251, 146, 60, 0.04);
+  background: rgba(251, 146, 60, 0.07);
   transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
 }
 /* Complete: white border + normal dark fill */
@@ -2804,8 +2791,8 @@ body {
 /* Focus: brighten the current state — no new color introduced */
 .form-input:focus {
   outline: none;
-  border-color: rgba(251, 146, 60, 0.8);
-  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.15);
+  border-color: rgba(251, 146, 60, 0.65);
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.12);
 }
 .form-input.is-complete:focus {
   border-color: rgba(245, 245, 245, 1);
