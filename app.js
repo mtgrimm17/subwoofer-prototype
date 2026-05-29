@@ -892,12 +892,17 @@ function _obCountriesForPreset(preset) {
 }
 
 function setObDistPreset(preset) {
-  state.formData.distributionPreset = preset;
-  if (preset !== 'custom') {
-    // Apply the preset's country list
-    state.formData.selectedCountries = _obCountriesForPreset(preset);
+  if (state.formData.distributionPreset === preset) {
+    // Toggle off — deselect the preset
+    state.formData.distributionPreset = null;
+  } else {
+    state.formData.distributionPreset = preset;
+    if (preset !== 'custom') {
+      // Apply the preset's country list
+      state.formData.selectedCountries = _obCountriesForPreset(preset);
+    }
+    // 'custom' keeps whatever countries are currently selected
   }
-  // 'custom' keeps whatever countries are currently selected
   _refreshObDistSection();
 }
 

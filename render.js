@@ -773,7 +773,7 @@ function buildAssetsTab() {
       <div class="ob-section" id="ob-sec-screenshots">
         <div class="ob-section-hdr">Screenshots</div>
         <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
-        <div class="ob-q" id="ob-q-screenshots" data-answered="${state.uploads.screenshots.length > 0 ? '1' : '0'}">
+        <div class="ob-q ob-q--rail-only" id="ob-q-screenshots" data-answered="${state.uploads.screenshots.length > 0 ? '1' : '0'}">
         <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
           <div class="asset-dropzone" id="ob-screenshot-dropzone"
                onclick="document.getElementById('ob-screenshot-input').click()"

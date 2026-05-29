@@ -1061,6 +1061,8 @@ body {
 .ob-q[data-answered="0"] {
   background: rgba(251, 146, 60, 0.04);
 }
+/* Rail-only variant: left bar without background tint (large upload zones, etc.) */
+.ob-q--rail-only[data-answered="0"] { background: transparent; }
 .ob-q[data-answered="0"]::before {
   content: '';
   position: absolute;
@@ -2787,7 +2789,7 @@ select.form-input {
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }
 
-.char-count { text-align: right; font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+.char-count { display: none; }  /* enforced via maxlength; counter hidden to keep layout clean */
 .char-count.is-warn { color: var(--orange); }
 .char-count.is-over { color: var(--magenta); }
 .char-note { color: var(--text-faint); opacity: 0.5; }
@@ -3908,8 +3910,8 @@ select.form-input {
 .ios-q-row {
   display: flex; align-items: center;
   justify-content: space-between; gap: 14px;
-  margin-bottom: 10px;
-  padding-top: 5px; padding-bottom: 5px;
+  min-height: 34px;
+  margin-bottom: 6px;
   border-left: 3px solid transparent;
   padding-left: 8px;
   margin-left: -11px;
