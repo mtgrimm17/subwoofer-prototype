@@ -145,6 +145,7 @@ function renderOnboardingFooter() {
 
 /* Tab 0: About */
 function buildAboutTab() {
+  const fd = state.formData;
   return `
     <div class="ob-form">
 
@@ -152,24 +153,28 @@ function buildAboutTab() {
       <div class="ob-section" id="ob-sec-about">
         <div class="ob-section-hdr">About your game</div>
 
-        <label class="form-label" for="ob-title">Game Title</label>
-        <div class="form-group">
-          <input class="form-input" id="ob-title" type="text" maxlength="50" required
-                 placeholder="e.g. Go Ape Ship!"
-                 oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
-          <div class="char-count" id="ob-title-count">0 / 30</div>
+        <div class="ob-q" id="ob-q-title" data-answered="${fd.title?.trim() ? '1' : '0'}">
+          <label class="form-label" for="ob-title">Game Title</label>
+          <div class="form-group">
+            <input class="form-input" id="ob-title" type="text" maxlength="50" required
+                   placeholder="e.g. Go Ape Ship!"
+                   oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
+            <div class="char-count" id="ob-title-count">0 / 30</div>
+          </div>
         </div>
 
         <div id="ob-scenario-wrap">
           ${buildScenarioWidget()}
         </div>
 
-        <label class="form-label" for="ob-desc">Description</label>
-        <div class="form-group">
-          <textarea class="form-input" id="ob-desc" rows="5" required
-                    placeholder="Tell players what makes your game worth their time..."
-                    oninput="syncField('description', this.value); charCount('ob-desc-count', this.value, 4000)"></textarea>
-          <div class="char-count" id="ob-desc-count">0 / 4000</div>
+        <div class="ob-q" id="ob-q-desc" data-answered="${fd.description?.trim() ? '1' : '0'}">
+          <label class="form-label" for="ob-desc">Description</label>
+          <div class="form-group">
+            <textarea class="form-input" id="ob-desc" rows="5" required
+                      placeholder="Tell players what makes your game worth their time..."
+                      oninput="syncField('description', this.value); charCount('ob-desc-count', this.value, 4000)"></textarea>
+            <div class="char-count" id="ob-desc-count">0 / 4000</div>
+          </div>
         </div>
       </div>
 
@@ -178,7 +183,9 @@ function buildAboutTab() {
       <!-- ── Platforms ── -->
       <div class="ob-section" id="ob-sec-platforms">
         <div class="ob-section-hdr">Platforms</div>
-        <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
+        <div class="ob-q" id="ob-q-platforms" data-answered="${state.activePlatforms.size > 0 ? '1' : '0'}">
+          <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
+        </div>
       </div>
 
     </div>`;
@@ -206,14 +213,16 @@ function buildDistributionTab() {
 
         <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
 
-        <span class="ob-dist-question">Where do you intend to make the game available?</span>
+        <div class="ob-q" id="ob-q-distribution" data-answered="${dPreset ? '1' : '0'}">
+          <span class="ob-dist-question">Where do you intend to make the game available?</span>
 
-        <div id="ob-dist-preset-group" class="ob-req-group ${!dPreset ? 'is-req-empty' : ''}" style="margin-bottom:10px;">
-          <div class="ob-preset-pills">
-            ${distPresets.map(p => `
-              <button class="ob-preset-pill ${dPreset === p.id ? 'is-active' : ''}"
-                      data-preset="${p.id}"
-                      onclick="setObDistPreset('${p.id}')">${p.label}</button>`).join('')}
+          <div id="ob-dist-preset-group" class="ob-req-group ${!dPreset ? 'is-req-empty' : ''}" style="margin-bottom:10px;">
+            <div class="ob-preset-pills">
+              ${distPresets.map(p => `
+                <button class="ob-preset-pill ${dPreset === p.id ? 'is-active' : ''}"
+                        data-preset="${p.id}"
+                        onclick="setObDistPreset('${p.id}')">${p.label}</button>`).join('')}
+            </div>
           </div>
         </div>
 
@@ -764,6 +773,7 @@ function buildAssetsTab() {
       <div class="ob-section" id="ob-sec-screenshots">
         <div class="ob-section-hdr">Screenshots</div>
         <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
+        <div class="ob-q" id="ob-q-screenshots" data-answered="${state.uploads.screenshots.length > 0 ? '1' : '0'}">
         <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
           <div class="asset-dropzone" id="ob-screenshot-dropzone"
                onclick="document.getElementById('ob-screenshot-input').click()"
@@ -778,6 +788,7 @@ function buildAssetsTab() {
           </div>
           <div class="asset-grid" id="ob-screenshot-grid"></div>
         </div>
+        </div><!-- /ob-q-screenshots -->
       </div>
 
       <div class="ob-sec-divider"></div>
@@ -817,10 +828,12 @@ function buildComplianceTab() {
       <div class="ob-section" id="ob-sec-privacy_url">
         <div class="ob-section-hdr">Links</div>
 
-        <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
-        <div class="form-group">
-          <input class="form-input" id="ob-privacy" type="url" required placeholder="https://yourgame.com/privacy"
-                 oninput="syncField('privacyUrl', this.value)">
+        <div class="ob-q" id="ob-q-privacy_url" data-answered="${state.formData.privacyUrl?.trim() ? '1' : '0'}">
+          <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
+          <div class="form-group">
+            <input class="form-input" id="ob-privacy" type="url" required placeholder="https://yourgame.com/privacy"
+                   oninput="syncField('privacyUrl', this.value)">
+          </div>
         </div>
       </div>
 
@@ -1303,18 +1316,18 @@ function buildIOSActiveCard(pid) {
     const done = isIOSSectionComplete(step.id);
     const risk = computeIOSSectionRisk(step.id);
 
-    // Show a dot for every incomplete step; color reflects risk level
-    const dotClass = risk === 'HIGH' ? 'high' : risk === 'MEDIUM' ? 'medium' : 'none';
-    const riskDot = done ? '' : `<span class="ios-step-risk ios-step-risk-${dotClass}"></span>`;
+    // Circle state: green check (done), red border (high risk flag), orange border (needs attention)
+    const numClass = done ? 'is-done'
+      : risk === 'HIGH' ? 'is-risk-high'
+      : 'is-risk-warn';
 
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="ios-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
-        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
+        <div class="ios-step-num ${numClass}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
           <div class="ios-step-name">${step.label}</div>
         </div>
-        ${riskDot}
         <span class="ios-step-arrow">›</span>
       </div>`;
   }).join('');
@@ -1475,13 +1488,15 @@ function renderStepModal() {
         </div>`;
     } else if (state.claudeCache && inferenceStatus !== 'error') {
       inferenceBanner = `
-        <div class="sw-tip-box" style="flex-wrap:wrap;margin-bottom:0;">
-          <span class="sw-tip-icon-circle">!</span>
-          <div class="sw-tip-text" style="flex:1;min-width:0;">
-            <strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided. Review before saving.
+        <div class="sw-tip-box sw-tip-box-inference">
+          <div class="sw-tip-box-row">
+            <span class="sw-tip-icon-circle">!</span>
+            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided.</span>
           </div>
-          <button class="ai-see-prompt-btn" onclick="togglePromptDrawer(this)">See prompt</button>
-          <div class="ai-prompt-drawer" style="flex-basis:100%;margin-top:4px;">${(state.claudeLastPrompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+          <div class="sw-tip-box-row sw-tip-box-actions">
+            <button class="ai-see-prompt-btn" onclick="togglePromptDrawer(this)">See prompt</button>
+            <div class="ai-prompt-drawer">${(state.claudeLastPrompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+          </div>
         </div>`;
     } else if (inferenceStatus === 'error') {
       inferenceBanner = `
@@ -1893,7 +1908,7 @@ function buildPrivacySection() {
         </label>
         <textarea class="form-input prv-nlp-textarea"
                   placeholder="e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network."
-                  oninput="updatePrivacyDescription(this.value)">${descVal}</textarea>
+                  onblur="updatePrivacyDescription(this.value)">${descVal}</textarea>
         ${statusHtml}
         ${buildPrivacyMatrix(a)}
       </div>`;

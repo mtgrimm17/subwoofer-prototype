@@ -462,11 +462,15 @@ function reRenderStepModal() {
 })();
 
 // Called by YES/NO and intensity/chip clicks — re-renders immediately
+// Clicking the already-selected value toggles it back to null (deselect)
 function answerIOSField(field, value) {
-  state.iosSubmitAnswers[field] = value;
-  // Always upsert meta with humanConfirmed — protects this answer from any
-  // future AI overwrite, whether or not AI meta existed before the click
-  state.iosAnswerMeta[field] = { ...(state.iosAnswerMeta[field] || {}), humanConfirmed: true };
+  if (state.iosSubmitAnswers[field] === value) {
+    state.iosSubmitAnswers[field] = null;
+    delete state.iosAnswerMeta[field];
+  } else {
+    state.iosSubmitAnswers[field] = value;
+    state.iosAnswerMeta[field] = { ...(state.iosAnswerMeta[field] || {}), humanConfirmed: true };
+  }
   reRenderStepModal();
 }
 
@@ -484,13 +488,11 @@ function togglePrivacyMatrix() {
 
 /* ── Privacy NLP → privacy label AI translation ───────── */
 
-let _privacyAITimer = null;
-
+// Fires on blur (focus-out) — not on every keystroke
 function updatePrivacyDescription(val) {
   state.iosSubmitAnswers.privacyDescription = val;
-  clearTimeout(_privacyAITimer);
   if (!val || val.trim().length < 20) return;
-  _privacyAITimer = setTimeout(_triggerPrivacyAI, 1200);
+  _triggerPrivacyAI();
 }
 
 async function _triggerPrivacyAI() {
@@ -819,7 +821,23 @@ const OB_SECTION_ANSWERED = {
   trailer:      () => true,
 };
 
+// Per-question answered predicates (drives ob-q data-answered for individual field rails)
+const OB_Q_ANSWERED = {
+  title:        () => !!(state.formData.title?.trim()),
+  desc:         () => !!(state.formData.description?.trim()),
+  platforms:    () => state.activePlatforms.size > 0,
+  distribution: () => !!state.formData.distributionPreset,
+  screenshots:  () => state.uploads.screenshots.length > 0,
+  privacy_url:  () => !!(state.formData.privacyUrl?.trim()),
+};
+
 function updateObSectionStates() {
+  // Per-question rails — each individual field gets its own amber indicator
+  for (const [id, pred] of Object.entries(OB_Q_ANSWERED)) {
+    const el = document.getElementById('ob-q-' + id);
+    if (el) el.setAttribute('data-answered', pred() ? '1' : '0');
+  }
+  // Section-level state kept for header tinting only (no visual rail)
   for (const [id, pred] of Object.entries(OB_SECTION_ANSWERED)) {
     const el = document.getElementById('ob-sec-' + id);
     if (el) el.classList.toggle('is-unanswered', !pred());
@@ -1568,9 +1586,14 @@ function computeInferences() {
 }
 
 function answerQuestion(key, value) {
-  state.questionAnswers[key]  = value;
-  state.questionInferred[key] = false;
-  // Re-render just the compliance questions list in-place (faster than full tab)
+  // Toggle: clicking the already-selected answer deselects it
+  if (state.questionAnswers[key] === value) {
+    state.questionAnswers[key]  = null;
+    state.questionInferred[key] = false;
+  } else {
+    state.questionAnswers[key]  = value;
+    state.questionInferred[key] = false;
+  }
   renderComplianceQuestions();
   updateObSectionStates();
 }

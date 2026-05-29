@@ -1045,17 +1045,37 @@ body {
 }
 .ob-section:first-child::before { top: 0; }
 
+/* Section rail disabled — per-question ob-q rails are now the sole amber indicator */
 .ob-section.is-unanswered::before {
+  background: transparent;
+}
+
+/* ── Per-question accent rail (replaces section-level rail) ─── */
+.ob-q {
+  position: relative;
+  margin-left: -14px;
+  padding-left: 14px;
+  border-radius: 0 4px 4px 0;
+  transition: background 0.15s;
+}
+.ob-q[data-answered="0"] {
+  background: rgba(251, 146, 60, 0.04);
+}
+.ob-q[data-answered="0"]::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 2px; border-radius: 1px;
   background: rgba(251, 146, 60, 0.5);
 }
 
-/* Spotlight / dim — when one section has keyboard/click focus, others recede.
-   :focus-within catches text inputs, selects, and clicked buttons alike.
-   Hover a dimmed section to preview it at full opacity. */
-.ob-form:focus-within .ob-section {
-  transition: opacity 0.25s;
+/* Spotlight / dim — both mouse hover and keyboard focus */
+.ob-form:focus-within .ob-section,
+.ob-form:has(.ob-section:hover) .ob-section {
+  transition: opacity 0.22s;
 }
-.ob-form:focus-within .ob-section:not(:focus-within) {
+.ob-form:focus-within .ob-section:not(:focus-within),
+.ob-form:has(.ob-section:hover) .ob-section:not(:hover) {
   opacity: 0.42;
 }
 .ob-form:focus-within .ob-section:not(:focus-within):hover {
@@ -1138,6 +1158,21 @@ body {
   font-size: 12px;
   line-height: 1.6;
   color: var(--text-dim);
+}
+
+/* Two-line inference banner variant */
+.sw-tip-box-inference {
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.sw-tip-box-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.sw-tip-box-actions {
+  padding-left: 23px; /* aligns with text after icon */
 }
 
 .sw-tip-icon-circle {
@@ -2038,6 +2073,16 @@ body {
   background: var(--green, #4ade80);
   border-color: var(--green, #4ade80);
   color: #fff;
+}
+/* Needs attention — unanswered questions */
+.ios-step-num.is-risk-warn {
+  border-color: var(--orange, #f5a623);
+  color: var(--orange, #f5a623);
+}
+/* Red flag — HIGH risk answer detected */
+.ios-step-num.is-risk-high {
+  border-color: var(--magenta, #ff3b78);
+  color: var(--magenta, #ff3b78);
 }
 
 .ios-step-info { flex: 1; min-width: 0; }
@@ -3861,9 +3906,10 @@ select.form-input {
 /* ── Question rows ───────────────────────────────────── */
 
 .ios-q-row {
-  display: flex; align-items: flex-start;
+  display: flex; align-items: center;
   justify-content: space-between; gap: 14px;
   margin-bottom: 10px;
+  padding-top: 5px; padding-bottom: 5px;
   border-left: 3px solid transparent;
   padding-left: 8px;
   margin-left: -11px;
@@ -3875,12 +3921,7 @@ select.form-input {
   border-left-color: rgba(251, 146, 60, 0.5);
   background: rgba(251, 146, 60, 0.03);
 }
-/* Within ob-section the section rail is the sole amber indicator —
-   suppress individual row bars to prevent double-rail stacking */
-.ob-section .ios-q-row[data-answered="0"] {
-  border-left-color: transparent;
-  background: transparent;
-}
+/* Per-question rails now active inside ob-section (section rail is disabled) */
 .ios-q-row:last-child { margin-bottom: 0; }
 .ios-q-row-intensity { align-items: center; margin-bottom: 4px; }
 
