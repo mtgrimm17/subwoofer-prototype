@@ -3894,6 +3894,11 @@ select.form-input {
 
 .ios-intensity-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
 
+/* Unified block — normalises spacing when mixing intensity + YN rows in one section */
+.ios-q-block { display: flex; flex-direction: column; gap: 6px; }
+.ios-q-block .ios-q-row,
+.ios-q-block .ios-q-row-intensity { margin-bottom: 0; }
+
 .intensity-group { display: flex; gap: 2px; flex-shrink: 0; }
 
 .intensity-btn {
@@ -4240,11 +4245,43 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
 
 /* No placeholder dots — checkboxes only appear when a row is selected (opacity:0 when disabled) */
 
-.prv-matrix-hint {
-  font-size: 11px;
-  color: var(--text-faint);
-  margin-bottom: 4px;
+/* Plain-language description field */
+.prv-nlp-wrap { margin-top: 4px; }
+
+.prv-nlp-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 6px;
 }
+
+.prv-nlp-status {
+  font-size: 12px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.prv-nlp-status.loading { color: var(--text-dim); }
+.prv-nlp-status.done    { color: var(--green); }
+.prv-nlp-status.error   { color: var(--orange); }
+
+.btn-inline {
+  background: none; border: none; padding: 0;
+  color: inherit; text-decoration: underline; cursor: pointer;
+  font-size: inherit; font-family: inherit;
+}
+
+/* Matrix header: count badge + expand toggle on same row */
+.prv-matrix-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.prv-count-badge { margin-left: 0; }
 
 /* Expand / collapse toggle above the matrix */
 .prv-expand-btn {

@@ -954,6 +954,7 @@ function makeBlankIOSAnswers() {
     // Privacy
     privacyPolicyUrl:       '',
     collectsData:           null,   // 'yes' / 'no'
+    privacyDescription:     '',     // plain-language description → AI translates to privacy labels
     // dataPerType: { [typeId]: { purposes: [], identity: null, tracking: null } }
     dataPerType:            {},
     // Content Rating — Step 1: Features (Yes/No)
@@ -1473,8 +1474,11 @@ const state = {
   // Whether the user has visited Store Page Preview (makes it count as complete)
   iosStorePreviewSeen: false,
 
-  // Whether the privacy matrix is showing all types (default: collapsed to common only)
+  // Whether the privacy matrix is showing all types (default: fully collapsed)
   privacyMatrixExpanded: false,
+
+  // Privacy NLP AI translation status: null | 'loading' | 'complete' | 'error'
+  privacyAIStatus: null,
 
   // Claude AI UI state (not persisted)
   claudeUI: {},

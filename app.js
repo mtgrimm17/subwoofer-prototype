@@ -482,6 +482,100 @@ function togglePrivacyMatrix() {
   reRenderStepModal();
 }
 
+/* ── Privacy NLP → privacy label AI translation ───────── */
+
+let _privacyAITimer = null;
+
+function updatePrivacyDescription(val) {
+  state.iosSubmitAnswers.privacyDescription = val;
+  clearTimeout(_privacyAITimer);
+  if (!val || val.trim().length < 20) return;
+  _privacyAITimer = setTimeout(_triggerPrivacyAI, 1200);
+}
+
+async function _triggerPrivacyAI() {
+  if (!CLAUDE_API_KEY) return;
+  const desc = (state.iosSubmitAnswers.privacyDescription || '').trim();
+  if (desc.length < 20) return;
+
+  state.privacyAIStatus = 'loading';
+  reRenderStepModal();
+
+  const typeList    = IOS_DATA_TYPES.flatMap(g => g.types)
+    .map(t => `${t.id}: ${t.label} — ${t.desc}`).join('\n');
+  const purposeList = IOS_PURPOSES
+    .map(p => `${p.id}: ${p.label} — ${p.desc}`).join('\n');
+
+  const prompt = `You are helping a mobile game developer fill in Apple App Store Data Privacy labels.
+
+Developer's description of their data collection:
+"${desc}"
+
+Available data type IDs:
+${typeList}
+
+Available purpose IDs:
+${purposeList}
+
+Return ONLY valid JSON — no markdown fences, no extra text:
+{
+  "selections": [
+    { "typeId": "<exact data type id>", "purposes": ["<purpose id>", ...], "tracking": "yes|no" }
+  ]
+}
+
+Rules:
+- Only include types clearly mentioned or strongly implied by the description.
+- Only include purposes that genuinely apply to each type.
+- Set tracking "yes" only if data crosses into third-party apps/websites for advertising.
+- Be conservative — omit rather than guess.`;
+
+  try {
+    const res = await fetch(CLAUDE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'x-api-key':                                 CLAUDE_API_KEY,
+        'anthropic-version':                         '2023-06-01',
+        'content-type':                              'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model:      CLAUDE_MODEL,
+        max_tokens: 800,
+        messages:   [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+      }),
+    });
+
+    if (!res.ok) throw new Error('API ' + res.status);
+    const data    = await res.json();
+    const text    = (data.content?.[0]?.text || '').trim();
+    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed  = JSON.parse(cleaned);
+
+    const validTypeIds    = new Set(IOS_DATA_TYPES.flatMap(g => g.types).map(t => t.id));
+    const validPurposeIds = new Set(IOS_PURPOSES.map(p => p.id));
+    const newPerType      = {};
+
+    for (const sel of (parsed.selections || [])) {
+      if (!validTypeIds.has(sel.typeId)) continue;
+      const purposes = (sel.purposes || []).filter(p => validPurposeIds.has(p));
+      newPerType[sel.typeId] = {
+        purposes,
+        identity: 'no',
+        tracking: sel.tracking === 'yes' ? 'yes' : 'no',
+      };
+    }
+
+    state.iosSubmitAnswers.dataPerType = newPerType;
+    state.privacyAIStatus = 'complete';
+  } catch (e) {
+    console.warn('[Privacy AI]', e.message);
+    state.privacyAIStatus = 'error';
+  }
+
+  reRenderStepModal();
+}
+
 function togglePrivacyDataType(typeId) {
   // Clicking a row (but not a checkbox inside it) toggles selection
   const perType = state.iosSubmitAnswers.dataPerType;

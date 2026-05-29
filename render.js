@@ -1476,7 +1476,7 @@ function renderStepModal() {
     } else if (state.claudeCache && inferenceStatus !== 'error') {
       inferenceBanner = `
         <div class="sw-tip-box" style="flex-wrap:wrap;margin-bottom:0;">
-          <span class="sw-tip-icon-circle" style="font-size:10px;">✦</span>
+          <span class="sw-tip-icon-circle">!</span>
           <div class="sw-tip-text" style="flex:1;min-width:0;">
             <strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided. Review before saving.
           </div>
@@ -1876,7 +1876,28 @@ function buildPrivacySection() {
   const a = state.iosSubmitAnswers;
   const noUrl = !a.privacyPolicyUrl.trim();
 
-  const matrixBlock = a.collectsData === 'yes' ? buildPrivacyMatrix(a) : '';
+  let collectBlock = '';
+  if (a.collectsData === 'yes') {
+    const descVal = (a.privacyDescription || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const statusHtml = state.privacyAIStatus === 'loading'
+      ? `<div class="prv-nlp-status loading"><span class="ai-spinner"></span> Translating to privacy labels…</div>`
+      : state.privacyAIStatus === 'complete'
+      ? `<div class="prv-nlp-status done">✓ Privacy labels updated — expand below to review or adjust</div>`
+      : state.privacyAIStatus === 'error'
+      ? `<div class="prv-nlp-status error">Translation failed. <button class="btn-inline" onclick="_triggerPrivacyAI()">Try again</button></div>`
+      : '';
+    collectBlock = `
+      <div class="prv-nlp-wrap">
+        <label class="form-label">Describe your data collection
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects and why. Subwoofer will translate this into the required Apple privacy label selections.</span></span>
+        </label>
+        <textarea class="form-input prv-nlp-textarea"
+                  placeholder="e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network."
+                  oninput="updatePrivacyDescription(this.value)">${descVal}</textarea>
+        ${statusHtml}
+        ${buildPrivacyMatrix(a)}
+      </div>`;
+  }
 
   return `
     <div class="form-group">
@@ -1894,7 +1915,7 @@ function buildPrivacySection() {
     </div>
     ${iosYNRow('Does your app collect any data from users?', 'collectsData',
       'Includes analytics SDKs, crash reporters, accounts, device IDs, or any third-party SDK that collects data.')}
-    ${matrixBlock}`;
+    ${collectBlock}`;
 }
 
 function buildPrivacyMatrix(a) {
@@ -1903,104 +1924,90 @@ function buildPrivacyMatrix(a) {
     { id: 'linked_identity', label: 'Linked to Identity' },
     { id: 'used_tracking',   label: 'Used for Tracking' },
   ];
+  const META_COL_TIPS = {
+    linked_identity: "Data directly linked to the user's identity — such as their account, name, or email address.",
+    used_tracking:   "Data used to track the user across third-party apps or websites for advertising or analytics.",
+  };
 
   const expanded        = state.privacyMatrixExpanded;
   const selectedTypeIds = new Set(Object.keys(a.dataPerType));
+  const selectedCount   = Object.keys(a.dataPerType).length;
 
-  // Does any non-common type exist at all? (determines whether expand UI is shown)
-  const hasExtraTypes = IOS_DATA_TYPES.some(group =>
-    group.types.some(t => !t.common && !selectedTypeIds.has(t.id))
-  );
-
-  // Header row
+  // Header row with inline tooltips
   const purposeHeaders = cols.map(c =>
-    `<th class="prv-col-hd" title="${c.desc}">${c.label}</th>`).join('');
+    `<th class="prv-col-hd"><span class="tooltip-anchor" data-tip="${c.desc}">${c.label} <span class="tooltip-icon">?</span><span class="tooltip-body">${c.desc}</span></span></th>`).join('');
   const metaHeaders = META_COLS.map(c =>
-    `<th class="prv-col-hd prv-meta-col">${c.label}</th>`).join('');
+    `<th class="prv-col-hd prv-meta-col"><span class="tooltip-anchor" data-tip="${META_COL_TIPS[c.id]}">${c.label} <span class="tooltip-icon">?</span><span class="tooltip-body">${META_COL_TIPS[c.id]}</span></span></th>`).join('');
 
-  // Build rows — show only common types by default; always show selected types
+  // Build rows — all types shown when expanded (grouped); none when collapsed
   let bodyHtml = '';
-
-  IOS_DATA_TYPES.forEach(group => {
-    const visibleTypes = group.types.filter(t => expanded || t.common || selectedTypeIds.has(t.id));
-    if (visibleTypes.length === 0) return;
-
-    // Only show group header in expanded view (collapsed view keeps it clean)
-    if (expanded) {
+  if (expanded) {
+    IOS_DATA_TYPES.forEach(group => {
       bodyHtml += `<tr class="prv-group-row"><td colspan="${1 + cols.length + META_COLS.length}">${group.group}</td></tr>`;
-    }
-
-    visibleTypes.forEach(t => {
-      const isOn = !!a.dataPerType[t.id];
-      const td   = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
-      const purposeCells = cols.map(c => {
-        const checked = td.purposes.includes(c.id);
-        return `<td class="prv-check-cell">
-          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
-                 data-type="${t.id}" data-col="${c.id}"
-                 ${checked ? 'checked' : ''}
-                 onclick="event.stopPropagation()"
-                 onchange="togglePrivacyPurpose('${t.id}','${c.id}',this.checked)">
-        </td>`;
-      }).join('');
-      const metaCells = META_COLS.map(c => {
-        const isChecked = c.id === 'linked_identity' ? td.identity === 'yes' : td.tracking === 'yes';
-        const field     = c.id === 'linked_identity' ? 'identity' : 'tracking';
-        return `<td class="prv-check-cell prv-meta-col">
-          <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
-                 data-type="${t.id}" data-meta="${field}"
-                 ${isChecked ? 'checked' : ''}
-                 onclick="event.stopPropagation()"
-                 onchange="setPrivacyMeta('${t.id}','${field}',this.checked)">
-        </td>`;
-      }).join('');
-
-      bodyHtml += `
-        <tr class="prv-data-row ${isOn ? 'is-on' : ''}" onclick="togglePrivacyDataType('${t.id}')">
-          <td class="prv-type-cell">
-            <span class="prv-type-name tooltip-anchor" data-tip="${t.desc}">${t.label}</span>
-          </td>
-          ${purposeCells}
-          ${metaCells}
-        </tr>`;
+      group.types.forEach(t => {
+        const isOn = !!a.dataPerType[t.id];
+        const td   = a.dataPerType[t.id] || { purposes: [], identity: null, tracking: null };
+        const purposeCells = cols.map(c => {
+          const checked = td.purposes.includes(c.id);
+          return `<td class="prv-check-cell">
+            <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
+                   data-type="${t.id}" data-col="${c.id}"
+                   ${checked ? 'checked' : ''}
+                   onclick="event.stopPropagation()"
+                   onchange="togglePrivacyPurpose('${t.id}','${c.id}',this.checked)">
+          </td>`;
+        }).join('');
+        const metaCells = META_COLS.map(c => {
+          const isChecked = c.id === 'linked_identity' ? td.identity === 'yes' : td.tracking === 'yes';
+          const field     = c.id === 'linked_identity' ? 'identity' : 'tracking';
+          return `<td class="prv-check-cell prv-meta-col">
+            <input type="checkbox" class="prv-cb" ${isOn ? '' : 'disabled'}
+                   data-type="${t.id}" data-meta="${field}"
+                   ${isChecked ? 'checked' : ''}
+                   onclick="event.stopPropagation()"
+                   onchange="setPrivacyMeta('${t.id}','${field}',this.checked)">
+          </td>`;
+        }).join('');
+        bodyHtml += `
+          <tr class="prv-data-row ${isOn ? 'is-on' : ''}" onclick="togglePrivacyDataType('${t.id}')">
+            <td class="prv-type-cell">
+              <span class="prv-type-name tooltip-anchor" data-tip="${t.desc}">${t.label}</span>
+            </td>
+            ${purposeCells}
+            ${metaCells}
+          </tr>`;
+      });
     });
-  });
+  }
 
-  const selectedCount = Object.keys(a.dataPerType).length;
-
-  // Single toggle button — above the table when collapsed, same position when expanded
-  const toggleBtnHtml = hasExtraTypes ? `
-    <button class="prv-expand-btn" onclick="togglePrivacyMatrix()">
-      ${expanded
-        ? `${_chevUp} Show common data types for game developers`
-        : `${_chevDown} Show all data types`}
-    </button>` : '';
+  const tableHtml = expanded ? `
+    <div class="prv-matrix-wrap">
+      <table class="prv-matrix">
+        <thead>
+          <tr>
+            <th class="prv-type-hd">Data Type</th>
+            ${purposeHeaders}
+            ${metaHeaders}
+          </tr>
+        </thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    </div>
+    ${Object.values(a.dataPerType).some(t => t.tracking === 'yes') ?
+      `<div class="dist-tip-box" style="margin-top:10px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span><strong>Tracking:</strong> You must implement Apple's AppTrackingTransparency framework and request user permission before collecting any data used for tracking.</span>
+      </div>` : ''}` : '';
 
   return `
-    <div class="ios-subsection">
-      <div class="ios-subsection-label" style="margin-bottom:6px;">
-        What data does your app collect?
-        ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} selected</span>` : ''}
+    <div class="ios-subsection" style="margin-top:10px;">
+      <div class="prv-matrix-header">
+        ${selectedCount > 0 ? `<span class="prv-count-badge">${selectedCount} type${selectedCount !== 1 ? 's' : ''} selected</span>` : ''}
+        <button class="prv-expand-btn" onclick="togglePrivacyMatrix()">
+          ${expanded ? `${_chevUp} Hide data types` : `${_chevDown} Show all data types`}
+        </button>
       </div>
-      <div class="prv-matrix-hint">Click a row to select it, then check how that data is used.</div>
-      ${toggleBtnHtml}
-      <div class="prv-matrix-wrap">
-        <table class="prv-matrix">
-          <thead>
-            <tr>
-              <th class="prv-type-hd">Data Type</th>
-              ${purposeHeaders}
-              ${metaHeaders}
-            </tr>
-          </thead>
-          <tbody>${bodyHtml}</tbody>
-        </table>
-      </div>
-      ${Object.values(a.dataPerType).some(t => t.tracking === 'yes') ?
-        `<div class="dist-tip-box" style="margin-top:10px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span><strong>Tracking:</strong> You must implement Apple's AppTrackingTransparency framework and request user permission before collecting any data used for tracking.</span>
-        </div>` : ''}
+      ${tableHtml}
     </div>`;
 }
 
@@ -2061,10 +2068,10 @@ function buildContentRatingSection() {
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Medical or Wellness</div>
-    <div class="ios-intensity-list">
+    <div class="ios-q-block">
       ${(() => { const q=iq('medicalTreatment'); return iosIntensityRow(q.label,q.id,q.tooltip); })()}
+      ${iosYNRow(yq('healthWellness').label, 'healthWellness', '', yq('healthWellness').tooltip)}
     </div>
-    ${iosYNRow(yq('healthWellness').label, 'healthWellness', '', yq('healthWellness').tooltip)}
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Sexuality or Nudity</div>
@@ -2080,13 +2087,13 @@ function buildContentRatingSection() {
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Chance-Based Activities</div>
-    <div class="ios-intensity-list">
+    <div class="ios-q-block">
       ${['simulatedGambling','contests'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
+      ${iosYNRow(yq('realMoneyGambling').label, 'realMoneyGambling', '', yq('realMoneyGambling').tooltip, true)}
+      ${a.realMoneyGambling === 'yes' ? '<div class="ios-risk-note risk-HIGH">Real-money gambling requires a special Apple entitlement and proof of licensing in every territory where it is offered. Apple will ask for documentation during review.</div>' : ''}
+      ${iosYNRow(yq('lootBoxes').label, 'lootBoxes', '', yq('lootBoxes').tooltip, true)}
+      ${a.lootBoxes === 'yes' ? '<div class="ios-risk-note risk-MEDIUM">Apps with loot boxes must clearly disclose the odds of receiving each item type before a player makes a purchase.</div>' : ''}
     </div>
-    ${iosYNRow(yq('realMoneyGambling').label, 'realMoneyGambling', '', yq('realMoneyGambling').tooltip, true)}
-    ${a.realMoneyGambling === 'yes' ? '<div class="ios-risk-note risk-HIGH">Real-money gambling requires a special Apple entitlement and proof of licensing in every territory where it is offered. Apple will ask for documentation during review.</div>' : ''}
-    ${iosYNRow(yq('lootBoxes').label, 'lootBoxes', '', yq('lootBoxes').tooltip, true)}
-    ${a.lootBoxes === 'yes' ? '<div class="ios-risk-note risk-MEDIUM">Apps with loot boxes must clearly disclose the odds of receiving each item type before a player makes a purchase.</div>' : ''}
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Additional Information</div>
