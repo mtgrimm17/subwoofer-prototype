@@ -974,14 +974,13 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--plat-color, var(--accent)) 20%, transparent);
 }
 
-/* Completion-state borders: platform tiles in an empty group get amber outline;
-   selected tile switches to white border (glow kept for visual delight) */
-.ob-q[data-answered="0"] .ob-plat-tile:not(.is-on) {
-  border-color: rgba(251, 146, 60, 0.5);
-  background: rgba(251, 146, 60, 0.02);
-  transition: border-color 0.25s, background 0.25s;
+/* Completion-state borders: platform chips in an empty group get amber outline;
+   selected chip switches to white border */
+.ob-q[data-answered="0"] .ob-plat-chip:not(.is-on) {
+  border-color: rgba(251, 146, 60, 0.4);
+  background: rgba(251, 146, 60, 0.07);
 }
-.ob-plat-tile.is-on { border-color: rgba(245, 245, 245, 0.7) !important; }
+.ob-plat-chip.is-on { border-color: rgba(245, 245, 245, 0.7) !important; }
 .ob-plat-tile-icon {
   font-size: 28px;
   line-height: 1;
@@ -1400,7 +1399,7 @@ body {
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
-  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  transition: color 0.12s, border-color 0.25s, background 0.25s;
 }
 
 .ob-plat-chip:hover:not(.is-on) {
