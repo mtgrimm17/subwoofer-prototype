@@ -852,7 +852,7 @@ function updateObSectionStates() {
   // Sync is-complete on text inputs — correct after any tab render
   _setInputComplete('ob-title',            !!(state.formData.title?.trim()));
   _setInputComplete('ob-desc',             !!(state.formData.description?.trim()));
-  _setInputComplete('ob-privacy-url',      !!(state.formData.privacyUrl?.trim()));
+  _setInputComplete('ob-privacy',          !!(state.formData.privacyUrl?.trim()));
   _setInputComplete('ob-prv-nlp-textarea', !!(state.iosSubmitAnswers?.privacyDescription?.trim()));
 }
 
@@ -866,7 +866,7 @@ function syncField(field, value) {
     if (curEl) curEl.textContent = value || 'My Game';
   }
   // Live is-complete on the typed input — immediate feedback as user types/clears
-  const FIELD_INPUT_MAP = { title: 'ob-title', description: 'ob-desc', privacyUrl: 'ob-privacy-url' };
+  const FIELD_INPUT_MAP = { title: 'ob-title', description: 'ob-desc', privacyUrl: 'ob-privacy' };
   if (FIELD_INPUT_MAP[field]) _setInputComplete(FIELD_INPUT_MAP[field], !!(value?.trim()));
   // Update section rails reactively
   updateObSectionStates();

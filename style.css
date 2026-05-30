@@ -257,7 +257,7 @@ body {
   font-weight: 500;
   padding: 7px 13px;
   border-radius: 6px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text-dim);
   cursor: pointer;
@@ -1068,20 +1068,39 @@ body {
   background: transparent;
 }
 
-/* ── Per-question accent rail (replaces section-level rail) ─── */
+/* ── Per-question accent rail ─────────────────────────────────
+   Two strategies depending on what's inside the ob-q:
+
+   A) Button groups (platforms, presets, screenshots — no .form-group):
+      Rail lives on ob-q::before and spans the full control area.
+
+   B) Text inputs / textareas (have a .form-group):
+      Rail lives on .form-group::before, so it only spans the input —
+      not the label above it. ob-q::before is suppressed via :has().
+   ──────────────────────────────────────────────────────────── */
 .ob-q {
   position: relative;
   margin-left: -14px;
   padding-left: 14px;
   border-radius: 0 4px 4px 0;
-  /* No background tint — completion emphasis lives on the control itself */
 }
-/* Rail is anchored to .form-group so it only spans the input/textarea, not the label above it.
-   The form-group sits 14px in from ob-q's left edge (due to padding-left: 14px on ob-q),
-   so left: -14px on the ::before puts the rail flush with ob-q's left border. */
-.form-group {
-  position: relative;
+
+/* A) General rail — button groups and upload zones */
+.ob-q::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 2px; border-radius: 1px;
+  background: rgba(251, 146, 60, 0.5);
+  opacity: 0;
+  transition: opacity 0.25s;
 }
+.ob-q[data-answered="0"]::before { opacity: 1; }
+
+/* B) Suppress ob-q rail when a .form-group is present; use form-group rail instead */
+.ob-q:has(.form-group)::before { content: none; }
+
+.form-group { position: relative; }
 .ob-q[data-answered="0"] .form-group::before {
   content: '';
   position: absolute;
@@ -1404,7 +1423,7 @@ body {
 .ob-plat-chip {
   padding: 7px 14px;
   border-radius: 6px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text-dim);
   cursor: pointer;
@@ -3539,7 +3558,7 @@ select.form-input {
   flex-direction: row;
   gap: 4px;
   flex-shrink: 0;
-  align-self: flex-start;
+  align-self: center;
 }
 
 .yn-btn {
