@@ -275,13 +275,13 @@ body {
 }
 
 /* Completion-state borders: preset pills in an empty group get amber outline;
-   the active pill switches to white border */
+   the active pill switches to blue border (matching other selected controls) */
 .ob-q[data-answered="0"] .ob-preset-pill:not(.is-active) {
-  border-color: rgba(251, 146, 60, 0.5);
-  background: rgba(251, 146, 60, 0.02);
+  border-width: 1px;
+  border-color: rgba(251, 146, 60, 0.4);
+  background: rgba(251, 146, 60, 0.03);
   transition: border-color 0.25s, background 0.25s;
 }
-.ob-preset-pill.is-active { border-color: rgba(245, 245, 245, 0.7) !important; }
 
 /* Manual markets row */
 .ob-manual-row {
@@ -977,10 +977,11 @@ body {
 /* Completion-state borders: platform chips in an empty group get amber outline;
    selected chip switches to white border */
 .ob-q[data-answered="0"] .ob-plat-chip:not(.is-on) {
+  border-width: 1px;
   border-color: rgba(251, 146, 60, 0.4);
-  background: rgba(251, 146, 60, 0.07);
+  background: rgba(251, 146, 60, 0.03);
 }
-.ob-plat-chip.is-on { border-color: rgba(245, 245, 245, 0.7) !important; }
+/* Selected ob-plat-chip uses existing .is-on blue styles — no override needed */
 .ob-plat-tile-icon {
   font-size: 28px;
   line-height: 1;
@@ -1075,19 +1076,30 @@ body {
   border-radius: 0 4px 4px 0;
   /* No background tint — completion emphasis lives on the control itself */
 }
-/* Rail is always rendered; opacity drives visibility with a smooth fade */
-.ob-q::before {
+/* Rail is anchored to .form-group so it only spans the input/textarea, not the label above it.
+   The form-group sits 14px in from ob-q's left edge (due to padding-left: 14px on ob-q),
+   so left: -14px on the ::before puts the rail flush with ob-q's left border. */
+.form-group {
+  position: relative;
+}
+.ob-q[data-answered="0"] .form-group::before {
   content: '';
   position: absolute;
-  left: 0; top: 4px; bottom: 4px;
+  left: -14px; top: 4px; bottom: 4px;
+  width: 2px; border-radius: 1px;
+  background: rgba(251, 146, 60, 0.5);
+  opacity: 1;
+  transition: opacity 0.25s;
+}
+.ob-q[data-answered="1"] .form-group::before {
+  content: '';
+  position: absolute;
+  left: -14px; top: 4px; bottom: 4px;
   width: 2px; border-radius: 1px;
   background: rgba(251, 146, 60, 0.5);
   opacity: 0;
   transition: opacity 0.25s;
 }
-.ob-q[data-answered="0"]::before { opacity: 1; }
-/* Rail-only variant — kept for large upload zones; no semantic difference now that backgrounds are removed */
-.ob-q--rail-only::before { content: none; }
 
 
 /* Section header — uppercase label, tints amber when section is unanswered */
@@ -2779,7 +2791,7 @@ body {
   font-family: inherit;
   color: var(--text);
   /* Incomplete default: amber border + very faint amber fill */
-  background: rgba(251, 146, 60, 0.07);
+  background: rgba(251, 146, 60, 0.03);
   transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
 }
 /* Complete: white border + normal dark fill */
@@ -3558,12 +3570,13 @@ select.form-input {
 
 /* yn-btn — in an unanswered row all unselected buttons get amber outline */
 .ios-q-row[data-answered="0"] .yn-btn:not(.is-selected) {
-  border-color: rgba(251, 146, 60, 0.55);
+  border-width: 1px;
+  border-color: rgba(251, 146, 60, 0.4);
   background: rgba(251, 146, 60, 0.03);
   transition: border-color 0.25s, background 0.25s;
 }
-/* Selected yn-btn → white border (completion signal); blue fill kept */
-.yn-btn.is-selected { border-color: rgba(245, 245, 245, 0.7) !important; }
+/* Selected yn-btn → blue border (standard selection color) */
+/* (no override needed — existing .yn-btn.is-selected already uses --sel-color blue) */
 
 /* AI inference confidence states
    ai-certain  (≥90%): full opacity + badge — AI is sure, show the answer clearly
@@ -3992,15 +4005,14 @@ select.form-input {
 .intensity-btn.is-sel-infrequent { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
 .intensity-btn.is-sel-frequent   { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
 
-/* intensity-btn — amber outline in unanswered row; white border when selected */
+/* intensity-btn — amber outline in unanswered row; blue border when selected (matches standard selection) */
 .ios-q-row[data-answered="0"] .intensity-btn:not(.is-sel-none):not(.is-sel-infrequent):not(.is-sel-frequent) {
-  border-color: rgba(251, 146, 60, 0.55);
+  border-width: 1px;
+  border-color: rgba(251, 146, 60, 0.4);
   background: rgba(251, 146, 60, 0.03);
   transition: border-color 0.25s, background 0.25s;
 }
-.intensity-btn.is-sel-none,
-.intensity-btn.is-sel-infrequent,
-.intensity-btn.is-sel-frequent { border-color: rgba(245, 245, 245, 0.7) !important; }
+/* Selected intensity-btn already uses --sel-color blue via .is-sel-* — no override needed */
 
 /* ── Multi-select chips (data types, IAP types, regions) */
 
