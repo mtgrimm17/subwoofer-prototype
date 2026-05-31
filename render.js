@@ -227,7 +227,7 @@ function buildDistributionTab() {
         </div>
 
         <div class="sw-tip-box" style="margin-bottom:10px;">
-          <img src="sw-icon.svg" class="sw-tip-logo" alt="">
+          <img src="SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
           <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
         </div>
 
@@ -241,7 +241,7 @@ function buildDistributionTab() {
         <div class="ob-section-hdr">Localization</div>
 
         <div class="sw-tip-box" style="margin-bottom:12px;">
-          <img src="sw-icon.svg" class="sw-tip-logo" alt="">
+          <img src="SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
           <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is a great way to increase traction and conversion in secondary markets.</span>
         </div>
 
@@ -546,7 +546,7 @@ function _legacyScenarioWidget_unused() {
     } else if (ls.status === 'done' && ls.found) {
       resultHtml = `
         <div class="sw-tip-box" style="margin-bottom:0;">
-          <img src="sw-icon.svg" class="sw-tip-logo" alt="">
+          <img src="SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
           <div class="sw-tip-text">
             <div><strong class="sw-tip-bold">Subwoofer Tip:</strong> We found this on ${escHtml(ls.source || 'the store')}.</div>
             <div class="ob-live-found-desc" style="margin-top:6px;">${escHtml(ls.description || '')}</div>
@@ -1490,7 +1490,7 @@ function renderStepModal() {
       inferenceBanner = `
         <div class="sw-tip-box sw-tip-box-inference">
           <div class="sw-tip-box-row">
-            <img src="sw-icon.svg" class="sw-tip-logo" alt="">
+            <img src="SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
             <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided.</span>
           </div>
           <div class="sw-tip-box-row sw-tip-box-actions">
