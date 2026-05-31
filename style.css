@@ -1069,14 +1069,16 @@ body {
 }
 
 /* ── Per-question accent rail ─────────────────────────────────
-   Two strategies depending on what's inside the ob-q:
+   Rail lives on the CONTROL WRAPPER, never on ob-q itself.
+   Two wrappers are used:
 
-   A) Button groups (platforms, presets, screenshots — no .form-group):
-      Rail lives on ob-q::before and spans the full control area.
+   .ob-req-group  — button chips, upload zones (platforms, presets, screenshots)
+   .form-group    — text inputs and textareas
 
-   B) Text inputs / textareas (have a .form-group):
-      Rail lives on .form-group::before, so it only spans the input —
-      not the label above it. ob-q::before is suppressed via :has().
+   Both sit 14px in from ob-q's left edge (due to padding-left: 14px),
+   so left: -14px on the ::before puts the rail flush with ob-q's border.
+   This ensures the rail only spans the actual input height, not any
+   question label above it.
    ──────────────────────────────────────────────────────────── */
 .ob-q {
   position: relative;
@@ -1085,22 +1087,11 @@ body {
   border-radius: 0 4px 4px 0;
 }
 
-/* A) General rail — button groups and upload zones */
-.ob-q::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 4px; bottom: 4px;
-  width: 2px; border-radius: 1px;
-  background: rgba(251, 146, 60, 0.5);
-  opacity: 0;
-  transition: opacity 0.25s;
-}
-.ob-q[data-answered="0"]::before { opacity: 1; }
+/* Shared rail mixin via custom property trick — same for both wrapper types */
+.ob-req-group,
+.ob-q .form-group { position: relative; }
 
-/* B) Suppress ob-q rail when a .form-group is present; use form-group rail instead */
-.ob-q:has(.form-group)::before { content: none; }
-
-.form-group { position: relative; }
+.ob-q[data-answered="0"] .ob-req-group::before,
 .ob-q[data-answered="0"] .form-group::before {
   content: '';
   position: absolute;
@@ -1110,6 +1101,7 @@ body {
   opacity: 1;
   transition: opacity 0.25s;
 }
+.ob-q[data-answered="1"] .ob-req-group::before,
 .ob-q[data-answered="1"] .form-group::before {
   content: '';
   position: absolute;
@@ -2804,27 +2796,35 @@ body {
 .form-input {
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid rgba(251, 146, 60, 0.4);
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   color: var(--text);
-  /* Incomplete default: amber border + very faint amber fill */
-  background: rgba(251, 146, 60, 0.03);
+  background: var(--bg);
   transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
 }
-/* Complete: white border + normal dark fill */
-.form-input.is-complete {
+.form-input:focus {
+  outline: none;
+  border-color: var(--text-faint);
+}
+
+/* Mandatory context: amber treatment only when inside an ob-q wrapper.
+   Optional fields (YouTube URL, trailer, etc.) are not inside ob-q
+   and therefore always get the neutral base style above. */
+.ob-q .form-input {
+  border-color: rgba(251, 146, 60, 0.4);
+  background: rgba(251, 146, 60, 0.03);
+}
+.ob-q .form-input.is-complete {
   border-color: rgba(245, 245, 245, 0.7);
   background: var(--bg);
 }
-/* Focus: brighten the current state — no new color introduced */
-.form-input:focus {
-  outline: none;
+.ob-q .form-input:focus {
   border-color: rgba(251, 146, 60, 0.65);
   box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.12);
 }
-.form-input.is-complete:focus {
+.ob-q .form-input.is-complete:focus {
   border-color: rgba(245, 245, 245, 1);
   box-shadow: 0 0 0 2px rgba(245, 245, 245, 0.08);
 }
