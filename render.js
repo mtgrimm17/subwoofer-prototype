@@ -1903,24 +1903,42 @@ function aiInferenceBadge(fieldId, value) {
   return '<span class="ai-badge">✦</span>';
 }
 
-/* ── iOS section helper: YES/NO question row ─────────── */
-// inverted=true: NO is the "safe" answer — placed first and styled green
-function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
-  const val = state.iosSubmitAnswers[fieldId];
-  const ttText = tooltip || desc || '';
-  const ttHTML = ttText ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${ttText}</span></span>` : '';
+/* ══════════════════════════════════════════════════════
+   SHARED UI PRIMITIVES
+   These are app-level building blocks used by every platform.
+   Add new question types here — never per-platform.
+   ══════════════════════════════════════════════════════ */
 
+/**
+ * ynRow — YES/NO question row.
+ * Shared across all platforms. Handles toggle, amber rail, and tooltip.
+ *
+ * @param {string}  label         Question text (may include HTML)
+ * @param {*}       value         Current value: 'yes' | 'no' | null
+ * @param {string}  onYes         onclick expression for YES button
+ * @param {string}  onNo          onclick expression for NO button
+ * @param {string}  [tooltip]     Tooltip body text
+ * @param {boolean} [inverted]    Swap yes/no visual styling (NO = safe answer)
+ * @param {string}  [yesClassXtra] Extra CSS classes on YES button (e.g. AI confidence)
+ * @param {string}  [noClassXtra]  Extra CSS classes on NO button
+ * @param {string}  [yesContent]  Full button inner HTML (default: 'YES')
+ * @param {string}  [noContent]   Full button inner HTML (default: 'NO')
+ */
+function ynRow(label, value, onYes, onNo,
+               tooltip = '', inverted = false,
+               yesClassXtra = '', noClassXtra = '',
+               yesContent = 'YES', noContent = 'NO') {
+  const ttHTML  = tooltip
+    ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>`
+    : '';
   const yesBase = inverted ? 'yn-btn yn-no' : 'yn-btn yn-yes';
   const noBase  = inverted ? 'yn-btn yn-yes' : 'yn-btn yn-no';
-
-  const yesClass = `${yesBase}${val === 'yes' ? ' is-selected' + aiInferenceClass(fieldId, 'yes') : ''}`;
-  const noClass  = `${noBase}${val === 'no'  ? ' is-selected' + aiInferenceClass(fieldId, 'no')  : ''}`;
-
-  const yesBtn = `<button class="${yesClass}" onclick="answerIOSField('${fieldId}','yes')">YES${aiInferenceBadge(fieldId, 'yes')}</button>`;
-  const noBtn  = `<button class="${noClass}"  onclick="answerIOSField('${fieldId}','no')">NO${aiInferenceBadge(fieldId, 'no')}</button>`;
-
+  const yesClass = `${yesBase}${value === 'yes' ? ' is-selected' : ''}${yesClassXtra ? ' ' + yesClassXtra : ''}`;
+  const noClass  = `${noBase}${value === 'no'  ? ' is-selected' : ''}${noClassXtra  ? ' ' + noClassXtra  : ''}`;
+  const yesBtn = `<button class="${yesClass}" onclick="${onYes}">${yesContent}</button>`;
+  const noBtn  = `<button class="${noClass}"  onclick="${onNo}">${noContent}</button>`;
   return `
-    <div class="ios-q-row" data-answered="${val !== null ? '1' : '0'}">
+    <div class="ios-q-row" data-answered="${value !== null && value !== undefined ? '1' : '0'}">
       <div class="ios-q-left">
         <div class="ios-q-label">${label}${ttHTML}</div>
       </div>
@@ -1930,22 +1948,72 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
     </div>`;
 }
 
-/* ── iOS section helper: None / Infrequent / Frequent row */
-function iosIntensityRow(label, fieldId, tooltip) {
-  const val = state.iosSubmitAnswers[fieldId];
-  const ttHTML = tooltip ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>` : '';
-
-  function iClass(v, base) { return `intensity-btn ${val === v ? base + aiInferenceClass(fieldId, v) : ''}`; }
-
+/**
+ * singleSelectRow — horizontal button group, single selection.
+ * Shared across all platforms. Handles toggle and amber rail.
+ * Use for intensity (None/Infrequent/Frequent), 3-way choices, etc.
+ *
+ * @param {string} label    Question text
+ * @param {*}      value    Current selected value (null = unanswered)
+ * @param {Array}  options  [{value, label, selectedClass, onSelect, extraClass, content}]
+ *                          - selectedClass: CSS class added when this option is selected
+ *                          - onSelect: onclick expression string
+ *                          - content: optional override HTML inside button
+ * @param {string} [tooltip]
+ */
+function singleSelectRow(label, value, options, tooltip = '') {
+  const ttHTML  = tooltip
+    ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>`
+    : '';
+  const answered = value !== null && value !== undefined;
+  const btns = options.map(o => {
+    const sel = value === o.value;
+    const cls = `intensity-btn${sel && o.selectedClass ? ' ' + o.selectedClass : ''}${sel && o.extraClass ? ' ' + o.extraClass : ''}`;
+    return `<button class="${cls}" onclick="${o.onSelect}">${o.content || o.label}</button>`;
+  }).join('');
   return `
-    <div class="ios-q-row ios-q-row-intensity" data-answered="${val !== null ? '1' : '0'}">
+    <div class="ios-q-row ios-q-row-intensity" data-answered="${answered ? '1' : '0'}">
       <div class="ios-q-label ios-q-label-sm">${label}${ttHTML}</div>
-      <div class="intensity-group">
-        <button class="${iClass('none',       'is-sel-none')}"       onclick="answerIOSField('${fieldId}','none')">None${aiInferenceBadge(fieldId, 'none')}</button>
-        <button class="${iClass('infrequent', 'is-sel-infrequent')}" onclick="answerIOSField('${fieldId}','infrequent')">Infrequent${aiInferenceBadge(fieldId, 'infrequent')}</button>
-        <button class="${iClass('frequent',   'is-sel-frequent')}"   onclick="answerIOSField('${fieldId}','frequent')">Frequent${aiInferenceBadge(fieldId, 'frequent')}</button>
-      </div>
+      <div class="intensity-group">${btns}</div>
     </div>`;
+}
+
+/* ── iOS wrappers — add AI inference decoration on top of shared primitives ── */
+
+// iOS YES/NO row: injects AI confidence classes and badge content
+function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
+  const val    = state.iosSubmitAnswers[fieldId];
+  const ttText = tooltip || desc || '';
+  return ynRow(
+    label, val,
+    `answerIOSField('${fieldId}','yes')`,
+    `answerIOSField('${fieldId}','no')`,
+    ttText, inverted,
+    val === 'yes' ? aiInferenceClass(fieldId, 'yes').trim() : '',
+    val === 'no'  ? aiInferenceClass(fieldId, 'no').trim()  : '',
+    'YES' + aiInferenceBadge(fieldId, 'yes'),
+    'NO'  + aiInferenceBadge(fieldId, 'no')
+  );
+}
+
+// iOS intensity row (None / Infrequent / Frequent): injects AI decoration
+function iosIntensityRow(label, fieldId, tooltip) {
+  const val  = state.iosSubmitAnswers[fieldId];
+  const opts = [
+    { value: 'none',       label: 'None',       selectedClass: 'is-sel-none',
+      extraClass: val === 'none'       ? aiInferenceClass(fieldId, 'none').trim()       : '',
+      content: 'None'       + aiInferenceBadge(fieldId, 'none'),
+      onSelect: `answerIOSField('${fieldId}','none')` },
+    { value: 'infrequent', label: 'Infrequent', selectedClass: 'is-sel-infrequent',
+      extraClass: val === 'infrequent' ? aiInferenceClass(fieldId, 'infrequent').trim() : '',
+      content: 'Infrequent' + aiInferenceBadge(fieldId, 'infrequent'),
+      onSelect: `answerIOSField('${fieldId}','infrequent')` },
+    { value: 'frequent',   label: 'Frequent',   selectedClass: 'is-sel-frequent',
+      extraClass: val === 'frequent'   ? aiInferenceClass(fieldId, 'frequent').trim()   : '',
+      content: 'Frequent'   + aiInferenceBadge(fieldId, 'frequent'),
+      onSelect: `answerIOSField('${fieldId}','frequent')` },
+  ];
+  return singleSelectRow(label, val, opts, tooltip);
 }
 
 /* ── Privacy ─────────────────────────────────────────── */
@@ -2589,22 +2657,13 @@ function swSelect(id, currentValue, options, onChangeFn) {
     </div>`;
 }
 
-/* Helper: YN row reading from androidSubmitAnswers */
-function androidYNRow(label, fieldId, desc, extraClass = '') {
+/* Android YES/NO row — thin wrapper over shared ynRow primitive */
+function androidYNRow(label, fieldId, desc) {
   const val = state.androidSubmitAnswers[fieldId];
-  const ttHTML = desc ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${desc}</span></span>` : '';
-  const yesClass = `yn-btn yn-yes${val === 'yes' ? ' is-selected' : ''}`;
-  const noClass  = `yn-btn yn-no${val === 'no'  ? ' is-selected' : ''}`;
-  return `
-    <div class="ios-q-row${extraClass ? ' ' + extraClass : ''}" data-answered="${val !== null ? '1' : '0'}">
-      <div class="ios-q-left">
-        <div class="ios-q-label">${label}${ttHTML}</div>
-      </div>
-      <div class="question-yn">
-        <button class="${yesClass}" onclick="answerAndroidField('${fieldId}','yes')">YES</button>
-        <button class="${noClass}"  onclick="answerAndroidField('${fieldId}','no')">NO</button>
-      </div>
-    </div>`;
+  return ynRow(label, val,
+    `answerAndroidField('${fieldId}','yes')`,
+    `answerAndroidField('${fieldId}','no')`,
+    desc);
 }
 
 /* Android Content Rating */
@@ -2744,10 +2803,7 @@ function buildAndroidDataSafetySection() {
       </div>` : '';
 
     // Data deletion 3-way
-    const delYes  = a.providesDataDeletion === 'yes';
-    const delNo   = a.providesDataDeletion === 'no';
-    const delAuto = a.providesDataDeletion === 'auto90';
-    const delAnswered = a.providesDataDeletion !== null;
+
     const delDataField = delYes ? `
       <div class="form-group" style="margin-top:10px;">
         <label class="form-label">Data deletion URL</label>
@@ -2788,16 +2844,18 @@ function buildAndroidDataSafetySection() {
 
       <div class="ios-subsection">
         <div class="ios-subsection-head">Data deletion</div>
-        <div class="ios-q-row" data-answered="${delAnswered ? '1' : '0'}">
-          <div class="ios-q-left">
-            <div class="ios-q-label">Do you provide a way for users to request that their data is deleted without deleting their account?</div>
-          </div>
-          <div class="intensity-group">
-            <button class="intensity-btn${delYes  ? ' is-sel-none' : ''}" onclick="answerAndroidField('providesDataDeletion','yes')">Yes</button>
-            <button class="intensity-btn${delAuto ? ' is-sel-infrequent' : ''}" onclick="answerAndroidField('providesDataDeletion','auto90')">Auto-deleted (90 days)</button>
-            <button class="intensity-btn${delNo   ? ' is-sel-frequent' : ''}"  onclick="answerAndroidField('providesDataDeletion','no')">No</button>
-          </div>
-        </div>
+        ${singleSelectRow(
+          'Do you provide a way for users to request that their data is deleted without deleting their account?',
+          a.providesDataDeletion,
+          [
+            { value: 'yes',    label: 'Yes',                    selectedClass: 'is-sel-none',
+              onSelect: "answerAndroidField('providesDataDeletion','yes')" },
+            { value: 'auto90', label: 'Auto-deleted (90 days)', selectedClass: 'is-sel-infrequent',
+              onSelect: "answerAndroidField('providesDataDeletion','auto90')" },
+            { value: 'no',     label: 'No',                     selectedClass: 'is-sel-frequent',
+              onSelect: "answerAndroidField('providesDataDeletion','no')" },
+          ]
+        )}
         ${delDataField}
       </div>
 
