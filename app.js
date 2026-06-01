@@ -253,6 +253,15 @@ function seedOnboardingToIOS() {
 }
 
 async function openStepModal(pid, stepId) {
+  if (pid === 'android') {
+    seedOnboardingToAndroid();
+    state.stepModal = { platformId: pid, stepId, inferenceStatus: null };
+    renderStepModal();
+    document.getElementById('submit-overlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+
   seedOnboardingToIOS();
 
   state.stepModal = { platformId: pid, stepId, inferenceStatus: null };
@@ -292,6 +301,7 @@ function closeStepModal() {
   document.getElementById('submit-overlay').classList.add('hidden');
   document.body.style.overflow = '';
   updateIOSCard();
+  updateAndroidCard();
 }
 
 function submitOverlayClick(e) {
@@ -2064,4 +2074,141 @@ function handleCQMulti(el) {
     const body = document.getElementById('cq-modal-body');
     if (body) body.scrollTop = scroll;
   });
+}
+
+/* ═══════════════════════════════════════════════════
+   ANDROID HANDLERS
+   ═══════════════════════════════════════════════════ */
+
+/* Seed Android answers from onboarding data where possible */
+function seedOnboardingToAndroid() {
+  const a  = state.androidSubmitAnswers;
+  const fd = state.formData;
+  const qa = state.questionAnswers;
+  // Pre-populate collectsOrSharesData from onboarding question
+  if (a.collectsOrSharesData === null && qa.dataCollection !== null) {
+    a.collectsOrSharesData = qa.dataCollection;
+  }
+}
+
+/* Update the Android card in the dashboard after changes */
+function updateAndroidCard() {
+  if (!state.activePlatforms.has('android')) return;
+  const counts = platformStepCount('android');
+  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+
+  const barFill = document.getElementById('bar-fill-android');
+  if (barFill) barFill.style.width = pct + '%';
+
+  const stepCountEl = document.getElementById('step-count-android');
+  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
+
+  PLATFORMS.android.steps.forEach((step, i) => {
+    const card = document.getElementById(`android-step-card-${step.id}`);
+    if (!card) return;
+    const done = isAndroidSectionComplete(step.id);
+    card.classList.toggle('is-complete', done);
+
+    const numEl = card.querySelector('.ios-step-num');
+    if (numEl) {
+      numEl.classList.toggle('is-done', done);
+      const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      numEl.innerHTML = done ? checkSVG : String(i + 1);
+    }
+  });
+
+  const submitBtn = document.getElementById('submit-btn-android');
+  if (submitBtn) {
+    const allDone = counts.allRequired;
+    submitBtn.classList.toggle('is-locked', !allDone);
+    if (allDone) {
+      submitBtn.removeAttribute('disabled');
+      submitBtn.setAttribute('onclick', "finalSubmit('android')");
+    } else {
+      submitBtn.setAttribute('disabled', '');
+      submitBtn.setAttribute('onclick', '');
+    }
+  }
+}
+
+/* Re-render Data Safety modal body preserving scroll */
+function reRenderAndroidStepModal() {
+  const bodyEl = document.getElementById('step-modal-body');
+  const scrollTop = bodyEl ? bodyEl.scrollTop : 0;
+  renderStepModal();
+  const newBodyEl = document.getElementById('step-modal-body');
+  if (newBodyEl) newBodyEl.scrollTop = scrollTop;
+}
+
+/* Answer a yes/no android field */
+function answerAndroidField(fieldId, value) {
+  state.androidSubmitAnswers[fieldId] = value;
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
+/* Answer a text field */
+function answerAndroidTextField(fieldId, value) {
+  state.androidSubmitAnswers[fieldId] = value;
+  updateAndroidCard();
+}
+
+/* Toggle account creation method */
+function toggleAndroidAccountMethod(methodId, checked) {
+  const a = state.androidSubmitAnswers;
+  if (checked) {
+    if (!a.accountMethods.includes(methodId)) a.accountMethods.push(methodId);
+    a.noAccountCreation = false;
+  } else {
+    a.accountMethods = a.accountMethods.filter(m => m !== methodId);
+  }
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
+/* Toggle "no account creation" checkbox */
+function toggleAndroidNoAccount(checked) {
+  const a = state.androidSubmitAnswers;
+  a.noAccountCreation = checked;
+  if (checked) a.accountMethods = [];
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
+/* Toggle a data type in/out of selection */
+function toggleAndroidDataType(typeId, checked) {
+  const a = state.androidSubmitAnswers;
+  if (checked) {
+    if (!a.dataPerType[typeId]) {
+      a.dataPerType[typeId] = { collected: true, shared: false, ephemeral: false, required: true, purposes: [] };
+    }
+  } else {
+    delete a.dataPerType[typeId];
+  }
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
+/* Toggle collected/shared/ephemeral/required flags for a data type */
+function toggleAndroidTypeFlag(typeId, flag, value) {
+  const a = state.androidSubmitAnswers;
+  if (!a.dataPerType[typeId]) {
+    a.dataPerType[typeId] = { collected: false, shared: false, ephemeral: false, required: true, purposes: [] };
+  }
+  a.dataPerType[typeId][flag] = value;
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
+/* Toggle a purpose for a data type */
+function toggleAndroidPurpose(typeId, purposeId, checked) {
+  const a = state.androidSubmitAnswers;
+  if (!a.dataPerType[typeId]) return;
+  const purposes = a.dataPerType[typeId].purposes;
+  if (checked) {
+    if (!purposes.includes(purposeId)) purposes.push(purposeId);
+  } else {
+    a.dataPerType[typeId].purposes = purposes.filter(p => p !== purposeId);
+  }
+  updateAndroidCard();
 }

@@ -636,13 +636,10 @@ const PLATFORMS = {
   android: {
     id: 'android', label: 'Google Play', color: '#34A853',
     steps: [
-      { id: 'reviewMetadata',     label: 'Review Metadata' },
-      { id: 'confirmScreenshots', label: 'Confirm Screenshots & Feature Graphic' },
-      { id: 'dataSafety',         label: 'Data Safety' },
-      { id: 'releaseTrack',       label: 'Release Track' },
-      { id: 'storePreview',       label: 'Store Page Preview' },
-      { id: 'reviewSubmission',   label: 'Review Submission',     isReview: true },
-      { id: 'submit',             label: 'Submit to Google Play', isSubmit: true },
+      { id: 'dataSafety',    label: 'Data Safety',        hasInference: false },
+      { id: 'contentRating', label: 'Content Rating',     hasInference: false },
+      { id: 'storeListing',  label: 'Store Listing',      hasInference: false },
+      { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
     ],
   },
   steam: {
@@ -723,6 +720,11 @@ function platformStepCount(platformId) {
   // iOS: completion is computed from submission answers, not manual task status
   if (platformId === 'ios') {
     const complete = p.steps.filter(s => isIOSSectionComplete(s.id)).length;
+    return { total: p.steps.length, complete, submitDone: false, allRequired: complete === p.steps.length };
+  }
+  // Android: completion is computed from androidSubmitAnswers
+  if (platformId === 'android') {
+    const complete = p.steps.filter(s => isAndroidSectionComplete(s.id)).length;
     return { total: p.steps.length, complete, submitDone: false, allRequired: complete === p.steps.length };
   }
   const required = p.steps.filter(s => !s.isSubmit);
@@ -1112,6 +1114,166 @@ function isIOSSectionComplete(sectionId) {
   return false;
 }
 
+/* ── Google Play Data Safety ─────────────────────────── */
+
+// Google Play data type taxonomy
+const ANDROID_DATA_TYPES = [
+  { group: 'Location', types: [
+    { id: 'approx_location',   label: 'Approximate location', desc: 'User or device location to an area ≥ 3 km², such as city-level' },
+    { id: 'precise_location',  label: 'Precise location',     desc: 'User or device location within < 3 km²' },
+  ]},
+  { group: 'Personal info', types: [
+    { id: 'name',              label: 'Name',                  desc: 'First or last name, or nickname' },
+    { id: 'email_address',     label: 'Email address',         desc: "A user's email address" },
+    { id: 'user_ids',          label: 'User IDs',              desc: 'Identifiers such as account ID, account number, or account name' },
+    { id: 'address',           label: 'Address',               desc: 'Mailing or home address' },
+    { id: 'phone_number',      label: 'Phone number',          desc: "A user's phone number" },
+    { id: 'race_ethnicity',    label: 'Race and ethnicity',    desc: '' },
+    { id: 'political_beliefs', label: 'Political or religious beliefs', desc: '' },
+    { id: 'sexual_orientation',label: 'Sexual orientation',    desc: '' },
+    { id: 'other_personal',    label: 'Other personal info',   desc: 'Date of birth, gender identity, veteran status, etc.' },
+  ]},
+  { group: 'Financial info', types: [
+    { id: 'payment_info',      label: 'User payment info',     desc: 'Bank account number or payment card number' },
+    { id: 'purchase_history',  label: 'Purchase history',      desc: 'Information about purchases or transactions made by the user' },
+    { id: 'credit_score',      label: 'Credit score',          desc: "A user's credit score" },
+    { id: 'other_financial',   label: 'Other financial info',  desc: 'Salary, assets, debts, etc.' },
+  ]},
+  { group: 'Health and fitness', types: [
+    { id: 'health_info',       label: 'Health info',           desc: 'Medical records, symptoms, etc.' },
+    { id: 'fitness_info',      label: 'Fitness info',          desc: 'Exercise or physical activity data' },
+  ]},
+  { group: 'Messages', types: [
+    { id: 'emails',            label: 'Emails',                desc: 'Email subject line, sender, recipients, contents' },
+    { id: 'sms',               label: 'SMS or MMS',            desc: 'Text messages including sender and recipients' },
+    { id: 'other_messages',    label: 'Other in-app messages', desc: 'Instant messages, chat content, etc.' },
+  ]},
+  { group: 'Photos and videos', types: [
+    { id: 'photos',            label: 'Photos',                desc: "A user's photos" },
+    { id: 'videos',            label: 'Videos',                desc: "A user's videos" },
+  ]},
+  { group: 'Audio files', types: [
+    { id: 'voice_recordings',  label: 'Voice or sound recordings', desc: 'Voicemail or sound recordings' },
+    { id: 'music_files',       label: 'Music files',           desc: "A user's music files" },
+    { id: 'other_audio',       label: 'Other audio files',     desc: 'Any other audio files created or provided by a user' },
+  ]},
+  { group: 'Files and docs', types: [
+    { id: 'files_docs',        label: 'Files and docs',        desc: "A user's files or documents, or info about them (e.g. file names)" },
+  ]},
+  { group: 'Calendar', types: [
+    { id: 'calendar_events',   label: 'Calendar events',       desc: 'Events, event notes, and attendees' },
+  ]},
+  { group: 'Contacts', types: [
+    { id: 'contacts',          label: 'Contacts',              desc: 'Names, phone numbers, email addresses from address book' },
+  ]},
+  { group: 'App activity', types: [
+    { id: 'app_interactions',  label: 'App interactions',      desc: 'Taps, page visits, or other interactions' },
+    { id: 'in_app_search',     label: 'In-app search history', desc: 'What a user has searched for in your app' },
+    { id: 'installed_apps',    label: 'Installed apps',        desc: "Information about apps installed on a user's device" },
+    { id: 'other_ugc',         label: 'Other user-generated content', desc: 'Bios, notes, open-ended responses, etc.' },
+    { id: 'other_actions',     label: 'Other actions',         desc: 'Gameplay, likes, dialog options, etc.' },
+  ]},
+  { group: 'Web browsing', types: [
+    { id: 'web_history',       label: 'Web browsing history',  desc: 'Information about websites a user has visited' },
+  ]},
+  { group: 'App info and performance', types: [
+    { id: 'crash_logs',        label: 'Crash logs',            desc: 'Crash data, stack traces, or other crash-related info' },
+    { id: 'diagnostics',       label: 'Diagnostics',           desc: 'Battery life, loading time, latency, framerate, technical diagnostics' },
+    { id: 'other_perf',        label: 'Other app performance data', desc: 'Any other app performance data' },
+  ]},
+  { group: 'Device or other IDs', types: [
+    { id: 'device_ids',        label: 'Device or other IDs',  desc: 'IMEI, MAC address, Advertising Identifier, Play Installment ID, etc.' },
+  ]},
+];
+
+// Flat lookup: typeId → { id, label, desc, group }
+const ANDROID_DATA_TYPE_LOOKUP = {};
+ANDROID_DATA_TYPES.forEach(g => g.types.forEach(t => { ANDROID_DATA_TYPE_LOOKUP[t.id] = { ...t, group: g.group }; }));
+
+const ANDROID_PURPOSES = [
+  { id: 'app_functionality', label: 'App functionality',                      desc: 'Features available in your app — necessary for the app to work' },
+  { id: 'analytics',         label: 'Analytics',                              desc: 'Collect data about how users use your app or how it performs' },
+  { id: 'developer_comms',   label: 'Developer communications',               desc: 'Send news or notifications about your app or developer' },
+  { id: 'advertising',       label: 'Advertising or marketing',               desc: 'Display or target ads, or track ad performance' },
+  { id: 'fraud_prevention',  label: 'Fraud prevention, security & compliance', desc: 'Fraud prevention, security, or compliance with laws' },
+  { id: 'personalization',   label: 'Personalization',                        desc: 'Customize what is shown to the user — e.g., content recommendations' },
+  { id: 'account_management',label: 'Account management',                     desc: 'Setup or management of a user\'s account with your app or company' },
+];
+
+const ANDROID_ACCOUNT_METHODS = [
+  { id: 'username_password',  label: 'Username and password' },
+  { id: 'username_other',     label: 'Username and other authentication method' },
+  { id: 'username_pw_other',  label: 'Username, password, and other authentication method' },
+  { id: 'oauth',              label: 'OAuth (Sign in with Google, Facebook, etc.)' },
+  { id: 'other',              label: 'Other' },
+];
+
+function makeBlankAndroidAnswers() {
+  return {
+    // Data Safety — Section 1: Collection & Security
+    collectsOrSharesData:     null,  // 'yes' / 'no'
+    encryptedInTransit:       null,  // 'yes' / 'no'
+    accountMethods:           [],    // array of ANDROID_ACCOUNT_METHODS ids
+    noAccountCreation:        false, // true = "No account creation required"
+    deleteAccountUrl:         '',
+    providesDataDeletion:     null,  // 'yes' / 'no' / 'auto90'
+    deleteDataUrl:            '',
+    targetsFamilies:          null,  // 'yes' / 'no'
+    // Data Safety — Section 2: Data Types
+    // { [typeId]: { collected: bool, shared: bool, ephemeral: bool, required: bool, purposes: string[] } }
+    dataPerType:              {},
+    // Store Listing
+    storePreviewSeen:         false,
+  };
+}
+
+function isAndroidSectionComplete(sectionId) {
+  const a = state.androidSubmitAnswers;
+  if (sectionId === 'dataSafety') {
+    if (a.collectsOrSharesData === null) return false;
+    if (a.collectsOrSharesData === 'yes') {
+      if (a.encryptedInTransit === null) return false;
+      const types = Object.entries(a.dataPerType);
+      if (types.length === 0) return false;
+      for (const [, t] of types) {
+        if (!t.collected && !t.shared) return false;
+        if (t.purposes.length === 0) return false;
+      }
+    }
+    return true;
+  }
+  if (sectionId === 'contentRating') {
+    // Stub — complete when onboarding CQ is done (for now, always completable)
+    return true;
+  }
+  if (sectionId === 'storeListing') {
+    return !!(state.formData.title?.trim() && state.formData.description?.trim());
+  }
+  if (sectionId === 'storePreview') {
+    return !!a.storePreviewSeen;
+  }
+  return false;
+}
+
+function computeAndroidSectionRisk(sectionId) {
+  const a = state.androidSubmitAnswers;
+  if (sectionId === 'dataSafety') {
+    if (a.collectsOrSharesData === null) return 'HIGH';
+    if (a.collectsOrSharesData === 'yes') {
+      const types = Object.entries(a.dataPerType);
+      if (types.length === 0) return 'HIGH';
+      const allPurposes = types.every(([, t]) => t.purposes.length > 0);
+      if (!allPurposes) return 'MEDIUM';
+    }
+    return 'LOW';
+  }
+  if (sectionId === 'storeListing') {
+    if (!state.formData.title?.trim() || !state.formData.description?.trim()) return 'HIGH';
+    return 'LOW';
+  }
+  return 'LOW';
+}
+
 /* ── Risk Categories (Submit Modal) ─────────────────── */
 
 const RISK_CATEGORIES = [
@@ -1464,6 +1626,9 @@ const state = {
 
   // iOS App Store submission questionnaire answers
   iosSubmitAnswers: makeBlankIOSAnswers(),
+
+  // Google Play submission questionnaire answers
+  androidSubmitAnswers: makeBlankAndroidAnswers(),
 
   // Per-field AI inference metadata: { [fieldId]: { confidence: 0-100, humanConfirmed: bool } }
   iosAnswerMeta: {},

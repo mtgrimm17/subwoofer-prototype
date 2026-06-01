@@ -1261,7 +1261,8 @@ function renderDashboard() {
 }
 
 function buildActiveCard(pid) {
-  if (pid === 'ios') return buildIOSActiveCard(pid);
+  if (pid === 'ios')     return buildIOSActiveCard(pid);
+  if (pid === 'android') return buildAndroidActiveCard(pid);
 
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
@@ -1351,6 +1352,59 @@ function buildIOSActiveCard(pid) {
                 id="submit-btn-${pid}"
                 onclick="${locked ? '' : `finalSubmit('${pid}')`}"
                 title="${locked ? 'Complete all steps first' : 'Submit to App Store'}"
+                ${locked ? 'disabled' : ''}>
+          Submit
+        </button>
+      </div>
+      <div class="ios-step-cards">${stepCards}</div>
+    </div>`;
+}
+
+function buildAndroidActiveCard(pid) {
+  const p      = PLATFORMS[pid];
+  const counts = platformStepCount(pid);
+  const locked = !counts.allRequired;
+
+  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  const stepCards = p.steps.map((step, i) => {
+    const done = isAndroidSectionComplete(step.id);
+    const risk = computeAndroidSectionRisk(step.id);
+
+    const numClass = done ? 'is-done'
+      : risk === 'HIGH' ? 'is-risk-high'
+      : 'is-risk-warn';
+
+    return `
+      <div class="ios-step-card ${done ? 'is-complete' : ''}" id="android-step-card-${step.id}"
+           onclick="openStepModal('${pid}','${step.id}')">
+        <div class="ios-step-num ${numClass}">${done ? checkSVG : i + 1}</div>
+        <div class="ios-step-info">
+          <div class="ios-step-name">${step.label}</div>
+        </div>
+        <span class="ios-step-arrow">›</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="active-card" id="active-card-${pid}">
+      <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
+        <div class="active-card-platform">
+          <div class="active-card-icon">${platformIcon(pid, 18)}</div>
+          <div>
+            <div class="active-card-name">${p.label}</div>
+            <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-bar-wrap">
+        <div class="card-bar">
+          <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
+        </div>
+        <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
+                id="submit-btn-${pid}"
+                onclick="${locked ? '' : `finalSubmit('${pid}')`}"
+                title="${locked ? 'Complete all steps first' : 'Submit to Google Play'}"
                 ${locked ? 'disabled' : ''}>
           Submit
         </button>
@@ -1470,8 +1524,9 @@ function renderStepModal() {
   const modal = document.getElementById('submit-modal');
   if (!modal) return;
   const { platformId, stepId, inferenceStatus, inferenceError } = state.stepModal || {};
-  // Privacy section needs extra width for the data matrix
-  modal.className = 'submit-modal' + (stepId === 'privacy' ? ' submit-modal-wide' : '');
+  // Privacy / Data Safety sections need extra width for the data matrix
+  const isWide = stepId === 'privacy' || (platformId === 'android' && stepId === 'dataSafety');
+  modal.className = 'submit-modal' + (isWide ? ' submit-modal-wide' : '');
   if (!platformId || !stepId) return;
 
   const p    = PLATFORMS[platformId];
@@ -1512,13 +1567,20 @@ function renderStepModal() {
   let body = '';
   if (inferenceStatus === 'loading') {
     body = `<div class="step-loading-placeholder"><div class="step-loading-shimmer"></div><div class="step-loading-shimmer"></div><div class="step-loading-shimmer short"></div></div>`;
+  } else if (platformId === 'android') {
+    if (stepId === 'dataSafety')    body = buildAndroidDataSafetySection();
+    else if (stepId === 'contentRating') body = buildAndroidStubSection('Content Rating', 'Content rating for Google Play is determined by the <strong>IARC questionnaire</strong>, which you completed during onboarding. Your rating will be generated automatically based on those answers when you submit. No additional input is needed here.');
+    else if (stepId === 'storeListing')  body = buildAndroidStoreListingSection();
+    else if (stepId === 'storePreview')  body = buildAndroidStorePreviewSection();
   } else if (stepId === 'privacy')        body = buildPrivacySection();
   else if (stepId === 'contentRating')    body = buildContentRatingSection();
   else if (stepId === 'business')         body = buildBusinessSection() + buildExportComplianceSection();
   else if (stepId === 'distribution')     body = buildDistributionSection();
   else if (stepId === 'storePreview')     body = buildStorePreviewSection();
 
-  const complete = isIOSSectionComplete(stepId);
+  const complete = platformId === 'android'
+    ? isAndroidSectionComplete(stepId)
+    : isIOSSectionComplete(stepId);
 
   modal.innerHTML = `
     <div class="submit-modal-header" style="border-top-color:${p.color};">
@@ -2493,4 +2555,311 @@ function trailerFileRowHTML(name, mb, prefix = '') {
       <span class="trailer-file-size">${mb} MB</span>
       <button class="btn btn-ghost btn-sm" onclick="removeTrailer('${prefix}')">Remove</button>
     </div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   ANDROID STEP SECTIONS
+   ═══════════════════════════════════════════════════ */
+
+/* Helper: YN row reading from androidSubmitAnswers */
+function androidYNRow(label, fieldId, desc, extraClass = '') {
+  const val = state.androidSubmitAnswers[fieldId];
+  const ttHTML = desc ? `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${desc}</span></span>` : '';
+  const yesClass = `yn-btn yn-yes${val === 'yes' ? ' is-selected' : ''}`;
+  const noClass  = `yn-btn yn-no${val === 'no'  ? ' is-selected' : ''}`;
+  return `
+    <div class="ios-q-row${extraClass ? ' ' + extraClass : ''}" data-answered="${val !== null ? '1' : '0'}">
+      <div class="ios-q-left">
+        <div class="ios-q-label">${label}${ttHTML}</div>
+      </div>
+      <div class="question-yn">
+        <button class="${yesClass}" onclick="answerAndroidField('${fieldId}','yes')">YES</button>
+        <button class="${noClass}"  onclick="answerAndroidField('${fieldId}','no')">NO</button>
+      </div>
+    </div>`;
+}
+
+/* Stub section for steps not yet implemented */
+function buildAndroidStubSection(title, note) {
+  return `
+    <div class="ios-section-head">${title}</div>
+    <div class="sw-tip-box" style="margin-bottom:16px;">
+      <div class="sw-tip-box-row">
+        <img src="SubwooferIcon_Orange4.png" class="sw-tip-logo" alt="">
+        <span class="sw-tip-text">${note}</span>
+      </div>
+    </div>`;
+}
+
+/* Android Store Listing — review metadata */
+function buildAndroidStoreListingSection() {
+  const fd = state.formData;
+  const titleOk = !!(fd.title?.trim());
+  const descOk  = !!(fd.description?.trim());
+  return `
+    <div class="ios-section-head">Store Listing</div>
+    <p class="ios-section-desc">Review the metadata that will appear on your Google Play store listing. Edit via <strong>Game Details</strong> if anything needs to change.</p>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Title</label>
+      <div class="form-input is-complete" style="background:var(--bg-2);cursor:default;color:var(--text);">${escHtml(fd.title || '')}</div>
+      ${!titleOk ? '<div class="ios-risk-note risk-HIGH">Title is required — add it in Game Details.</div>' : ''}
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Short description <span style="color:var(--text-faint);font-weight:400;">(first 80 chars of description)</span></label>
+      <div class="form-input is-complete" style="background:var(--bg-2);cursor:default;color:var(--text);min-height:36px;">${escHtml((fd.description || '').slice(0, 80))}</div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Full description</label>
+      <div class="form-input is-complete" style="background:var(--bg-2);cursor:default;color:var(--text);min-height:72px;white-space:pre-wrap;">${escHtml(fd.description || '')}</div>
+      ${!descOk ? '<div class="ios-risk-note risk-HIGH">Description is required — add it in Game Details.</div>' : ''}
+    </div>`;
+}
+
+/* Android Store Preview — simple placeholder */
+function buildAndroidStorePreviewSection() {
+  const fd   = state.formData;
+  const ups  = state.uploads;
+  const icon = ups.appIcon;
+  const shots = ups.screenshots || [];
+  const title = escHtml(fd.title || 'Your Game Title');
+  const descRaw = fd.description || '';
+  const descShort = escHtml(descRaw.slice(0, 120) + (descRaw.length > 120 ? '…' : ''));
+
+  const iconHtml = icon
+    ? `<img src="${icon.dataUrl}" style="width:60px;height:60px;border-radius:14px;object-fit:cover;">`
+    : `<div style="width:60px;height:60px;border-radius:14px;background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:10px;">Icon</div>`;
+
+  const screenshotStrip = shots.length
+    ? `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:10px;">${shots.slice(0,5).map(s => `<img src="${s.dataUrl}" style="height:120px;border-radius:8px;flex-shrink:0;">`).join('')}</div>`
+    : `<div style="height:80px;background:var(--bg-2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:12px;margin-top:10px;">No screenshots uploaded</div>`;
+
+  // Mark as seen
+  state.androidSubmitAnswers.storePreviewSeen = true;
+
+  return `
+    <div class="ios-section-head">Store Page Preview</div>
+    <p class="ios-section-desc" style="margin-bottom:14px;">This is an approximation of how your game will appear on Google Play.</p>
+    <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        ${iconHtml}
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text);">${title}</div>
+          <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">Games</div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button style="background:#01875f;color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:13px;font-weight:500;cursor:pointer;">Install</button>
+          </div>
+        </div>
+      </div>
+      ${screenshotStrip}
+      <div style="font-size:12px;color:var(--text-faint);margin-top:12px;line-height:1.5;">${descShort}</div>
+    </div>`;
+}
+
+/* ── Android Data Safety ─────────────────────────────── */
+function buildAndroidDataSafetySection() {
+  const a = state.androidSubmitAnswers;
+  const collectsYes = a.collectsOrSharesData === 'yes';
+
+  // Security + account block (only if collects data)
+  let detailsBlock = '';
+  if (collectsYes) {
+    // Account creation
+    const methodChecks = ANDROID_ACCOUNT_METHODS.map(m => {
+      const checked = a.accountMethods.includes(m.id);
+      return `<label class="android-check-label">
+        <input type="checkbox" ${checked ? 'checked' : ''}
+               onchange="toggleAndroidAccountMethod('${m.id}', this.checked)">
+        <span>${m.label}</span>
+      </label>`;
+    }).join('');
+    const noAcctChecked = a.noAccountCreation;
+    const accountMethodsChecked = a.accountMethods.length > 0 || noAcctChecked;
+    const deleteAcctBlock = a.accountMethods.length > 0 ? `
+      <div class="form-group" style="margin-top:10px;">
+        <label class="form-label">Delete account URL <span style="color:var(--text-faint);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="url" value="${escHtml(a.deleteAccountUrl)}"
+               placeholder="https://yourgame.com/delete-account"
+               oninput="answerAndroidTextField('deleteAccountUrl', this.value)">
+        <div style="font-size:11px;color:var(--text-faint);margin-top:4px;">Required if you offer account creation. A URL where users can request account deletion.</div>
+      </div>` : '';
+
+    // Data deletion
+    let deletionBlock = '';
+    if (a.providesDataDeletion === 'yes') {
+      deletionBlock = `
+        <div class="form-group" style="margin-top:10px;">
+          <label class="form-label">Delete data URL <span style="color:var(--text-faint);font-weight:400;">(optional)</span></label>
+          <input class="form-input" type="url" value="${escHtml(a.deleteDataUrl)}"
+                 placeholder="https://yourgame.com/delete-data"
+                 oninput="answerAndroidTextField('deleteDataUrl', this.value)">
+        </div>`;
+    }
+    const delYes   = a.providesDataDeletion === 'yes';
+    const delNo    = a.providesDataDeletion === 'no';
+    const delAuto  = a.providesDataDeletion === 'auto90';
+
+    detailsBlock = `
+      <div class="ios-subsection">
+        <div class="ios-subsection-head">Security</div>
+        ${androidYNRow('Is all user data collected by your app encrypted in transit?',
+          'encryptedInTransit',
+          'Data is encrypted as it travels between the user\'s device and your servers.')}
+      </div>
+
+      <div class="ios-subsection">
+        <div class="ios-subsection-head">Account creation</div>
+        <div style="font-size:13px;color:var(--text-faint);margin-bottom:10px;">What sign-in options does your app offer?</div>
+        ${methodChecks}
+        <label class="android-check-label" style="margin-top:4px;">
+          <input type="checkbox" ${noAcctChecked ? 'checked' : ''}
+                 onchange="toggleAndroidNoAccount(this.checked)">
+          <span>No account creation required</span>
+        </label>
+        ${deleteAcctBlock}
+      </div>
+
+      <div class="ios-subsection">
+        <div class="ios-subsection-head">Data deletion</div>
+        <div style="font-size:13px;color:var(--text-faint);margin-bottom:10px;">Do you provide a way for users to request that their data is deleted without deleting their account?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="yn-btn yn-yes${delYes ? ' is-selected' : ''}" onclick="answerAndroidField('providesDataDeletion','yes')">Yes</button>
+          <button class="yn-btn yn-no${delNo ? ' is-selected' : ''}"  onclick="answerAndroidField('providesDataDeletion','no')">No</button>
+          <button class="yn-btn${delAuto ? ' is-selected' : ''}"       onclick="answerAndroidField('providesDataDeletion','auto90')"
+                  style="border-color:var(--border);color:var(--text-faint);">No — auto-deleted within 90 days</button>
+        </div>
+        ${deletionBlock}
+      </div>
+
+      <div class="ios-subsection">
+        <div class="ios-subsection-head">Families policy</div>
+        ${androidYNRow('Does this app target children?', 'targetsFamilies',
+          'If your app targets children under 13, additional restrictions apply under Google Play\'s Families Policy.')}
+      </div>
+
+      <div class="ios-subsection">
+        <div class="ios-subsection-head">Data types</div>
+        <p class="ios-section-desc">Select every type of user data your app collects or shares. For each type, you\'ll specify how it\'s used.</p>
+        ${buildAndroidDataTypesPicker(a)}
+      </div>`;
+  }
+
+  return `
+    <div class="ios-section-head">Data Safety</div>
+    <p class="ios-section-desc">Google Play requires you to disclose what user data your app collects and shares, and how it's used. This information appears on your store listing.</p>
+
+    ${androidYNRow(
+      'Does your app collect or share any of the required user data types?',
+      'collectsOrSharesData',
+      'Required types include location, personal info, financial info, health, messages, files, contacts, app activity, identifiers, and more. See the Data Safety section for the full list.'
+    )}
+
+    ${detailsBlock}`;
+}
+
+function buildAndroidDataTypesPicker(a) {
+  const selectedIds = new Set(Object.keys(a.dataPerType));
+  const totalSelected = selectedIds.size;
+
+  // Build category list
+  let categoriesHtml = '';
+  ANDROID_DATA_TYPES.forEach(group => {
+    const groupTypes = group.types;
+    const anySelected = groupTypes.some(t => selectedIds.has(t.id));
+    const typesHtml = groupTypes.map(t => {
+      const checked = selectedIds.has(t.id);
+      return `<label class="android-check-label android-type-label">
+        <input type="checkbox" ${checked ? 'checked' : ''}
+               onchange="toggleAndroidDataType('${t.id}', this.checked)">
+        <span class="android-type-name">${t.label}</span>
+        ${t.desc ? `<span class="android-type-desc">${t.desc}</span>` : ''}
+      </label>`;
+    }).join('');
+
+    categoriesHtml += `
+      <div class="android-type-group${anySelected ? ' has-selection' : ''}">
+        <div class="android-type-group-head">${group.group}</div>
+        <div class="android-type-group-body">${typesHtml}</div>
+      </div>`;
+  });
+
+  // Per-type usage questions for selected types
+  let usageHtml = '';
+  if (totalSelected > 0) {
+    const usageRows = [...selectedIds].map(typeId => {
+      const typeMeta = ANDROID_DATA_TYPE_LOOKUP[typeId];
+      if (!typeMeta) return '';
+      const td = a.dataPerType[typeId] || { collected: false, shared: false, ephemeral: false, required: false, purposes: [] };
+
+      const purposeChecks = ANDROID_PURPOSES.map(p => {
+        const checked = (td.purposes || []).includes(p.id);
+        return `<label class="android-check-label android-purpose-label">
+          <input type="checkbox" ${checked ? 'checked' : ''}
+                 onchange="toggleAndroidPurpose('${typeId}','${p.id}',this.checked)">
+          <span>${p.label}</span>
+        </label>`;
+      }).join('');
+
+      const isCollected = td.collected;
+      const isShared    = td.shared;
+
+      return `
+        <div class="android-usage-row">
+          <div class="android-usage-type-head">
+            <span class="android-usage-type-name">${typeMeta.label}</span>
+            <span class="android-usage-group-tag">${typeMeta.group}</span>
+          </div>
+          <div class="android-usage-fields">
+            <div class="android-usage-field">
+              <div class="android-usage-field-label">How is this data handled?</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="yn-btn${isCollected ? ' is-selected' : ''}"
+                        onclick="toggleAndroidTypeFlag('${typeId}','collected',${!isCollected})"
+                        style="${isCollected ? '' : 'border-color:var(--border);color:var(--text-faint);'}">Collected</button>
+                <button class="yn-btn${isShared ? ' is-selected' : ''}"
+                        onclick="toggleAndroidTypeFlag('${typeId}','shared',${!isShared})"
+                        style="${isShared ? '' : 'border-color:var(--border);color:var(--text-faint);'}">Shared</button>
+              </div>
+            </div>
+            ${isCollected ? `
+            <div class="android-usage-field">
+              <div class="android-usage-field-label">Is this data only processed temporarily?</div>
+              <div style="display:flex;gap:8px;">
+                <button class="yn-btn yn-yes${td.ephemeral ? ' is-selected' : ''}" onclick="toggleAndroidTypeFlag('${typeId}','ephemeral',true)">Yes</button>
+                <button class="yn-btn yn-no${!td.ephemeral ? ' is-selected' : ''}"  onclick="toggleAndroidTypeFlag('${typeId}','ephemeral',false)">No</button>
+              </div>
+            </div>
+            <div class="android-usage-field">
+              <div class="android-usage-field-label">Is this data collection required, or can users opt out?</div>
+              <div style="display:flex;gap:8px;">
+                <button class="yn-btn${td.required ? ' is-selected' : ''}"
+                        onclick="toggleAndroidTypeFlag('${typeId}','required',true)"
+                        style="${td.required ? '' : 'border-color:var(--border);color:var(--text-faint);'}">Required</button>
+                <button class="yn-btn${!td.required ? ' is-selected' : ''}"
+                        onclick="toggleAndroidTypeFlag('${typeId}','required',false)"
+                        style="${!td.required ? '' : 'border-color:var(--border);color:var(--text-faint);'}">Optional</button>
+              </div>
+            </div>` : ''}
+            <div class="android-usage-field">
+              <div class="android-usage-field-label">Why is this data collected or shared?</div>
+              <div class="android-purpose-grid">${purposeChecks}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    usageHtml = `
+      <div class="android-usage-section">
+        <div class="ios-subsection-head" style="margin-top:16px;margin-bottom:10px;">Data usage & purposes</div>
+        ${usageRows}
+      </div>`;
+  }
+
+  return `
+    <div class="android-types-wrap">
+      <div class="android-types-header">
+        ${totalSelected > 0 ? `<span class="prv-count-badge">${totalSelected} type${totalSelected !== 1 ? 's' : ''} selected</span>` : '<span style="font-size:12px;color:var(--text-faint);">Select all types that apply</span>'}
+      </div>
+      <div class="android-types-categories">${categoriesHtml}</div>
+    </div>
+    ${usageHtml}`;
 }
