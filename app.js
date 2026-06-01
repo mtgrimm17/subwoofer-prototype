@@ -2154,43 +2154,27 @@ function answerAndroidTextField(fieldId, value) {
 }
 
 /* Toggle account creation method */
-function toggleAndroidAccountMethod(methodId, checked) {
-  const a = state.androidSubmitAnswers;
-  if (checked) {
-    if (!a.accountMethods.includes(methodId)) a.accountMethods.push(methodId);
-    a.noAccountCreation = false;
-  } else {
-    a.accountMethods = a.accountMethods.filter(m => m !== methodId);
-  }
+/* Single-select account creation method */
+function setAndroidAccountMethod(methodId) {
+  state.androidSubmitAnswers.accountMethod = methodId || null;
   reRenderAndroidStepModal();
   updateAndroidCard();
 }
 
-/* Toggle "no account creation" checkbox */
-function toggleAndroidNoAccount(checked) {
+/* Toggle a data type row on/off (row click) */
+function toggleAndroidDataType(typeId) {
   const a = state.androidSubmitAnswers;
-  a.noAccountCreation = checked;
-  if (checked) a.accountMethods = [];
-  reRenderAndroidStepModal();
-  updateAndroidCard();
-}
-
-/* Toggle a data type in/out of selection */
-function toggleAndroidDataType(typeId, checked) {
-  const a = state.androidSubmitAnswers;
-  if (checked) {
-    if (!a.dataPerType[typeId]) {
-      a.dataPerType[typeId] = { collected: true, shared: false, ephemeral: false, required: true, purposes: [] };
-    }
-  } else {
+  if (a.dataPerType[typeId]) {
     delete a.dataPerType[typeId];
+  } else {
+    a.dataPerType[typeId] = { collected: true, shared: false, ephemeral: false, required: true, purposes: [] };
   }
   reRenderAndroidStepModal();
   updateAndroidCard();
 }
 
-/* Toggle collected/shared/ephemeral/required flags for a data type */
-function toggleAndroidTypeFlag(typeId, flag, value) {
+/* Set a boolean flag (collected/shared/ephemeral/required) on a data type */
+function setAndroidTypeFlag(typeId, flag, value) {
   const a = state.androidSubmitAnswers;
   if (!a.dataPerType[typeId]) {
     a.dataPerType[typeId] = { collected: false, shared: false, ephemeral: false, required: true, purposes: [] };
@@ -2210,5 +2194,113 @@ function toggleAndroidPurpose(typeId, purposeId, checked) {
   } else {
     a.dataPerType[typeId].purposes = purposes.filter(p => p !== purposeId);
   }
+  updateAndroidCard();
+}
+
+/* Toggle the data matrix expanded/collapsed */
+function toggleAndroidMatrix() {
+  state.androidMatrixExpanded = !state.androidMatrixExpanded;
+  reRenderAndroidStepModal();
+}
+
+/* Plain-language data description → AI translation */
+function updateAndroidDataDescription(val) {
+  state.androidSubmitAnswers.androidDataDescription = val;
+  if (!val || val.trim().length < 20) return;
+  _triggerAndroidDataAI();
+}
+
+async function _triggerAndroidDataAI() {
+  if (!CLAUDE_API_KEY) return;
+  const desc = (state.androidSubmitAnswers.androidDataDescription || '').trim();
+  if (desc.length < 20) return;
+
+  state.androidDataAIStatus = 'loading';
+  reRenderAndroidStepModal();
+
+  const typeList    = ANDROID_DATA_TYPES.flatMap(g => g.types)
+    .map(t => `${t.id}: ${t.label} (${t.group})${t.desc ? ' — ' + t.desc : ''}`).join('\n');
+  const purposeList = ANDROID_PURPOSES.map(p => `${p.id}: ${p.label}`).join('\n');
+
+  const prompt = `You are helping a mobile game developer complete the Google Play Data Safety form.
+
+Developer's description of their data collection and sharing:
+"${desc}"
+
+Available data type IDs (id: label — description):
+${typeList}
+
+Available purpose IDs:
+${purposeList}
+
+Return ONLY valid JSON — no markdown fences, no extra text:
+{
+  "selections": [
+    {
+      "typeId": "<exact data type id>",
+      "collected": true,
+      "shared": false,
+      "ephemeral": false,
+      "required": true,
+      "purposes": ["<purpose id>", ...]
+    }
+  ]
+}
+
+Rules:
+- Only include types clearly mentioned or strongly implied by the description.
+- Set collected:true if the app collects this type, shared:true if shared with third parties.
+- ephemeral:true only if data is never stored (only processed in memory).
+- required:true if collection is mandatory for the app to function.
+- Only include purposes that genuinely apply.
+- Be conservative — omit rather than guess.`;
+
+  try {
+    const res = await fetch(CLAUDE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'x-api-key':                                 CLAUDE_API_KEY,
+        'anthropic-version':                         '2023-06-01',
+        'content-type':                              'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model:      CLAUDE_MODEL,
+        max_tokens: 1000,
+        messages:   [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+      }),
+    });
+
+    if (!res.ok) throw new Error('API ' + res.status);
+    const data    = await res.json();
+    const text    = (data.content?.[0]?.text || '').trim();
+    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed  = JSON.parse(cleaned);
+
+    const validTypeIds    = new Set(ANDROID_DATA_TYPES.flatMap(g => g.types).map(t => t.id));
+    const validPurposeIds = new Set(ANDROID_PURPOSES.map(p => p.id));
+    const newPerType      = {};
+
+    for (const sel of (parsed.selections || [])) {
+      if (!validTypeIds.has(sel.typeId)) continue;
+      const purposes = (sel.purposes || []).filter(p => validPurposeIds.has(p));
+      newPerType[sel.typeId] = {
+        collected: !!sel.collected,
+        shared:    !!sel.shared,
+        ephemeral: !!sel.ephemeral,
+        required:  sel.required !== false,
+        purposes,
+      };
+    }
+
+    state.androidSubmitAnswers.dataPerType = newPerType;
+    state.androidDataAIStatus = 'complete';
+    state.androidMatrixExpanded = true;
+  } catch (e) {
+    console.warn('[Android Data AI]', e.message);
+    state.androidDataAIStatus = 'error';
+  }
+
+  reRenderAndroidStepModal();
   updateAndroidCard();
 }

@@ -638,7 +638,7 @@ const PLATFORMS = {
     steps: [
       { id: 'dataSafety',    label: 'Data Safety',        hasInference: false },
       { id: 'contentRating', label: 'Content Rating',     hasInference: false },
-      { id: 'storeListing',  label: 'Store Listing',      hasInference: false },
+      { id: 'business',      label: 'Business',           hasInference: false },
       { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
     ],
   },
@@ -1206,6 +1206,7 @@ const ANDROID_ACCOUNT_METHODS = [
   { id: 'username_pw_other',  label: 'Username, password, and other authentication method' },
   { id: 'oauth',              label: 'OAuth (Sign in with Google, Facebook, etc.)' },
   { id: 'other',              label: 'Other' },
+  { id: 'none',               label: 'No account creation' },
 ];
 
 function makeBlankAndroidAnswers() {
@@ -1213,16 +1214,17 @@ function makeBlankAndroidAnswers() {
     // Data Safety — Section 1: Collection & Security
     collectsOrSharesData:     null,  // 'yes' / 'no'
     encryptedInTransit:       null,  // 'yes' / 'no'
-    accountMethods:           [],    // array of ANDROID_ACCOUNT_METHODS ids
-    noAccountCreation:        false, // true = "No account creation required"
+    accountMethod:            null,  // single-select: one of ANDROID_ACCOUNT_METHODS ids
+    accountMethodOther:       '',    // free text if accountMethod === 'other'
     deleteAccountUrl:         '',
     providesDataDeletion:     null,  // 'yes' / 'no' / 'auto90'
     deleteDataUrl:            '',
     targetsFamilies:          null,  // 'yes' / 'no'
-    // Data Safety — Section 2: Data Types
+    // Data Safety — Section 2: Data Usage
+    androidDataDescription:   '',   // plain-language → AI translates to data matrix
     // { [typeId]: { collected: bool, shared: bool, ephemeral: bool, required: bool, purposes: string[] } }
     dataPerType:              {},
-    // Store Listing
+    // Store Preview
     storePreviewSeen:         false,
   };
 }
@@ -1243,10 +1245,10 @@ function isAndroidSectionComplete(sectionId) {
     return true;
   }
   if (sectionId === 'contentRating') {
-    // Stub — complete when onboarding CQ is done (for now, always completable)
-    return true;
+    const { total, answered } = cqProgress();
+    return total > 0 && answered === total;
   }
-  if (sectionId === 'storeListing') {
+  if (sectionId === 'business') {
     return !!(state.formData.title?.trim() && state.formData.description?.trim());
   }
   if (sectionId === 'storePreview') {
@@ -1267,7 +1269,12 @@ function computeAndroidSectionRisk(sectionId) {
     }
     return 'LOW';
   }
-  if (sectionId === 'storeListing') {
+  if (sectionId === 'contentRating') {
+    const { total, answered } = cqProgress();
+    if (total === 0 || answered < total) return 'HIGH';
+    return 'LOW';
+  }
+  if (sectionId === 'business') {
     if (!state.formData.title?.trim() || !state.formData.description?.trim()) return 'HIGH';
     return 'LOW';
   }
@@ -1629,6 +1636,12 @@ const state = {
 
   // Google Play submission questionnaire answers
   androidSubmitAnswers: makeBlankAndroidAnswers(),
+
+  // Android data matrix expansion state
+  androidMatrixExpanded: false,
+
+  // Android data NLP AI translation status: null | 'loading' | 'complete' | 'error'
+  androidDataAIStatus: null,
 
   // Per-field AI inference metadata: { [fieldId]: { confidence: 0-100, humanConfirmed: bool } }
   iosAnswerMeta: {},
