@@ -2769,8 +2769,10 @@ body {
   background: var(--panel-2);
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 10px;
 }
+
+/* Grid sits below the dropzone as a sibling — not inside ob-req-group */
+.asset-grid { margin-top: 10px; }
 
 .asset-dropzone:hover, .asset-dropzone.is-over {
   border-color: var(--green);

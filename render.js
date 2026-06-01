@@ -734,20 +734,20 @@ function buildAssetsTab() {
         <div class="ob-section-hdr">Screenshots</div>
         <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
         <div class="ob-q ob-q--rail-only" id="ob-q-screenshots" data-answered="${state.uploads.screenshots.length > 0 ? '1' : '0'}">
-        <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
-          <div class="asset-dropzone" id="ob-screenshot-dropzone"
-               onclick="document.getElementById('ob-screenshot-input').click()"
-               ondragover="event.preventDefault(); this.classList.add('is-over')"
-               ondragleave="this.classList.remove('is-over')"
-               ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
-            <div class="asset-dropzone-icon">↑</div>
-            <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
-            <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
-            <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
-                   onchange="handleScreenshotFiles(this.files); this.value=''">
+          <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
+            <div class="asset-dropzone" id="ob-screenshot-dropzone"
+                 onclick="document.getElementById('ob-screenshot-input').click()"
+                 ondragover="event.preventDefault(); this.classList.add('is-over')"
+                 ondragleave="this.classList.remove('is-over')"
+                 ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
+              <div class="asset-dropzone-icon">↑</div>
+              <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
+              <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
+              <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
+                     onchange="handleScreenshotFiles(this.files); this.value=''">
+            </div>
           </div>
           <div class="asset-grid" id="ob-screenshot-grid"></div>
-        </div>
         </div><!-- /ob-q-screenshots -->
       </div>
 
@@ -2764,7 +2764,7 @@ function buildAndroidDataSafetySection() {
 
     // Data deletion 3-way
 
-    const delDataField = delYes ? `
+    const delDataField = a.providesDataDeletion === 'yes' ? `
       <div class="form-group" style="margin-top:10px;">
         <label class="form-label">Data deletion URL</label>
         <input class="form-input" type="url" value="${escHtml(a.deleteDataUrl)}"
