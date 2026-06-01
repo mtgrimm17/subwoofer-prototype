@@ -1636,8 +1636,26 @@ function closeAllDropdowns() {
   document.getElementById('submissionMenu')?.classList.remove('open');
   document.getElementById('profileMenu')?.classList.remove('open');
   document.getElementById('loc-primary-wrap')?.classList.remove('is-open');
+  // Close all swSelect dropdowns
+  document.querySelectorAll('.sw-select-wrap').forEach(el => el.classList.remove('is-open'));
   // Close language type-ahead search if open
   document.getElementById('lang-search-wrap')?.classList.add('hidden');
+}
+
+/* ── swSelect — reusable styled dropdown ─────────────── */
+
+function toggleSwSelect(event, id) {
+  event.stopPropagation();
+  const wrap = document.getElementById('swsel-' + id);
+  if (!wrap) return;
+  const isOpen = wrap.classList.contains('is-open');
+  closeAllDropdowns();
+  if (!isOpen) wrap.classList.add('is-open');
+}
+
+function swSelectChoose(id, value, callbackFn) {
+  closeAllDropdowns();
+  if (typeof window[callbackFn] === 'function') window[callbackFn](value);
 }
 
 /* ── Profile menu ────────────────────────────────────── */
@@ -2141,8 +2159,10 @@ function reRenderAndroidStepModal() {
 }
 
 /* Answer a yes/no android field */
+/* Toggle a yes/no or single-choice field — clicking same value again deselects to null */
 function answerAndroidField(fieldId, value) {
-  state.androidSubmitAnswers[fieldId] = value;
+  const current = state.androidSubmitAnswers[fieldId];
+  state.androidSubmitAnswers[fieldId] = (current === value) ? null : value;
   reRenderAndroidStepModal();
   updateAndroidCard();
 }

@@ -2561,6 +2561,34 @@ function trailerFileRowHTML(name, mb, prefix = '') {
    ANDROID STEP SECTIONS
    ═══════════════════════════════════════════════════ */
 
+/**
+ * swSelect — reusable styled dropdown (matches Primary Language picker aesthetic).
+ * @param {string}   id          Unique DOM id suffix — element gets id="swsel-{id}"
+ * @param {string}   currentValue  Currently selected value, or null
+ * @param {Array}    options      [{value, label}, ...]
+ * @param {string}   onChangeFn  Name of a global function called with the chosen value
+ */
+function swSelect(id, currentValue, options, onChangeFn) {
+  const chevSvg = `<svg class="loc-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+  const isNull  = currentValue === null || currentValue === undefined || currentValue === '';
+  const currentLabel = isNull ? 'Select…' : (options.find(o => o.value === currentValue)?.label || 'Select…');
+
+  const ddItems = options.map(o => `
+    <button class="loc-dd-item${o.value === currentValue ? ' is-current' : ''}"
+            onclick="swSelectChoose('${id}','${o.value}','${onChangeFn}')">
+      <span class="loc-dd-name">${escHtml(o.label)}</span>
+    </button>`).join('');
+
+  return `
+    <div class="loc-primary-wrap sw-select-wrap" id="swsel-${id}" style="min-width:0;max-width:100%;width:100%;">
+      <button class="loc-primary-pill" onclick="toggleSwSelect(event,'${id}')">
+        <span class="loc-primary-name${isNull ? ' is-placeholder' : ''}">${currentLabel}</span>
+        ${chevSvg}
+      </button>
+      <div class="loc-dropdown">${ddItems}</div>
+    </div>`;
+}
+
 /* Helper: YN row reading from androidSubmitAnswers */
 function androidYNRow(label, fieldId, desc, extraClass = '') {
   const val = state.androidSubmitAnswers[fieldId];
@@ -2750,12 +2778,9 @@ function buildAndroidDataSafetySection() {
         <div class="ios-subsection-head">Account creation</div>
         <div class="form-group">
           <label class="form-label">What sign-in options does your app offer?</label>
-          <select class="form-input" onchange="setAndroidAccountMethod(this.value)">
-            <option value="" ${!a.accountMethod ? 'selected' : ''}>Select…</option>
-            ${ANDROID_ACCOUNT_METHODS.map(m =>
-              `<option value="${m.id}" ${a.accountMethod === m.id ? 'selected' : ''}>${m.label}</option>`
-            ).join('')}
-          </select>
+          ${swSelect('android-account-method', a.accountMethod,
+            ANDROID_ACCOUNT_METHODS.map(m => ({value: m.id, label: m.label})),
+            'setAndroidAccountMethod')}
         </div>
         ${otherField}
         ${deleteAccountField}
@@ -2795,9 +2820,6 @@ function buildAndroidDataSafetySection() {
   }
 
   return `
-    <div class="ios-section-head">Data Safety</div>
-    <p class="ios-section-desc">Google Play requires you to disclose what user data your app collects and shares, and how it's used. This information appears on your store listing.</p>
-
     ${androidYNRow(
       'Does your app collect or share any user data?',
       'collectsOrSharesData',

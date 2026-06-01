@@ -5294,3 +5294,9 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   font-size: 12px;
   padding: 3px 0;
 }
+
+/* swSelect / loc-primary placeholder state */
+.loc-primary-name.is-placeholder {
+  color: var(--text-faint);
+  font-weight: 400;
+}
