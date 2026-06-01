@@ -5300,3 +5300,11 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   color: var(--text-faint);
   font-weight: 400;
 }
+
+/* Tab icon images (replaces dot-grid SVGs) */
+.ob-tab-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+}

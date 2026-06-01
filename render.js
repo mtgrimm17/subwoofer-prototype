@@ -22,53 +22,13 @@ function platformIcon(id, size = 20) {
 /* ── Onboarding ──────────────────────────────────────── */
 
 /* ── Tab icons: dot-grid SVGs (5×5, cell=3px, gap=1.5px, step=4.5) ── */
-function _dotGridSVG(cells) {
-  const s = 4.5, w = 3, r = 0.75;
-  const rects = cells.map(([c, row]) =>
-    `<rect x="${(c*s).toFixed(1)}" y="${(row*s).toFixed(1)}" width="${w}" height="${w}" rx="${r}"/>`
-  ).join('');
-  return `<svg width="20" height="20" viewBox="0 0 22 22" fill="currentColor" aria-hidden="true">${rects}</svg>`;
-}
-
-// About — document/ID card
-const OB_TAB_ICON_ABOUT = _dotGridSVG([
-  [0,0],[1,0],[2,0],[3,0],[4,0],
-  [0,1],[4,1],
-  [0,2],[1,2],[4,2],
-  [0,3],[1,3],[4,3],
-  [0,4],[1,4],[2,4],[3,4],[4,4],
-]);
-// Distribution — globe (circle with meridian/equator)
-const OB_TAB_ICON_DISTRIBUTION = _dotGridSVG([
-  [1,0],[2,0],[3,0],
-  [0,1],[2,1],[4,1],
-  [0,2],[1,2],[2,2],[3,2],[4,2],
-  [0,3],[2,3],[4,3],
-  [1,4],[2,4],[3,4],
-]);
-// Assets — stacked layers
-const OB_TAB_ICON_ASSETS = _dotGridSVG([
-  [1,0],[2,0],[3,0],
-  [0,1],[1,1],[2,1],[3,1],[4,1],
-  [1,2],[2,2],[3,2],
-  [0,3],[1,3],[2,3],[3,3],[4,3],
-  [1,4],[2,4],[3,4],
-]);
-// Compliance — shield
-const OB_TAB_ICON_COMPLIANCE = _dotGridSVG([
-  [1,0],[2,0],[3,0],
-  [0,1],[1,1],[2,1],[3,1],[4,1],
-  [0,2],[2,2],[4,2],
-  [1,3],[2,3],[3,3],
-  [2,4],
-]);
-
 const OB_TAB_DEFS = [
-  { label: 'About',        icon: () => OB_TAB_ICON_ABOUT        },
-  { label: 'Distribution', icon: () => OB_TAB_ICON_DISTRIBUTION },
-  { label: 'Assets',       icon: () => OB_TAB_ICON_ASSETS       },
-  { label: 'Compliance',   icon: () => OB_TAB_ICON_COMPLIANCE   },
+  { label: 'About',        icon: () => `<img src="Assets/Icon_About.png"        class="ob-tab-img" alt="">` },
+  { label: 'Distribution', icon: () => `<img src="Assets/Icon_Distribution.png" class="ob-tab-img" alt="">` },
+  { label: 'Assets',       icon: () => `<img src="Assets/Icon_Assets.png"       class="ob-tab-img" alt="">` },
+  { label: 'Compliance',   icon: () => `<img src="Assets/Icon_Compliance.png"   class="ob-tab-img" alt="">` },
 ];
+
 
 /* Returns 0–1 completion fraction for a given tab index */
 function getTabProgress(tabIdx) {
@@ -227,7 +187,7 @@ function buildDistributionTab() {
         </div>
 
         <div class="sw-tip-box" style="margin-bottom:10px;">
-          <img src="SubwooferIcon_Orange4.png" class="sw-tip-logo" alt="">
+          <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
           <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
         </div>
 
@@ -241,7 +201,7 @@ function buildDistributionTab() {
         <div class="ob-section-hdr">Localization</div>
 
         <div class="sw-tip-box" style="margin-bottom:12px;">
-          <img src="SubwooferIcon_Orange4.png" class="sw-tip-logo" alt="">
+          <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
           <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is a great way to increase traction and conversion in secondary markets.</span>
         </div>
 
@@ -546,7 +506,7 @@ function _legacyScenarioWidget_unused() {
     } else if (ls.status === 'done' && ls.found) {
       resultHtml = `
         <div class="sw-tip-box" style="margin-bottom:0;">
-          <img src="SubwooferIcon_Orange4.png" class="sw-tip-logo" alt="">
+          <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
           <div class="sw-tip-text">
             <div><strong class="sw-tip-bold">Subwoofer Tip:</strong> We found this on ${escHtml(ls.source || 'the store')}.</div>
             <div class="ob-live-found-desc" style="margin-top:6px;">${escHtml(ls.description || '')}</div>
@@ -1545,7 +1505,7 @@ function renderStepModal() {
       inferenceBanner = `
         <div class="sw-tip-box sw-tip-box-inference">
           <div class="sw-tip-box-row">
-            <img src="SubwooferIcon_Orange4.png" class="sw-tip-logo" alt="">
+            <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
             <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided.</span>
           </div>
           <div class="sw-tip-box-row sw-tip-box-actions">
@@ -2687,7 +2647,7 @@ function buildAndroidContentRatingSection() {
       ${done
         ? `<div class="sw-tip-box" style="margin-bottom:12px;">
              <div class="sw-tip-box-row">
-               <img src="SubwooferIcon_Orange4.png" class="sw-tip-logo" alt="">
+               <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
                <span class="sw-tip-text">Questionnaire complete — your content rating will be generated when you submit to Google Play.</span>
              </div>
            </div>`
@@ -2705,7 +2665,7 @@ function buildAndroidStubSection(title, note) {
     <div class="ios-section-head">${title}</div>
     <div class="sw-tip-box" style="margin-bottom:16px;">
       <div class="sw-tip-box-row">
-        <img src="SubwooferIcon_Orange4.png" class="sw-tip-logo" alt="">
+        <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
         <span class="sw-tip-text">${note}</span>
       </div>
     </div>`;

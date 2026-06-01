@@ -1383,8 +1383,12 @@ function confirmGameImport() {
       }
     });
     const gridWrap = document.getElementById('ob-plat-grid-wrap');
-    if (gridWrap) gridWrap.innerHTML = buildObPlatTilesHTML();
+    if (gridWrap) {
+      gridWrap.innerHTML = buildObPlatTilesHTML();
+      gridWrap.classList.remove('is-req-empty');
+    }
     renderOnboardingFooter();
+    updateObSectionStates();
   }
 
   ls.confirmed = true;
