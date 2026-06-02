@@ -320,34 +320,17 @@ function updateIOSCard() {
   const stepCountEl = document.getElementById('step-count-ios');
   if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
 
-  // Update each step card completion state + risk dot
+  // Update each step card: gray circle when incomplete, green checkmark when done
   PLATFORMS.ios.steps.forEach((step, i) => {
     const card = document.getElementById(`ios-step-card-${step.id}`);
     if (!card) return;
     const done = isIOSSectionComplete(step.id);
     card.classList.toggle('is-complete', done);
 
-    // Update risk dot
-    const risk = computeIOSSectionRisk(step.id);
-    let riskDot = card.querySelector('.ios-step-risk');
-    if (done) {
-      if (riskDot) riskDot.remove();
-    } else {
-      const dotClass = risk === 'HIGH' ? 'high' : risk === 'MEDIUM' ? 'medium' : 'none';
-      if (riskDot) {
-        riskDot.className = `ios-step-risk ios-step-risk-${dotClass}`;
-      } else {
-        // Insert before the arrow
-        const arrow = card.querySelector('.ios-step-arrow');
-        const dot = document.createElement('span');
-        dot.className = `ios-step-risk ios-step-risk-${dotClass}`;
-        card.insertBefore(dot, arrow);
-      }
-    }
-
     const numEl = card.querySelector('.ios-step-num');
     if (numEl) {
       numEl.classList.toggle('is-done', done);
+      numEl.classList.remove('is-risk-warn', 'is-risk-high');
       numEl.innerHTML = done
         ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
         : String(i + 1);
