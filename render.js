@@ -2624,35 +2624,186 @@ function androidYNRow(label, fieldId, desc) {
 
 /* Android Content Rating */
 function buildAndroidContentRatingSection() {
-  const { total, answered } = cqProgress();
-  const pct  = total ? Math.round((answered / total) * 100) : 0;
-  const done = answered === total && total > 0;
+  const { total, answered } = androidCqProgress();
 
-  return `
-    <div class="ios-section-head">Content Rating</div>
-    <p class="ios-section-desc">Google Play assigns content ratings via <strong>IARC</strong>. Subwoofer collects your answers through the Compliance Questionnaire and submits them automatically when you publish.</p>
+  /* Short labels and section name overrides for IARC/Google Play questions */
+  const SECTION_NAMES = {
+    'Blood, Violence, or Gory Images':                          'Violence & Gore',
+    'Fear':                                                     'Fear & Horror',
+    'Language':                                                 'Language',
+    'Crude Humor':                                              'Crude Humor',
+    'Nudity or Sexual Content':                                 'Nudity & Sexual Content',
+    'Controlled Substances':                                    'Controlled Substances',
+    'Gambling & Speculative Acts':                              'Gambling',
+    'Digital Purchases, Cash Convertible Rewards, or NFTs':     'Digital Purchases',
+    'Interactive Elements':                                     'Interactive Elements',
+    'Elements of Extremism':                                    'Extremism',
+  };
 
-    <div class="ios-subsection">
-      <div class="ios-subsection-head">Compliance Questionnaire</div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-        <div style="flex:1;background:var(--bg-2);border-radius:6px;height:6px;overflow:hidden;">
-          <div style="width:${pct}%;height:100%;background:${done ? '#34A853' : '#fb923c'};border-radius:6px;transition:width 0.3s;"></div>
-        </div>
-        <span style="font-size:12px;color:var(--text-faint);white-space:nowrap;">${answered} / ${total} answered</span>
-      </div>
-      ${done
-        ? `<div class="sw-tip-box" style="margin-bottom:12px;">
-             <div class="sw-tip-box-row">
-               <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-               <span class="sw-tip-text">Questionnaire complete — your content rating will be generated when you submit to Google Play.</span>
-             </div>
-           </div>`
-        : `<div class="ios-risk-note risk-HIGH" style="margin-bottom:12px;">Complete the Compliance Questionnaire before submitting. Your content rating cannot be generated without it.</div>`
+  const Q_LABELS = {
+    cq_violence:          'Violence or gory images',
+    cq_violence_types:    'Types of violence',
+    cq_violence_setting:  'Setting',
+    cq_violence_pixelated:'Art style',
+    cq_vh_reactions:      'Reactions to violence',
+    cq_vh_presentation:   'How violence is shown',
+    cq_vh_gore_level:     'Blood & gore level',
+    cq_vh_war:            'Realistic war setting',
+    cq_vh_innocents:      'Harm to innocents',
+    cq_vh_fierce:         'Intense or sinister elements',
+    cq_vnh_reactions:     'Reactions to non-human violence',
+    cq_vnh_gore_level:    'Non-human blood & gore level',
+    cq_vnh_human_like:    'Human-like creatures',
+    cq_vnh_real_animals:  'Violence against real animals',
+    cq_gore_assoc:        'Associated with violent acts',
+    cq_gore_explicitness: 'Explicitness',
+    cq_fear:              'Scary or horrifying content',
+    cq_fear_types:        'Types of fear content',
+    cq_fear_scary_freq:   'Frequency of scary elements',
+    cq_fear_horror_freq:  'Frequency of horrifying elements',
+    cq_fear_imminent:     'Intense unrelenting threat',
+    cq_language:          'Offensive language',
+    cq_language_types:    'Types of language',
+    cq_lang_minor_freq:   'Minor profanity frequency',
+    cq_lang_moderate_freq:'Moderate swearing frequency',
+    cq_lang_discrim_freq: 'Discriminatory language frequency',
+    cq_lang_sexual_freq:  'Sexual expletive frequency',
+    cq_crude:             'Crude humor',
+    cq_crude_bodily:      'Bodily humor types',
+    cq_sexual:            'Sexual or nudity content',
+    cq_sexual_types:      'Types of sexual content',
+    cq_sex_act_freq:      'Frequency of sexual acts',
+    cq_sex_act_depiction: 'How sexual acts are depicted',
+    cq_sex_act_minors:    'Characters under 18',
+    cq_sex_nudity_types:  'Nudity or revealing attire',
+    cq_sex_suggestive_desc:'Suggestive content description',
+    cq_sex_dating_focus:  'Dating games as primary focus',
+    cq_sex_violence_pres: 'Sexual violence depiction',
+    cq_substances:        'Drugs, alcohol, or tobacco',
+    cq_sub_types:         'Substance types',
+    cq_sub_drugs:         'Illegal drug depiction',
+    cq_sub_fantasy:       'Fantasy drug depiction',
+    cq_sub_medical:       'Medical drug depiction',
+    cq_sub_alcohol:       'Alcohol depiction',
+    cq_sub_tobacco:       'Tobacco depiction',
+    cq_gambling:          'Gambling or speculative acts',
+    cq_gamb_types:        'Gambling types',
+    cq_gamb_themes_focus: 'Gambling as primary focus',
+    cq_gamb_bingo_cash:   'Bingo with cash payouts',
+    cq_gamb_casino_cash:  'Casino with cash payouts',
+    cq_digital:           'Digital purchases',
+    cq_digital_types:     'Purchase types',
+    cq_digital_lootbox:   'Chance-based (loot boxes)',
+    cq_location:          'Live location sharing',
+    cq_user_interact:     'User-to-user interaction',
+    cq_interact_types:    'Interaction safeguards',
+    cq_extremism:         'Extremist content',
+  };
+
+  /* Render a single CQ question in Content Rating style */
+  function renderCRQuestion(q) {
+    const label   = Q_LABELS[q.id] || q.text;
+    const tooltip = q.text;
+    const ans     = state.cqAnswers[q.id];
+    const ttHTML  = `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${escHtml(tooltip)}</span></span>`;
+
+    if (q.type === 'yn') {
+      return ynRow(label + ttHTML, ans,
+        `answerAndroidCR('${q.id}','yes')`,
+        `answerAndroidCR('${q.id}','no')`);
+    }
+
+    if (q.type === 'single') {
+      const opts = q.options;
+      if (opts.length <= 4) {
+        // Intensity-style buttons — map options to None/mild/etc via index
+        const selClasses = ['is-sel-none','is-sel-infrequent','is-sel-frequent','is-sel-frequent'];
+        const answered = ans !== null && ans !== undefined && ans !== '';
+        const btns = opts.map((o, i) => {
+          const sel = ans === o;
+          return `<button class="intensity-btn${sel ? ' ' + selClasses[i] : ''}"
+                          onclick="answerAndroidCRSingle('${q.id}',${i})">${escHtml(o)}</button>`;
+        }).join('');
+        return `
+          <div class="ios-q-row ios-q-row-intensity" data-answered="${answered ? '1' : '0'}">
+            <div class="ios-q-label ios-q-label-sm">${label}${ttHTML}</div>
+            <div class="intensity-group">${btns}</div>
+          </div>`;
+      } else {
+        // Dropdown for many options
+        const isNull = ans === null || ans === undefined || ans === '';
+        const currentLabel = isNull ? 'Select…' : escHtml(ans);
+        const ddItems = opts.map((o, i) => `
+          <button class="loc-dd-item${ans === o ? ' is-current' : ''}"
+                  onclick="answerAndroidCRSingle('${q.id}',${i}); closeAllDropdowns()">
+            <span class="loc-dd-name">${escHtml(o)}</span>
+          </button>`).join('');
+        const chevSvg = `<svg class="loc-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+        const answered = !isNull;
+        return `
+          <div class="ios-q-row" data-answered="${answered ? '1' : '0'}">
+            <div class="ios-q-left"><div class="ios-q-label">${label}${ttHTML}</div></div>
+            <div class="loc-primary-wrap sw-select-wrap" id="swsel-cr-${q.id}" style="width:220px;flex-shrink:0;">
+              <button class="loc-primary-pill" onclick="toggleSwSelect(event,'cr-${q.id}')">
+                <span class="loc-primary-name${isNull ? ' is-placeholder' : ''}">${currentLabel}</span>
+                ${chevSvg}
+              </button>
+              <div class="loc-dropdown" style="right:0;left:auto;">${ddItems}</div>
+            </div>
+          </div>`;
       }
-      <button class="btn btn-primary" onclick="closeStepModal(); openCQModal()">
-        ${done ? 'Review questionnaire' : 'Complete questionnaire →'}
-      </button>
-    </div>`;
+    }
+
+    if (q.type === 'multi') {
+      const current = Array.isArray(ans) ? ans : [];
+      const answered = current.length > 0;
+      const checks = q.options.map(o => {
+        const checked = current.includes(o);
+        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''}
+                 onchange="toggleAndroidCRMulti('${q.id}', this.value, this.checked)"
+                 value="${escHtml(o)}">
+          <span>${escHtml(o)}</span>
+        </label>`;
+      }).join('');
+      return `
+        <div class="ios-q-row" data-answered="${answered ? '1' : '0'}" style="flex-direction:column;align-items:flex-start;">
+          <div class="ios-q-label" style="margin-bottom:8px;">${label}${ttHTML}</div>
+          <div class="cq-check-list">${checks}</div>
+        </div>`;
+    }
+
+    return '';
+  }
+
+  /* Group android-visible questions by section and render */
+  const androidQs = CQ_QUESTIONS.filter(q => q.platforms.includes('android'));
+  const sections  = [...new Set(androidQs.map(q => q.section))];
+
+  let html = '';
+  let firstSection = true;
+
+  sections.forEach(section => {
+    const visibleQs = androidQs.filter(q => q.section === section && cqIsVisible(q));
+    if (!visibleQs.length) return;
+
+    if (!firstSection) html += '<div class="ios-q-divider"></div>';
+    html += `<div class="ios-content-step-label">${SECTION_NAMES[section] || section}</div>`;
+    firstSection = false;
+
+    visibleQs.forEach(q => {
+      const wrap = q.indent > 0
+        ? `<div class="ios-followup">${renderCRQuestion(q)}</div>`
+        : renderCRQuestion(q);
+      html += wrap;
+    });
+  });
+
+  if (!html) {
+    html = `<div class="ios-risk-note risk-HIGH">No questions applicable. Make sure Google Play is activated as a platform.</div>`;
+  }
+
+  return html;
 }
 
 /* Stub section for steps not yet implemented */

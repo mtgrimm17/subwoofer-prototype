@@ -1229,6 +1229,19 @@ function makeBlankAndroidAnswers() {
   };
 }
 
+/* Progress for android-visible CQ questions only */
+function androidCqProgress() {
+  const visible  = CQ_QUESTIONS.filter(q => q.platforms.includes('android') && cqIsVisible(q));
+  const answered = visible.filter(q => {
+    const a = state.cqAnswers[q.id];
+    if (q.type === 'yn' || q.type === 'single') return a != null && a !== '' && a !== undefined;
+    if (q.type === 'multi')  return Array.isArray(a) && a.length > 0;
+    if (q.type === 'text')   return typeof a === 'string' && a.trim() !== '';
+    return false;
+  });
+  return { total: visible.length, answered: answered.length };
+}
+
 function isAndroidSectionComplete(sectionId) {
   const a = state.androidSubmitAnswers;
   if (sectionId === 'dataSafety') {
@@ -1245,7 +1258,7 @@ function isAndroidSectionComplete(sectionId) {
     return true;
   }
   if (sectionId === 'contentRating') {
-    const { total, answered } = cqProgress();
+    const { total, answered } = androidCqProgress();
     return total > 0 && answered === total;
   }
   if (sectionId === 'business') {
@@ -1270,7 +1283,7 @@ function computeAndroidSectionRisk(sectionId) {
     return 'LOW';
   }
   if (sectionId === 'contentRating') {
-    const { total, answered } = cqProgress();
+    const { total, answered } = androidCqProgress();
     if (total === 0 || answered < total) return 'HIGH';
     return 'LOW';
   }

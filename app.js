@@ -2112,6 +2112,48 @@ function handleCQMulti(el) {
    ═══════════════════════════════════════════════════ */
 
 /* Seed Android answers from onboarding data where possible */
+/* ── Android Content Rating — inline CQ answer handlers ─────
+   These update cqAnswers (shared with the CQ modal) but re-render
+   the step modal instead of the CQ modal.                      */
+
+function answerAndroidCR(qid, value) {
+  const current = state.cqAnswers[qid];
+  state.cqAnswers[qid] = (current === value) ? undefined : value;
+  _confirmCQHuman(qid);
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
+function answerAndroidCRSingle(qid, optIdx) {
+  const q = CQ_QUESTIONS.find(x => x.id === qid);
+  if (!q) return;
+  const opt     = q.options[optIdx];
+  const current = state.cqAnswers[qid];
+  state.cqAnswers[qid] = (current === opt) ? undefined : opt;
+  _confirmCQHuman(qid);
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
+function toggleAndroidCRMulti(qid, opt, checked) {
+  const NONE_RE = /\bnone\b/i;
+  const current = Array.isArray(state.cqAnswers[qid]) ? state.cqAnswers[qid] : [];
+  if (checked) {
+    if (NONE_RE.test(opt)) {
+      state.cqAnswers[qid] = [opt];
+    } else {
+      const filtered = current.filter(v => !NONE_RE.test(v));
+      if (!filtered.includes(opt)) filtered.push(opt);
+      state.cqAnswers[qid] = filtered;
+    }
+  } else {
+    state.cqAnswers[qid] = current.filter(v => v !== opt);
+  }
+  _confirmCQHuman(qid);
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
 function seedOnboardingToAndroid() {
   const a  = state.androidSubmitAnswers;
   const fd = state.formData;
