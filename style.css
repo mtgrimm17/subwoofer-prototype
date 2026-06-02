@@ -3609,11 +3609,8 @@ select.form-input {
 /* (no override needed — existing .yn-btn.is-selected already uses --sel-color blue) */
 
 /* AI inference confidence states
-   ai-certain  (≥90%): full opacity + badge — AI is sure, show the answer clearly
-   ai-confident (70–89%): dimmed + badge — AI is less sure, flag for review      */
-.yn-btn.is-selected.ai-certain     { /* full opacity — badge alone signals AI */ }
+   ai-confident: dimmed (0.5) + white ✦ badge — all AI-inferred answers look the same */
 .yn-btn.is-selected.ai-confident   { opacity: 0.5 !important; }
-.intensity-btn.ai-certain          { /* full opacity — badge alone signals AI */ }
 .intensity-btn.ai-confident        { opacity: 0.5 !important; }
 
 /* ✦ sparkle badge for AI-inferred answers */
@@ -5301,6 +5298,12 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
 .loc-primary-name.is-placeholder {
   color: var(--text-faint);
   font-weight: 400;
+}
+
+/* Incomplete swSelect — orange border when nothing selected */
+.sw-select-incomplete .loc-primary-pill {
+  border-color: rgba(251, 146, 60, 0.5);
+  background: rgba(251, 146, 60, 0.03);
 }
 
 /* Tab icon images (replaces dot-grid SVGs) */

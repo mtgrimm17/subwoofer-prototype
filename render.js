@@ -1278,14 +1278,10 @@ function buildIOSActiveCard(pid) {
     const risk = computeIOSSectionRisk(step.id);
 
     // Circle state: green check (done), red border (high risk flag), orange border (needs attention)
-    const numClass = done ? 'is-done'
-      : risk === 'HIGH' ? 'is-risk-high'
-      : 'is-risk-warn';
-
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="ios-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
-        <div class="ios-step-num ${numClass}">${done ? checkSVG : i + 1}</div>
+        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
           <div class="ios-step-name">${step.label}</div>
         </div>
@@ -1331,14 +1327,10 @@ function buildAndroidActiveCard(pid) {
     const done = isAndroidSectionComplete(step.id);
     const risk = computeAndroidSectionRisk(step.id);
 
-    const numClass = done ? 'is-done'
-      : risk === 'HIGH' ? 'is-risk-high'
-      : 'is-risk-warn';
-
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="android-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
-        <div class="ios-step-num ${numClass}">${done ? checkSVG : i + 1}</div>
+        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
           <div class="ios-step-name">${step.label}</div>
         </div>
@@ -1848,8 +1840,7 @@ function aiInferenceClass(fieldId, value) {
   const val  = state.iosSubmitAnswers[fieldId];
   const meta = state.iosAnswerMeta[fieldId];
   if (val !== value || !meta || meta.humanConfirmed) return '';
-  if (meta.confidence >= 90) return ' ai-certain';
-  return ' ai-confident';
+  return ' ai-confident';  // single AI-inferred state — confidence threshold handled at apply time
 }
 
 function aiInferenceBadge(fieldId, value) {
@@ -2592,7 +2583,7 @@ function trailerFileRowHTML(name, mb, prefix = '') {
  * @param {Array}    options      [{value, label}, ...]
  * @param {string}   onChangeFn  Name of a global function called with the chosen value
  */
-function swSelect(id, currentValue, options, onChangeFn) {
+function swSelect(id, currentValue, options, onChangeFn, width = '100%') {
   const chevSvg = `<svg class="loc-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
   const isNull  = currentValue === null || currentValue === undefined || currentValue === '';
   const currentLabel = isNull ? 'Select…' : (options.find(o => o.value === currentValue)?.label || 'Select…');
@@ -2604,7 +2595,7 @@ function swSelect(id, currentValue, options, onChangeFn) {
     </button>`).join('');
 
   return `
-    <div class="loc-primary-wrap sw-select-wrap" id="swsel-${id}" style="min-width:0;max-width:100%;width:100%;">
+    <div class="loc-primary-wrap sw-select-wrap" id="swsel-${id}" style="min-width:0;max-width:100%;width:${width};">
       <button class="loc-primary-pill" onclick="toggleSwSelect(event,'${id}')">
         <span class="loc-primary-name${isNull ? ' is-placeholder' : ''}">${currentLabel}</span>
         ${chevSvg}
@@ -2787,7 +2778,7 @@ function buildAndroidContentRatingSection() {
     const visibleQs = androidQs.filter(q => q.section === section && cqIsVisible(q));
     if (!visibleQs.length) return;
 
-    if (!firstSection) html += '<div class="ios-q-divider"></div>';
+    // no divider between sections — section label underline is sufficient
     html += `<div class="ios-content-step-label">${SECTION_NAMES[section] || section}</div>`;
     firstSection = false;
 
@@ -2917,7 +2908,7 @@ function buildAndroidDataSafetySection() {
 
   const familiesWarning = a.targetsFamilies === 'yes' ? `
     <div class="ios-risk-note risk-HIGH" style="margin-top:8px;">
-      <strong>Families Policy applies.</strong> Your app will be subject to strict Google Play Families Policy requirements: no behavioural advertising, no data collection beyond core functionality, content must meet ESRB Everyone or equivalent, and you may need to participate in the Teacher Approved program. Many developers select this by mistake — choose Yes only if children under 13 are your <em>primary intended audience</em>.
+      <strong>Families Policy applies.</strong> Your app will be subject to strict Google Play Families Policy requirements: no behavioural advertising, no data collection beyond core functionality, content must meet ESRB Everyone or equivalent, and you may need to participate in the Teacher Approved program.
     </div>` : '';
 
   const aiStatus = state.androidDataAIStatus;
@@ -2931,23 +2922,20 @@ function buildAndroidDataSafetySection() {
     : '';
 
   const detailsBlock = collectsYes ? `
-    <div class="ios-q-divider"></div>
     ${androidYNRow('Encrypted in transit', 'encryptedInTransit',
       'All user data transmitted between the app and your servers is encrypted (e.g. HTTPS/TLS).')}
-
-    <div class="ios-q-divider"></div>
     <div class="form-group" style="margin-top:2px;">
       <label class="form-label">Sign-in method
         <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">The authentication method your app uses when users create an account.</span></span>
       </label>
-      ${swSelect('android-account-method', a.accountMethod,
-        ANDROID_ACCOUNT_METHODS.map(m => ({value: m.id, label: m.label})),
-        'setAndroidAccountMethod')}
+      <div class="${!a.accountMethod ? 'sw-select-incomplete' : ''}">
+        ${swSelect('android-account-method', a.accountMethod,
+          ANDROID_ACCOUNT_METHODS.map(m => ({value: m.id, label: m.label})),
+          'setAndroidAccountMethod', '280px')}
+      </div>
     </div>
     ${otherField}
     ${deleteAccountField}
-
-    <div class="ios-q-divider"></div>
     ${singleSelectRow(
       'Data deletion without account deletion',
       a.providesDataDeletion,
@@ -2962,13 +2950,15 @@ function buildAndroidDataSafetySection() {
       'Do you provide a way for users to request deletion of their data without deleting their account? "Auto" means all data is automatically deleted within 90 days.'
     )}
     ${delDataField}
-
-    <div class="ios-q-divider"></div>
     ${androidYNRow('Primarily targets children under 13', 'targetsFamilies',
       'Select Yes ONLY if children under 13 are the primary intended audience of your app — not merely because children might also play it. This is a meaningful legal and policy distinction.')}
+    <div class="sw-tip-box" style="margin-top:6px;margin-bottom:4px;">
+      <div class="sw-tip-box-row">
+        <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
+        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer tip:</strong> Many developers select this by mistake — choose Yes only if children under 13 are your <em>primary intended audience</em>.</span>
+      </div>
+    </div>
     ${familiesWarning}
-
-    <div class="ios-q-divider"></div>
     <div class="prv-nlp-wrap" style="margin-top:2px;">
       <label class="form-label">Describe your data collection and sharing
         <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects or shares and why. Subwoofer will translate this into the required Google Play Data Safety selections.</span></span>

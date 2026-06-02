@@ -174,7 +174,7 @@ function applyClaudeResults(result) {
     if (!entry || typeof entry !== 'object') return;
     const { value, confidence } = entry;
     if (!validValues.includes(value)) return;
-    if (typeof confidence !== 'number' || confidence < 70) return;
+    if (typeof confidence !== "number" || confidence < 80) return;
     // Precedence: human answer (direct click or onboarding seed) always wins
     if (meta[fieldId]?.humanConfirmed) { filled++; return; }
     a[fieldId] = value;
@@ -640,7 +640,7 @@ function applyCQResults(result) {
 
     const { value, confidence } = entry;
     if (value === undefined || value === null) { skipped++; return; }
-    if (typeof confidence !== 'number' || confidence < 70) { skipped++; return; }
+    if (typeof confidence !== 'number' || confidence < 80) { skipped++; return; }
 
     // Never overwrite a human-confirmed answer
     if (state.cqAnswerMeta[q.id]?.humanConfirmed) { applied++; return; }
