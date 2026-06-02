@@ -2740,111 +2740,102 @@ function buildAndroidDataSafetySection() {
   const a = state.androidSubmitAnswers;
   const collectsYes = a.collectsOrSharesData === 'yes';
 
-  // Account method block
-  let accountBlock = '';
-  if (collectsYes) {
-    const hasAccountCreation = a.accountMethod && a.accountMethod !== 'none';
-    const otherField = a.accountMethod === 'other' ? `
-      <div class="form-group" style="margin-top:10px;">
-        <label class="form-label">Describe your authentication method</label>
-        <input class="form-input" type="text" value="${escHtml(a.accountMethodOther)}"
-               placeholder="e.g. Biometric login, SSO"
-               oninput="answerAndroidTextField('accountMethodOther', this.value)">
-      </div>` : '';
+  const hasAccountCreation = a.accountMethod && a.accountMethod !== 'none';
 
-    const deleteAccountField = hasAccountCreation ? `
-      <div class="form-group" style="margin-top:12px;">
-        <label class="form-label">Account deletion URL</label>
-        <input class="form-input" type="url" id="android-delete-acct-url"
-               value="${escHtml(a.deleteAccountUrl)}"
-               placeholder="https://yourgame.com/delete-account"
-               oninput="answerAndroidTextField('deleteAccountUrl', this.value)">
-        ${!a.deleteAccountUrl.trim() ? '<div class="ios-risk-note risk-HIGH">Required. Provide a URL where users can request account deletion.</div>' : ''}
-      </div>` : '';
+  const deleteAccountField = hasAccountCreation ? `
+    <div class="form-group" style="margin-top:10px;">
+      <label class="form-label">Account deletion URL</label>
+      <input class="form-input" type="url" id="android-delete-acct-url"
+             value="${escHtml(a.deleteAccountUrl)}"
+             placeholder="https://yourgame.com/delete-account"
+             oninput="answerAndroidTextField('deleteAccountUrl', this.value)">
+      ${!a.deleteAccountUrl.trim() ? '<div class="ios-risk-note risk-HIGH">Required. Provide a URL where users can request account deletion.</div>' : ''}
+    </div>` : '';
 
-    // Data deletion 3-way
+  const otherField = a.accountMethod === 'other' ? `
+    <div class="form-group" style="margin-top:8px;">
+      <label class="form-label">Describe your authentication method</label>
+      <input class="form-input" type="text" value="${escHtml(a.accountMethodOther)}"
+             placeholder="e.g. Biometric login, SSO"
+             oninput="answerAndroidTextField('accountMethodOther', this.value)">
+    </div>` : '';
 
-    const delDataField = a.providesDataDeletion === 'yes' ? `
-      <div class="form-group" style="margin-top:10px;">
-        <label class="form-label">Data deletion URL</label>
-        <input class="form-input" type="url" value="${escHtml(a.deleteDataUrl)}"
-               placeholder="https://yourgame.com/delete-data"
-               oninput="answerAndroidTextField('deleteDataUrl', this.value)">
-      </div>` : '';
+  const delDataField = a.providesDataDeletion === 'yes' ? `
+    <div class="form-group" style="margin-top:8px;">
+      <label class="form-label">Data deletion URL</label>
+      <input class="form-input" type="url" value="${escHtml(a.deleteDataUrl)}"
+             placeholder="https://yourgame.com/delete-data"
+             oninput="answerAndroidTextField('deleteDataUrl', this.value)">
+    </div>` : '';
 
-    // NLP description + matrix
-    const descVal = (a.androidDataDescription || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const aiStatus = state.androidDataAIStatus;
-    const statusHtml = aiStatus === 'loading'
-      ? `<div class="prv-nlp-status loading"><span class="ai-spinner"></span> Translating to data safety labels…</div>`
-      : aiStatus === 'complete'
-      ? `<div class="prv-nlp-status done">✓ Data types updated — expand below to review or adjust</div>`
-      : aiStatus === 'error'
-      ? `<div class="prv-nlp-status error">Translation failed. <button class="btn-inline" onclick="_triggerAndroidDataAI()">Try again</button></div>`
-      : '';
+  const aiStatus = state.androidDataAIStatus;
+  const descVal  = (a.androidDataDescription || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const statusHtml = aiStatus === 'loading'
+    ? `<div class="prv-nlp-status loading"><span class="ai-spinner"></span> Translating to data safety labels…</div>`
+    : aiStatus === 'complete'
+    ? `<div class="prv-nlp-status done">✓ Data types updated — expand below to review or adjust</div>`
+    : aiStatus === 'error'
+    ? `<div class="prv-nlp-status error">Translation failed. <button class="btn-inline" onclick="_triggerAndroidDataAI()">Try again</button></div>`
+    : '';
 
-    accountBlock = `
-      <div class="ios-subsection">
-        <div class="ios-subsection-head">Security</div>
-        ${androidYNRow('Is all of the user data collected by your app encrypted in transit?', 'encryptedInTransit',
-          'Data is encrypted as it travels between the user\'s device and your servers.')}
-      </div>
+  const detailsBlock = collectsYes ? `
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Security</div>
+    ${androidYNRow('Encrypted in transit', 'encryptedInTransit',
+      'All user data transmitted between the app and your servers is encrypted (e.g. HTTPS/TLS).')}
 
-      <div class="ios-subsection">
-        <div class="ios-subsection-head">Account creation</div>
-        <div class="form-group">
-          <label class="form-label">What sign-in options does your app offer?</label>
-          ${swSelect('android-account-method', a.accountMethod,
-            ANDROID_ACCOUNT_METHODS.map(m => ({value: m.id, label: m.label})),
-            'setAndroidAccountMethod')}
-        </div>
-        ${otherField}
-        ${deleteAccountField}
-      </div>
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Account creation</div>
+    <div class="form-group" style="margin-top:6px;">
+      <label class="form-label">Sign-in method
+        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">The authentication method(s) your app uses when users create an account.</span></span>
+      </label>
+      ${swSelect('android-account-method', a.accountMethod,
+        ANDROID_ACCOUNT_METHODS.map(m => ({value: m.id, label: m.label})),
+        'setAndroidAccountMethod')}
+    </div>
+    ${otherField}
+    ${deleteAccountField}
 
-      <div class="ios-subsection">
-        <div class="ios-subsection-head">Data deletion</div>
-        ${singleSelectRow(
-          'Do you provide a way for users to request that their data is deleted without deleting their account?',
-          a.providesDataDeletion,
-          [
-            { value: 'yes',    label: 'Yes',                    selectedClass: 'is-sel-none',
-              onSelect: "answerAndroidField('providesDataDeletion','yes')" },
-            { value: 'auto90', label: 'Auto-deleted (90 days)', selectedClass: 'is-sel-infrequent',
-              onSelect: "answerAndroidField('providesDataDeletion','auto90')" },
-            { value: 'no',     label: 'No',                     selectedClass: 'is-sel-frequent',
-              onSelect: "answerAndroidField('providesDataDeletion','no')" },
-          ]
-        )}
-        ${delDataField}
-      </div>
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Data deletion</div>
+    ${singleSelectRow(
+      'Data deletion without account deletion',
+      a.providesDataDeletion,
+      [
+        { value: 'yes',    label: 'Yes',          selectedClass: 'is-sel-none',
+          onSelect: "answerAndroidField('providesDataDeletion','yes')" },
+        { value: 'auto90', label: 'Auto (90 days)',selectedClass: 'is-sel-infrequent',
+          onSelect: "answerAndroidField('providesDataDeletion','auto90')" },
+        { value: 'no',     label: 'No',            selectedClass: 'is-sel-frequent',
+          onSelect: "answerAndroidField('providesDataDeletion','no')" },
+      ],
+      'Do you provide a way for users to request deletion of their data without deleting their account? "Auto" means data is automatically deleted within 90 days.'
+    )}
+    ${delDataField}
 
-      <div class="ios-subsection">
-        <div class="ios-subsection-head">Families policy</div>
-        ${androidYNRow('Does your app target children?', 'targetsFamilies',
-          'If your app targets children under 13, additional restrictions apply under Google Play\'s Families Policy.')}
-      </div>
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Families policy</div>
+    ${androidYNRow('Targets children', 'targetsFamilies',
+      'App is designed for or marketed to children under 13. Triggers Google Play\'s Families Policy requirements.')}
 
-      <div class="prv-nlp-wrap">
-        <label class="form-label">Describe your data collection and sharing
-          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects or shares and why. Subwoofer will translate this into the required Google Play Data Safety selections.</span></span>
-        </label>
-        <textarea class="form-input prv-nlp-textarea"
-                  placeholder="e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network."
-                  onblur="updateAndroidDataDescription(this.value)">${descVal}</textarea>
-        ${statusHtml}
-        ${buildAndroidDataMatrix(a)}
-      </div>`;
-  }
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Data types</div>
+    <div class="prv-nlp-wrap" style="margin-top:6px;">
+      <label class="form-label">Describe your data collection and sharing
+        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects or shares and why. Subwoofer will translate this into the required Google Play Data Safety selections.</span></span>
+      </label>
+      <textarea class="form-input prv-nlp-textarea"
+                placeholder="e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network."
+                onblur="updateAndroidDataDescription(this.value)">${descVal}</textarea>
+      ${statusHtml}
+      ${buildAndroidDataMatrix(a)}
+    </div>` : '';
 
   return `
-    ${androidYNRow(
-      'Does your app collect or share any user data?',
-      'collectsOrSharesData',
-      'Includes location, personal info, financial info, health, messages, files, contacts, app activity, identifiers, and more.'
-    )}
-
-    ${accountBlock}`;
+    ${androidYNRow('Collects or shares user data', 'collectsOrSharesData',
+      'Includes location, personal info, financial info, health data, messages, files, contacts, app activity, identifiers, and similar required disclosures.')}
+    ${detailsBlock}`;
 }
 
 function buildAndroidDataMatrix(a) {
