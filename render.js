@@ -1508,10 +1508,6 @@ function renderStepModal() {
             <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
             <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided.</span>
           </div>
-          <div class="sw-tip-box-row sw-tip-box-actions">
-            <button class="ai-see-prompt-btn" onclick="togglePromptDrawer(this)">See prompt</button>
-            <div class="ai-prompt-drawer">${(state.claudeLastPrompt || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-          </div>
         </div>`;
     } else if (inferenceStatus === 'error') {
       inferenceBanner = `
@@ -2768,6 +2764,11 @@ function buildAndroidDataSafetySection() {
              oninput="answerAndroidTextField('deleteDataUrl', this.value)">
     </div>` : '';
 
+  const familiesWarning = a.targetsFamilies === 'yes' ? `
+    <div class="ios-risk-note risk-HIGH" style="margin-top:8px;">
+      <strong>Families Policy applies.</strong> Your app will be subject to strict Google Play Families Policy requirements: no behavioural advertising, no data collection beyond core functionality, content must meet ESRB Everyone or equivalent, and you may need to participate in the Teacher Approved program. Many developers select this by mistake — choose Yes only if children under 13 are your <em>primary intended audience</em>.
+    </div>` : '';
+
   const aiStatus = state.androidDataAIStatus;
   const descVal  = (a.androidDataDescription || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const statusHtml = aiStatus === 'loading'
@@ -2780,15 +2781,13 @@ function buildAndroidDataSafetySection() {
 
   const detailsBlock = collectsYes ? `
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Security</div>
     ${androidYNRow('Encrypted in transit', 'encryptedInTransit',
       'All user data transmitted between the app and your servers is encrypted (e.g. HTTPS/TLS).')}
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Account creation</div>
-    <div class="form-group" style="margin-top:6px;">
+    <div class="form-group" style="margin-top:2px;">
       <label class="form-label">Sign-in method
-        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">The authentication method(s) your app uses when users create an account.</span></span>
+        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">The authentication method your app uses when users create an account.</span></span>
       </label>
       ${swSelect('android-account-method', a.accountMethod,
         ANDROID_ACCOUNT_METHODS.map(m => ({value: m.id, label: m.label})),
@@ -2798,30 +2797,28 @@ function buildAndroidDataSafetySection() {
     ${deleteAccountField}
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Data deletion</div>
     ${singleSelectRow(
       'Data deletion without account deletion',
       a.providesDataDeletion,
       [
-        { value: 'yes',    label: 'Yes',          selectedClass: 'is-sel-none',
+        { value: 'yes',    label: 'Yes',           selectedClass: 'is-sel-none',
           onSelect: "answerAndroidField('providesDataDeletion','yes')" },
-        { value: 'auto90', label: 'Auto (90 days)',selectedClass: 'is-sel-infrequent',
+        { value: 'auto90', label: 'Auto (90 days)', selectedClass: 'is-sel-infrequent',
           onSelect: "answerAndroidField('providesDataDeletion','auto90')" },
-        { value: 'no',     label: 'No',            selectedClass: 'is-sel-frequent',
+        { value: 'no',     label: 'No',             selectedClass: 'is-sel-frequent',
           onSelect: "answerAndroidField('providesDataDeletion','no')" },
       ],
-      'Do you provide a way for users to request deletion of their data without deleting their account? "Auto" means data is automatically deleted within 90 days.'
+      'Do you provide a way for users to request deletion of their data without deleting their account? "Auto" means all data is automatically deleted within 90 days.'
     )}
     ${delDataField}
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Families policy</div>
-    ${androidYNRow('Targets children', 'targetsFamilies',
-      'App is designed for or marketed to children under 13. Triggers Google Play\'s Families Policy requirements.')}
+    ${androidYNRow('Primarily targets children under 13', 'targetsFamilies',
+      'Select Yes ONLY if children under 13 are the primary intended audience of your app — not merely because children might also play it. This is a meaningful legal and policy distinction.')}
+    ${familiesWarning}
 
     <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Data types</div>
-    <div class="prv-nlp-wrap" style="margin-top:6px;">
+    <div class="prv-nlp-wrap" style="margin-top:2px;">
       <label class="form-label">Describe your data collection and sharing
         <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects or shares and why. Subwoofer will translate this into the required Google Play Data Safety selections.</span></span>
       </label>

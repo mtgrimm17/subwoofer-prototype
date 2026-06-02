@@ -474,12 +474,21 @@ function reRenderStepModal() {
 // Called by YES/NO and intensity/chip clicks — re-renders immediately
 // Clicking the already-selected value toggles it back to null (deselect)
 function answerIOSField(field, value) {
-  if (state.iosSubmitAnswers[field] === value) {
+  const current      = state.iosSubmitAnswers[field];
+  const meta         = state.iosAnswerMeta[field];
+  const humanAlready = meta?.humanConfirmed === true;
+
+  if (current === value && humanAlready) {
+    // Human-confirmed answer clicked again → unselect
     state.iosSubmitAnswers[field] = null;
     delete state.iosAnswerMeta[field];
+  } else if (current === value && !humanAlready) {
+    // AI-inferred answer clicked → promote to human-confirmed, keep value
+    state.iosAnswerMeta[field] = { ...(meta || {}), humanConfirmed: true };
   } else {
+    // Different value selected → set and mark human
     state.iosSubmitAnswers[field] = value;
-    state.iosAnswerMeta[field] = { ...(state.iosAnswerMeta[field] || {}), humanConfirmed: true };
+    state.iosAnswerMeta[field] = { ...(meta || {}), humanConfirmed: true };
   }
   reRenderStepModal();
 }
