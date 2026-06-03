@@ -109,8 +109,12 @@ function completeOnboarding() {
   for (let t = 0; t < OB_TAB_REQUIRED.length; t++) {
     const missing = OB_TAB_REQUIRED[t].some(id => !OB_Q_ANSWERED[id]?.());
     if (missing) {
-      setOnboardingTab(t);          // navigate to the failing tab
-      _setObValidating(true);       // light up the incomplete fields
+      // Navigate directly — avoid setOnboardingTab() which clears validation state
+      state.onboardingTab = t;
+      renderOnboarding();
+      const body = document.getElementById('ob-body');
+      if (body) body.scrollTop = 0;
+      _setObValidating(true);
       updateObSectionStates();
       return;
     }
