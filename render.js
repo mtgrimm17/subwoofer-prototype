@@ -111,8 +111,7 @@ function buildAboutTab() {
 
       <!-- ── About your game ── -->
       <div class="ob-section" id="ob-sec-about">
-        <div class="ob-section-hdr">About your game</div>
-
+        
         <div class="ob-q" id="ob-q-title" data-answered="${fd.title?.trim() ? '1' : '0'}">
           <label class="form-label" for="ob-title">Game Title</label>
           <div class="form-group">
@@ -142,7 +141,7 @@ function buildAboutTab() {
 
       <!-- ── Platforms ── -->
       <div class="ob-section" id="ob-sec-platforms">
-        <div class="ob-section-hdr">Platforms</div>
+        <div class="ob-section-hdr">Target Platforms</div>
         <div class="ob-q" id="ob-q-platforms" data-answered="${state.activePlatforms.size > 0 ? '1' : '0'}">
           <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
         </div>
@@ -901,7 +900,7 @@ function renderComplianceQuestions() {
     const tipText = escHtml(q.label + (q.desc ? ' ' + q.desc : ''));
     const ttHTML = `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tipText}</span></span>`;
     h += `
-      <div class="ios-q-row" data-answered="${answer !== null ? '1' : '0'}">
+      <div class="ios-q-row">
         <div class="ios-q-left">
           <div class="ios-q-label">${escHtml(q.title)}${ttHTML}</div>
         </div>
@@ -1549,7 +1548,7 @@ function renderStepModal() {
     </div>
     <div class="submit-modal-footer">
       <button class="btn btn-primary" onclick="closeStepModal()">
-        ${complete ? 'Done ✓' : 'Save & Close'}
+        ${complete ? 'Done' : 'Save & Close'}
       </button>
     </div>`;
 
@@ -1947,18 +1946,18 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
 function iosIntensityRow(label, fieldId, tooltip) {
   const val  = state.iosSubmitAnswers[fieldId];
   const opts = [
-    { value: 'none',       label: 'None',       selectedClass: 'is-sel-none',
-      extraClass: val === 'none'       ? aiInferenceClass(fieldId, 'none').trim()       : '',
-      content: 'None'       + aiInferenceBadge(fieldId, 'none'),
-      onSelect: `answerIOSField('${fieldId}','none')` },
-    { value: 'infrequent', label: 'Infrequent', selectedClass: 'is-sel-infrequent',
-      extraClass: val === 'infrequent' ? aiInferenceClass(fieldId, 'infrequent').trim() : '',
-      content: 'Infrequent' + aiInferenceBadge(fieldId, 'infrequent'),
-      onSelect: `answerIOSField('${fieldId}','infrequent')` },
     { value: 'frequent',   label: 'Frequent',   selectedClass: 'is-sel-frequent',
       extraClass: val === 'frequent'   ? aiInferenceClass(fieldId, 'frequent').trim()   : '',
       content: 'Frequent'   + aiInferenceBadge(fieldId, 'frequent'),
       onSelect: `answerIOSField('${fieldId}','frequent')` },
+    { value: 'infrequent', label: 'Infrequent', selectedClass: 'is-sel-infrequent',
+      extraClass: val === 'infrequent' ? aiInferenceClass(fieldId, 'infrequent').trim() : '',
+      content: 'Infrequent' + aiInferenceBadge(fieldId, 'infrequent'),
+      onSelect: `answerIOSField('${fieldId}','infrequent')` },
+    { value: 'none',       label: 'None',       selectedClass: 'is-sel-none',
+      extraClass: val === 'none'       ? aiInferenceClass(fieldId, 'none').trim()       : '',
+      content: 'None'       + aiInferenceBadge(fieldId, 'none'),
+      onSelect: `answerIOSField('${fieldId}','none')` },
   ];
   return singleSelectRow(label, val, opts, tooltip);
 }
@@ -2181,9 +2180,9 @@ function buildContentRatingSection() {
     <div class="ios-content-step-label">Chance-Based Activities</div>
     <div class="ios-q-block">
       ${['simulatedGambling','contests'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
-      ${iosYNRow(yq('realMoneyGambling').label, 'realMoneyGambling', '', yq('realMoneyGambling').tooltip, true)}
+      ${iosYNRow(yq('realMoneyGambling').label, 'realMoneyGambling', '', yq('realMoneyGambling').tooltip)}
       ${a.realMoneyGambling === 'yes' ? '<div class="ios-risk-note risk-HIGH">Real-money gambling requires a special Apple entitlement and proof of licensing in every territory where it is offered. Apple will ask for documentation during review.</div>' : ''}
-      ${iosYNRow(yq('lootBoxes').label, 'lootBoxes', '', yq('lootBoxes').tooltip, true)}
+      ${iosYNRow(yq('lootBoxes').label, 'lootBoxes', '', yq('lootBoxes').tooltip)}
       ${a.lootBoxes === 'yes' ? '<div class="ios-risk-note risk-MEDIUM">Apps with loot boxes must clearly disclose the odds of receiving each item type before a player makes a purchase.</div>' : ''}
     </div>
 

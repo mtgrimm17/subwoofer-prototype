@@ -1126,7 +1126,7 @@ body {
   gap: 8px;
   transition: color 0.2s;
 }
-.ob-section.is-unanswered .ob-section-hdr {
+.is-validating .ob-section.is-unanswered .ob-section-hdr {
   color: rgba(251, 146, 60, 0.65);
 }
 
@@ -2774,12 +2774,19 @@ body {
 /* Grid sits below the dropzone as a sibling — not inside ob-req-group */
 .asset-grid { margin-top: 10px; }
 
-.asset-dropzone:hover, .asset-dropzone.is-over {
-  border-color: var(--green);
-  background: rgba(74, 222, 128, 0.04);
+.asset-dropzone:hover .asset-dropzone-label,
+.asset-dropzone:hover .asset-dropzone-icon,
+.asset-dropzone.is-over .asset-dropzone-label,
+.asset-dropzone.is-over .asset-dropzone-icon {
+  color: var(--text);
 }
 
 .asset-dropzone-sm { padding: 16px 20px; }
+
+/* Dropzone incomplete state — only in validation mode */
+.is-validating .ob-q[data-answered="0"] .asset-dropzone {
+  border-color: rgba(251, 146, 60, 0.5);
+}
 
 .asset-dropzone-icon {
   font-size: 20px;
@@ -3993,8 +4000,8 @@ select.form-input {
   border-radius: 0 4px 4px 0;
   transition: border-color 0.15s, background 0.15s;
 }
-/* Unanswered — amber left bar + faint background */
-.ios-q-row[data-answered="0"] {
+/* Unanswered — amber left bar + faint background (only in validation mode) */
+.is-validating .ios-q-row[data-answered="0"] {
   border-left-color: rgba(251, 146, 60, 0.5);
   background: rgba(251, 146, 60, 0.03);
 }
