@@ -900,7 +900,7 @@ function renderComplianceQuestions() {
     const tipText = escHtml(q.label + (q.desc ? ' ' + q.desc : ''));
     const ttHTML = `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tipText}</span></span>`;
     h += `
-      <div class="ios-q-row">
+      <div class="ios-q-row" data-answered="${answer !== null ? '1' : '0'}">
         <div class="ios-q-left">
           <div class="ios-q-label">${escHtml(q.title)}${ttHTML}</div>
         </div>

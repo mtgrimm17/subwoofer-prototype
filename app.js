@@ -45,10 +45,10 @@ function setOnboardingTab(idx) {
 
 /* Required fields per tab — maps tab index to OB_Q_ANSWERED keys */
 const OB_TAB_REQUIRED = [
-  ['title', 'platforms'],   // Tab 0: About
-  ['distribution'],         // Tab 1: Distribution
-  ['screenshots'],          // Tab 2: Assets
-  ['privacy_url'],          // Tab 3: Compliance
+  ['title', 'platforms'],              // Tab 0: About
+  ['distribution'],                    // Tab 1: Distribution
+  ['screenshots'],                     // Tab 2: Assets
+  ['privacy_url', 'compliance'],       // Tab 3: Compliance
 ];
 
 function _setObValidating(on) {
@@ -105,15 +105,15 @@ function prevOnboardingTab() {
 }
 
 function completeOnboarding() {
-  if (!state.formData.title.trim()) {
-    alert('Please enter your game title before continuing.');
-    setOnboardingTab(0);
-    return;
-  }
-  if (state.activePlatforms.size === 0) {
-    alert('Please select at least one platform before continuing.');
-    setOnboardingTab(0);
-    return;
+  // Validate all tabs — find the first one with an unmet required field
+  for (let t = 0; t < OB_TAB_REQUIRED.length; t++) {
+    const missing = OB_TAB_REQUIRED[t].some(id => !OB_Q_ANSWERED[id]?.());
+    if (missing) {
+      setOnboardingTab(t);          // navigate to the failing tab
+      _setObValidating(true);       // light up the incomplete fields
+      updateObSectionStates();
+      return;
+    }
   }
 
   if (state._newProjectMode) {
@@ -857,6 +857,7 @@ const OB_Q_ANSWERED = {
   distribution: () => !!state.formData.distributionPreset,
   screenshots:  () => state.uploads.screenshots.length > 0,
   privacy_url:  () => !!(state.formData.privacyUrl?.trim()),
+  compliance:   () => QUESTIONS.every(q => state.questionAnswers[q.id] !== null),
 };
 
 // Toggle is-complete on a specific input element (used for text inputs/textareas)
@@ -1540,6 +1541,7 @@ function handleScreenshotFiles(files) {
       state.uploads.screenshots.push({ id, name: file.name, dataUrl: ev.target.result });
       const grid = document.getElementById('ob-screenshot-grid');
       if (grid) renderScreenshotGridInto(grid);
+      updateObSectionStates();   // clear amber as soon as first screenshot lands
     };
     reader.readAsDataURL(file);
   });
