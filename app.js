@@ -38,11 +38,35 @@ function closeOnboarding() {
 }
 
 function setOnboardingTab(idx) {
+  _setObValidating(false);
   state.onboardingTab = idx;
   renderOnboarding();
 }
 
+/* Required fields per tab — maps tab index to OB_Q_ANSWERED keys */
+const OB_TAB_REQUIRED = [
+  ['title', 'platforms'],   // Tab 0: About
+  ['distribution'],         // Tab 1: Distribution
+  ['screenshots'],          // Tab 2: Assets
+  ['privacy_url'],          // Tab 3: Compliance
+];
+
+function _setObValidating(on) {
+  document.getElementById('ob-modal')?.classList.toggle('is-validating', on);
+}
+
 function nextOnboardingTab() {
+  // Check required fields for current tab — show validation if any missing
+  const required = OB_TAB_REQUIRED[state.onboardingTab] || [];
+  const allFilled = required.every(id => OB_Q_ANSWERED[id]?.());
+
+  if (!allFilled) {
+    _setObValidating(true);
+    updateObSectionStates();    // Ensure data-answered attributes are current
+    return;                     // Block navigation until fields are filled
+  }
+
+  _setObValidating(false);
   if (state.onboardingTab < 3) {
     state.onboardingTab++;
     renderOnboarding();
@@ -72,6 +96,7 @@ function toggleOnboardingPlatform(pid) {
 
 function prevOnboardingTab() {
   if (state.onboardingTab > 0) {
+    _setObValidating(false);
     state.onboardingTab--;
     renderOnboarding();
     const body = document.getElementById('ob-body');
@@ -850,6 +875,11 @@ function updateObSectionStates() {
   for (const [id, pred] of Object.entries(OB_SECTION_ANSWERED)) {
     const el = document.getElementById('ob-sec-' + id);
     if (el) el.classList.toggle('is-unanswered', !pred());
+  }
+  // If in validation mode and all required fields for this tab are now filled, clear validation
+  const required = OB_TAB_REQUIRED[state.onboardingTab] || [];
+  if (required.every(id => OB_Q_ANSWERED[id]?.())) {
+    _setObValidating(false);
   }
   // Sync is-complete on text inputs — correct after any tab render
   _setInputComplete('ob-title',            !!(state.formData.title?.trim()));

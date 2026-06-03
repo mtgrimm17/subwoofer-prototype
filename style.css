@@ -276,7 +276,7 @@ body {
 
 /* Completion-state borders: preset pills in an empty group get amber outline;
    the active pill switches to blue border (matching other selected controls) */
-.ob-q[data-answered="0"] .ob-preset-pill:not(.is-active) {
+.is-validating .ob-q[data-answered="0"] .ob-preset-pill:not(.is-active) {
   border-width: 1px;
   border-color: rgba(251, 146, 60, 0.4);
   background: rgba(251, 146, 60, 0.03);
@@ -976,7 +976,7 @@ body {
 
 /* Completion-state borders: platform chips in an empty group get amber outline;
    selected chip switches to white border */
-.ob-q[data-answered="0"] .ob-plat-chip:not(.is-on) {
+.is-validating .ob-q[data-answered="0"] .ob-plat-chip:not(.is-on) {
   border-width: 1px;
   border-color: rgba(251, 146, 60, 0.4);
   background: rgba(251, 146, 60, 0.03);
@@ -1091,8 +1091,8 @@ body {
 .ob-req-group,
 .ob-q .form-group { position: relative; }
 
-.ob-q[data-answered="0"] .ob-req-group::before,
-.ob-q[data-answered="0"] .form-group::before {
+.is-validating .ob-q[data-answered="0"] .ob-req-group::before,
+.is-validating .ob-q[data-answered="0"] .form-group::before {
   content: '';
   position: absolute;
   left: -14px; top: 4px; bottom: 4px;
@@ -1101,8 +1101,8 @@ body {
   opacity: 1;
   transition: opacity 0.25s;
 }
-.ob-q[data-answered="1"] .ob-req-group::before,
-.ob-q[data-answered="1"] .form-group::before {
+.is-validating .ob-q[data-answered="1"] .ob-req-group::before,
+.is-validating .ob-q[data-answered="1"] .form-group::before {
   content: '';
   position: absolute;
   left: -14px; top: 4px; bottom: 4px;
@@ -2823,19 +2823,19 @@ body {
 /* Mandatory context: amber treatment only when inside an ob-q wrapper.
    Optional fields (YouTube URL, trailer, etc.) are not inside ob-q
    and therefore always get the neutral base style above. */
-.ob-q .form-input {
+.is-validating .ob-q .form-input {
   border-color: rgba(251, 146, 60, 0.4);
   background: rgba(251, 146, 60, 0.03);
 }
-.ob-q .form-input.is-complete {
+.is-validating .ob-q .form-input.is-complete {
   border-color: rgba(245, 245, 245, 0.7);
   background: var(--bg);
 }
-.ob-q .form-input:focus {
+.is-validating .ob-q .form-input:focus {
   border-color: rgba(251, 146, 60, 0.65);
   box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.12);
 }
-.ob-q .form-input.is-complete:focus {
+.is-validating .ob-q .form-input.is-complete:focus {
   border-color: rgba(245, 245, 245, 1);
   box-shadow: 0 0 0 2px rgba(245, 245, 245, 0.08);
 }
@@ -3599,7 +3599,7 @@ select.form-input {
    ──────────────────────────────────────────────────────── */
 
 /* yn-btn — in an unanswered row all unselected buttons get amber outline */
-.ios-q-row[data-answered="0"] .yn-btn:not(.is-selected) {
+.is-validating .ios-q-row[data-answered="0"] .yn-btn:not(.is-selected) {
   border-width: 1px;
   border-color: rgba(251, 146, 60, 0.4);
   background: rgba(251, 146, 60, 0.03);
@@ -4033,7 +4033,7 @@ select.form-input {
 .intensity-btn.is-sel-frequent   { background: var(--sel-bg); border-color: var(--sel-color); color: var(--sel-color); }
 
 /* intensity-btn — amber outline in unanswered row; blue border when selected (matches standard selection) */
-.ios-q-row[data-answered="0"] .intensity-btn:not(.is-sel-none):not(.is-sel-infrequent):not(.is-sel-frequent) {
+.is-validating .ios-q-row[data-answered="0"] .intensity-btn:not(.is-sel-none):not(.is-sel-infrequent):not(.is-sel-frequent) {
   border-width: 1px;
   border-color: rgba(251, 146, 60, 0.4);
   background: rgba(251, 146, 60, 0.03);
@@ -5301,7 +5301,7 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
 }
 
 /* Incomplete swSelect — orange border when nothing selected */
-.sw-select-incomplete .loc-primary-pill {
+.is-validating .sw-select-incomplete .loc-primary-pill {
   border-color: rgba(251, 146, 60, 0.5);
   background: rgba(251, 146, 60, 0.03);
 }
