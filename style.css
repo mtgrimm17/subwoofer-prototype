@@ -2835,7 +2835,7 @@ body {
   background: rgba(251, 146, 60, 0.03);
 }
 .is-validating .ob-q .form-input.is-complete {
-  border-color: rgba(245, 245, 245, 0.7);
+  border-color: var(--border);   /* neutral — answered inputs look unchanged */
   background: var(--bg);
 }
 .is-validating .ob-q .form-input:focus {
@@ -2843,8 +2843,8 @@ body {
   box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.12);
 }
 .is-validating .ob-q .form-input.is-complete:focus {
-  border-color: rgba(245, 245, 245, 1);
-  box-shadow: 0 0 0 2px rgba(245, 245, 245, 0.08);
+  border-color: var(--text-faint);
+  box-shadow: none;
 }
 textarea.form-input { resize: vertical; line-height: 1.55; }
 select.form-input {
