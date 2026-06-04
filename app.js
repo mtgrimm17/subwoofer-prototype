@@ -1380,7 +1380,7 @@ function confirmGameImport() {
   // STORE_NAME_TO_PID is defined in claude.js (loaded first)
   const foundPids = [...new Set(
     (ls.allStores || []).map(s => STORE_NAME_TO_PID[(s || '').toLowerCase().trim()] || s)
-      .filter(pid => !!PLATFORMS[pid])
+      .filter(pid => !!PLATFORMS[pid] && !COMING_SOON_PLATFORMS.has(pid))
   )];
   if (foundPids.length) {
     state.activePlatforms.clear();

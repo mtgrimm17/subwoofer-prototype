@@ -96,8 +96,7 @@ function renderOnboardingFooter() {
       <div class="ob-step-dots">
         ${[0,1,2,3].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
       </div>
-      <button class="btn btn-primary" onclick="${isLast ? 'completeOnboarding()' : 'nextOnboardingTab()'}"
-        ${isLast && !hasPlat ? 'disabled title="Select at least one platform to continue"' : ''}>
+      <button class="btn btn-primary" onclick="${isLast ? 'completeOnboarding()' : 'nextOnboardingTab()'}">
         ${isLast ? 'Launch Dashboard →' : 'Next →'}
       </button>
     </div>`;
@@ -573,11 +572,17 @@ function buildObCountryChips() {
       <span class="ob-dist-col-count">iOS Gamers (approx)</span>
     </div>
     <div class="ob-dist-country-list" id="ob-dist-country-list">${topRows}</div>
-    ${extraCount > 0 ? `
+    ${extraCount > 0 ? (() => {
+      const hiddenSelected = IOS_COUNTRIES.slice(10).filter(c => selected.has(c.code)).length;
+      const badge = hiddenSelected > 0
+        ? `<span class="ob-dist-hidden-badge" title="${hiddenSelected} selected market${hiddenSelected > 1 ? 's' : ''} below — expand to review">${hiddenSelected} selected ↓</span>`
+        : '';
+      return `
     <button class="ob-dist-expand-btn" id="ob-dist-expand-btn" onclick="toggleObDistExpand(this)">
-      ${_chevDown} Show ${extraCount} more markets
+      ${_chevDown} Show ${extraCount} more markets${badge}
     </button>
-    <div class="ob-dist-country-list hidden" id="ob-dist-country-list-extra">${extraRows}</div>` : ''}`;
+    <div class="ob-dist-country-list hidden" id="ob-dist-country-list-extra">${extraRows}</div>`;
+    })() : ''}`;
 }
 
 /* ── Legacy alias ── */
@@ -608,7 +613,7 @@ function buildObPlatTilesHTML() {
 
 /* ── Language picker ── two-row: primary (amber dropdown) + supported (green chips) */
 // Industry-standard localization set (EFIGS + CJK + PT) — always shown
-const OB_LANG_FEATURED = ['en','zh','zh-TW','ja','ko','es','es-419','pt','pt-BR','fr','de','it'];
+const OB_LANG_FEATURED = ['en','zh','ja','ko','es','pt','fr','de','it'];
 
 // Region labels for each language code
 const OB_LANG_REGIONS = {

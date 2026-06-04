@@ -523,7 +523,11 @@ If not found or uncertain:
   "confidence": 0
 }
 
-Rules: only return found:true if genuinely confident (confidence ≥ 70). Do NOT fabricate descriptions.`;
+Rules:
+- Return found:true if confidence ≥ 60.
+- In allStores, include EVERY platform you know this game is on — be inclusive, not conservative.
+- Steam games are frequently missed by other APIs, so if you know the game is on Steam, always include "steam".
+- Do NOT fabricate descriptions — use only what you know from published store listings.`;
 
   const res = await fetch(CLAUDE_ENDPOINT, {
     method:  'POST',
