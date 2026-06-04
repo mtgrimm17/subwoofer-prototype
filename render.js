@@ -367,8 +367,10 @@ function buildReleaseTimingContent() {
 /* ── Onboarding list helpers ─────────────────────────── */
 
 const OB_LANG_NAMES = {
-  en:'English', zh:'Chinese (Simplified)', ja:'Japanese', ko:'Korean',
-  pt:'Portuguese', es:'Spanish', de:'German', fr:'French',
+  en:'English', zh:'Chinese (Simplified)', 'zh-TW':'Chinese (Traditional)',
+  ja:'Japanese', ko:'Korean',
+  pt:'Portuguese', 'pt-BR':'Portuguese (Brazilian)', es:'Spanish',
+  'es-419':'Spanish (Latin America)', de:'German', fr:'French',
   ru:'Russian', ar:'Arabic', tr:'Turkish', id:'Indonesian',
   th:'Thai', nl:'Dutch', pl:'Polish', it:'Italian', sv:'Swedish',
   nb:'Norwegian', da:'Danish', fi:'Finnish', cs:'Czech',
@@ -583,13 +585,21 @@ function buildObCountryList() { return buildObCountryChips(); }
 
 /* ── Platform chips (text-only multi-select, same style as lang chips) ── */
 function buildObPlatTilesHTML() {
-  const selectable = [
-    { id:'ios',     label:'App Store' },
-    { id:'android', label:'Google Play' },
-    { id:'steam',   label:'Steam' },
-    { id:'egs',     label:'Epic Games Store' },
+  const PLATFORMS_OB = [
+    { id:'ios',      label:'App Store',         comingSoon: false },
+    { id:'android',  label:'Google Play',        comingSoon: false },
+    { id:'steam',    label:'Steam',              comingSoon: true  },
+    { id:'psn',      label:'PlayStation Store',  comingSoon: true  },
+    { id:'xbox',     label:'Xbox Store',         comingSoon: true  },
+    { id:'egs',      label:'Epic Games Store',   comingSoon: true  },
+    { id:'nintendo', label:'Nintendo eShop',     comingSoon: true  },
   ];
-  const chips = selectable.map(({ id, label }) => {
+  const chips = PLATFORMS_OB.map(({ id, label, comingSoon }) => {
+    if (comingSoon) {
+      return `<button class="ob-plat-chip ob-plat-chip-cs" disabled title="${label} — coming soon">
+        ${label}<span class="ob-cs-badge">Soon</span>
+      </button>`;
+    }
     const isOn = state.activePlatforms.has(id);
     return `<button class="ob-plat-chip${isOn ? ' is-on' : ''}" onclick="toggleOnboardingPlatform('${id}')">${label}</button>`;
   }).join('');
@@ -598,12 +608,12 @@ function buildObPlatTilesHTML() {
 
 /* ── Language picker ── two-row: primary (amber dropdown) + supported (green chips) */
 // Industry-standard localization set (EFIGS + CJK + PT) — always shown
-const OB_LANG_FEATURED = ['en','zh','ja','ko','es','pt','fr','de','it'];
+const OB_LANG_FEATURED = ['en','zh','zh-TW','ja','ko','es','es-419','pt','pt-BR','fr','de','it'];
 
 // Region labels for each language code
 const OB_LANG_REGIONS = {
-  en:'Global', zh:'CN / TW', ja:'JP', ko:'KR',
-  es:'ES / LATAM', pt:'BR / PT', fr:'FR', de:'DE', it:'IT',
+  en:'Global', zh:'CN', 'zh-TW':'TW', ja:'JP', ko:'KR',
+  es:'ES', 'es-419':'LATAM', pt:'PT', 'pt-BR':'BR', fr:'FR', de:'DE', it:'IT',
   ru:'RU', ar:'MENA', tr:'TR', id:'ID', th:'TH',
   nl:'NL', pl:'PL', sv:'SE', nb:'NO', da:'DK', fi:'FI',
   cs:'CZ', hu:'HU', ro:'RO', uk:'UA', vi:'VN',

@@ -5320,3 +5320,19 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   object-fit: contain;
   display: block;
 }
+
+/* Coming-soon platform chips in onboarding */
+.ob-plat-chip.ob-plat-chip-cs {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+.ob-cs-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-left: 5px;
+  vertical-align: middle;
+}
