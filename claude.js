@@ -672,3 +672,274 @@ function applyCQResults(result) {
   console.log(`[Claude CQ] Applied ${applied}, skipped ${skipped}`);
   return { applied, skipped };
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ABSTRACTED AI INFERENCE — shared across all platforms/steps
+   ═══════════════════════════════════════════════════════════════
+
+   runInference(pid, stepId) is the public entry point.
+   It gathers all accumulated game knowledge (onboarding + prior
+   platform answers), builds a platform-specific prompt, calls
+   Claude, and applies results to the right answer store.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Shared context builder ──────────────────────────────────── */
+
+function buildSharedContext() {
+  const fd  = state.formData;
+  const qa  = state.questionAnswers;
+  const ios = state.iosSubmitAnswers;
+  const and = state.androidSubmitAnswers;
+  const stm = state.steamSubmitAnswers;
+  const cq  = state.cqAnswers;
+  const parts = [];
+
+  // ── Game basics ──────────────────────────────────────────────
+  parts.push(`GAME TITLE: ${fd.title || '(not provided)'}`);
+  parts.push(`DESCRIPTION: ${fd.description || '(not provided)'}`);
+  if (fd.genre) parts.push(`GENRE: ${fd.genre}`);
+
+  // ── Onboarding compliance answers ────────────────────────────
+  const qaMap = { violence:'Violence or combat', sexualContent:'Sexual or mature content',
+                  strongLanguage:'Strong language', dataCollection:'Data collection',
+                  inAppPurchases:'In-app purchases' };
+  const qaLines = Object.entries(qaMap)
+    .filter(([k]) => qa[k] !== null)
+    .map(([k,label]) => `  ${label}: ${qa[k]}`);
+  if (qaLines.length) parts.push(`ONBOARDING COMPLIANCE:\n${qaLines.join('\n')}`);
+
+  // ── CQ answers (if any filled) ───────────────────────────────
+  const filledCQ = Object.entries(cq)
+    .filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0));
+  if (filledCQ.length) {
+    const cqLines = filledCQ.slice(0, 40).map(([k, v]) => {
+      const q = CQ_QUESTIONS.find(x => x.id === k);
+      const label = q ? q.text.slice(0, 60) : k;
+      return `  ${label}: ${Array.isArray(v) ? v.join(', ') : v}`;
+    });
+    parts.push(`CONTENT QUESTIONNAIRE ANSWERS (IARC/Google):\n${cqLines.join('\n')}`);
+  }
+
+  // ── iOS Content Rating answers (if filled) ───────────────────
+  const iosFields = [...IOS_INTENSITY_QUESTIONS, ...IOS_CONTENT_YN_QUESTIONS];
+  const filledIOS = iosFields.filter(q => ios[q.id] !== null && ios[q.id] !== undefined);
+  if (filledIOS.length) {
+    const iosLines = filledIOS.map(q => `  ${q.label}: ${ios[q.id]}`);
+    parts.push(`iOS APP STORE CONTENT RATING:\n${iosLines.join('\n')}`);
+  }
+
+  // ── Steam content answers (if any filled) ────────────────────
+  const sca = stm.steamContentAnswers || {};
+  const filledSteam = Object.entries(sca).filter(([, v]) => v === 'yes' || v === 'no');
+  if (filledSteam.length) {
+    const steamYes = filledSteam.filter(([, v]) => v === 'yes').map(([k]) => k);
+    if (steamYes.length) {
+      parts.push(`STEAM CONTENT SURVEY — categories marked YES: ${steamYes.join(', ')}`);
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+/* ── Android Content Rating inference ───────────────────────── */
+
+async function inferAndroidCR() {
+  const ctx = buildSharedContext();
+  // Build the question list for android-visible CQ questions (top-level only for brevity)
+  const visibleQ = CQ_QUESTIONS.filter(q =>
+    q.platforms.includes('android') && !q.parent && cqIsVisible(q)
+  );
+
+  const qLines = visibleQ.map(q => {
+    const opts = q.type === 'multi' ? `Options: ${(q.options||[]).slice(0,6).join(' | ')}` : '';
+    return `id: ${q.id} | type: ${q.type} | question: ${q.text.slice(0,100)}${opts ? ' | ' + opts : ''}`;
+  }).join('\n');
+
+  const prompt = `You are an expert game content analyst helping pre-fill a Google Play IARC content questionnaire.
+
+${ctx}
+
+Based on ALL of the above information, answer these Google Play content questions. Be conservative — only mark "yes" if clearly supported by the game data.
+
+QUESTIONS TO ANSWER:
+${qLines}
+
+Return ONLY valid JSON — no markdown, no explanation:
+{
+  "answers": {
+    "<question_id>": {
+      "value": "<yes|no|option_text|[\"option1\",\"option2\"]>",
+      "confidence": <0-100>
+    }
+  }
+}
+
+Rules:
+- For yn: value is "yes" or "no"
+- For single: value is the exact option text
+- For multi: value is an array of matching option strings (empty array [] if none apply)
+- Only include questions where confidence >= 80
+- Be conservative — prefer "no" or empty arrays when uncertain`;
+
+  const res = await fetch(CLAUDE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'x-api-key':                                 CLAUDE_API_KEY,
+      'anthropic-version':                         '2023-06-01',
+      'content-type':                              'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL, max_tokens: 2000,
+      messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+    }),
+  });
+  if (!res.ok) throw new Error('API ' + res.status);
+  const data    = await res.json();
+  const text    = (data.content?.[0]?.text || '').trim();
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const parsed  = JSON.parse(cleaned);
+
+  const validQIds    = new Set(CQ_QUESTIONS.map(q => q.id));
+  const answers      = parsed.answers || {};
+  let applied = 0;
+
+  for (const [qid, entry] of Object.entries(answers)) {
+    if (!validQIds.has(qid)) continue;
+    if (state.cqAnswerMeta[qid]?.humanConfirmed) continue;
+    const { value, confidence } = entry;
+    if (typeof confidence !== 'number' || confidence < 80) continue;
+    const q = CQ_QUESTIONS.find(x => x.id === qid);
+    if (!q) continue;
+
+    if (q.type === 'yn' && (value === 'yes' || value === 'no')) {
+      state.cqAnswers[qid] = value;
+      state.cqAnswerMeta[qid] = { confidence, humanConfirmed: false };
+      applied++;
+    } else if (q.type === 'single' && typeof value === 'string' && q.options.includes(value)) {
+      state.cqAnswers[qid] = value;
+      state.cqAnswerMeta[qid] = { confidence, humanConfirmed: false };
+      applied++;
+    } else if (q.type === 'multi' && Array.isArray(value)) {
+      const valid = value.filter(v => q.options.includes(v));
+      if (valid.length > 0 || value.length === 0) {
+        state.cqAnswers[qid] = valid;
+        state.cqAnswerMeta[qid] = { confidence, humanConfirmed: false };
+        applied++;
+      }
+    }
+  }
+  console.log(`[Android CR inference] Applied ${applied} answers`);
+}
+
+/* ── Steam Content Rating inference ─────────────────────────── */
+
+async function inferSteamCR() {
+  const ctx = buildSharedContext();
+  const allItems = STEAM_CONTENT_CATEGORIES.flatMap(g => g.items.map(i => ({...i, group: g.group})));
+  const itemLines = allItems.map(i => `  ${i.id}: ${i.label}`).join('\n');
+
+  const MATURE_OPTS = ['gen_mature','freq_violence','some_nudity','freq_nudity','adult_sexual'];
+  const matureLines = [
+    'gen_mature: General mature content',
+    'freq_violence: Frequent violence or gore',
+    'some_nudity: Some nudity or sexual content',
+    'freq_nudity: Frequent nudity or sexual content',
+    'adult_sexual: Adult only sexual content',
+  ].join('\n  ');
+
+  const prompt = `You are an expert game content analyst helping pre-fill a Steam content questionnaire.
+
+${ctx}
+
+Answer each Steam content survey item with yes or no, and provide a confidence score.
+
+CONTENT CATEGORY ITEMS (answer yes if it applies to this game):
+${itemLines}
+
+MATURE CONTENT DECLARATIONS (answer yes if applicable):
+  ${matureLines}
+
+Return ONLY valid JSON — no markdown, no explanation:
+{
+  "items": {
+    "<item_id>": { "value": "yes|no", "confidence": <0-100> }
+  },
+  "mature": {
+    "<mature_id>": { "value": "yes|no", "confidence": <0-100> }
+  }
+}
+
+Rules:
+- Only include items where confidence >= 80
+- Be conservative — prefer "no" when uncertain
+- Cascade: if adult_sexual=yes → freq_nudity, some_nudity, gen_mature also yes
+- If freq_violence=yes → gen_mature also yes`;
+
+  const res = await fetch(CLAUDE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'x-api-key':                                 CLAUDE_API_KEY,
+      'anthropic-version':                         '2023-06-01',
+      'content-type':                              'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL, max_tokens: 2000,
+      messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+    }),
+  });
+  if (!res.ok) throw new Error('API ' + res.status);
+  const data    = await res.json();
+  const text    = (data.content?.[0]?.text || '').trim();
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const parsed  = JSON.parse(cleaned);
+
+  const validItems = new Set(STEAM_CONTENT_CATEGORIES.flatMap(g => g.items.map(i => i.id)));
+  const MATURE_SET = new Set(['gen_mature','freq_violence','some_nudity','freq_nudity','adult_sexual']);
+  if (!state.steamSubmitAnswers.steamContentAnswers) state.steamSubmitAnswers.steamContentAnswers = {};
+  const sca  = state.steamSubmitAnswers.steamContentAnswers;
+  const meta = state.steamAnswerMeta;
+  let applied = 0;
+
+  for (const [id, entry] of Object.entries(parsed.items || {})) {
+    if (!validItems.has(id)) continue;
+    if (meta[id]?.humanConfirmed) continue;
+    const { value, confidence } = entry;
+    if (typeof confidence !== 'number' || confidence < 80) continue;
+    if (value === 'yes' || value === 'no') {
+      sca[id]  = value;
+      meta[id] = { confidence, humanConfirmed: false };
+      applied++;
+    }
+  }
+  for (const [id, entry] of Object.entries(parsed.mature || {})) {
+    if (!MATURE_SET.has(id)) continue;
+    if (meta[id]?.humanConfirmed) continue;
+    const { value, confidence } = entry;
+    if (typeof confidence !== 'number' || confidence < 80) continue;
+    if (value === 'yes' || value === 'no') {
+      sca[id]  = value;
+      meta[id] = { confidence, humanConfirmed: false };
+      applied++;
+    }
+  }
+  console.log(`[Steam CR inference] Applied ${applied} answers`);
+}
+
+/* ── Public dispatcher ───────────────────────────────────────── */
+
+async function runInference(pid, stepId) {
+  if (!CLAUDE_API_KEY) throw new Error('NO_KEY');
+  const key = pid + ':' + stepId;
+  if (state.platformInferenceCache[key]) return; // already ran
+
+  if (pid === 'android' && stepId === 'contentRating') {
+    await inferAndroidCR();
+  } else if (pid === 'steam' && stepId === 'contentRating') {
+    await inferSteamCR();
+  }
+  // ios:contentRating is handled by existing analyzeGameWithClaude() flow
+
+  state.platformInferenceCache[key] = true;
+}

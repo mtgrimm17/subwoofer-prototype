@@ -266,16 +266,46 @@ async function openStepModal(pid, stepId) {
   if (pid === 'android') {
     seedOnboardingToAndroid();
     state.stepModal = { platformId: pid, stepId, inferenceStatus: null };
-    renderStepModal();
     document.getElementById('submit-overlay').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    const andStep = PLATFORMS[pid].steps.find(s => s.id === stepId);
+    if (andStep?.hasInference && CLAUDE_API_KEY && !state.platformInferenceCache[pid+':'+stepId]) {
+      state.stepModal.inferenceStatus = 'loading';
+      renderStepModal();
+      try {
+        await runInference(pid, stepId);
+        state.stepModal.inferenceStatus = 'done';
+      } catch(err) {
+        state.stepModal.inferenceStatus = 'error';
+        state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
+      }
+      reRenderAndroidStepModal();
+      updateAndroidCard();
+    } else {
+      renderStepModal();
+    }
     return;
   }
   if (pid === 'steam') {
     state.stepModal = { platformId: pid, stepId, inferenceStatus: null };
-    renderStepModal();
     document.getElementById('submit-overlay').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    const stmStep = PLATFORMS[pid].steps.find(s => s.id === stepId);
+    if (stmStep?.hasInference && CLAUDE_API_KEY && !state.platformInferenceCache[pid+':'+stepId]) {
+      state.stepModal.inferenceStatus = 'loading';
+      renderStepModal();
+      try {
+        await runInference(pid, stepId);
+        state.stepModal.inferenceStatus = 'done';
+      } catch(err) {
+        state.stepModal.inferenceStatus = 'error';
+        state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
+      }
+      reRenderSteamStepModal();
+      updateSteamCard();
+    } else {
+      renderStepModal();
+    }
     return;
   }
 
@@ -2155,7 +2185,8 @@ function answerAndroidCRMultiOpt(qid, optIdx, yesOrNo) {
 function answerAndroidCR(qid, value) {
   const current = state.cqAnswers[qid];
   state.cqAnswers[qid] = (current === value) ? undefined : value;
-  _confirmCQHuman(qid);
+  // Mark human-confirmed — removes AI badge
+  state.cqAnswerMeta[qid] = { ...(state.cqAnswerMeta[qid] || {}), humanConfirmed: true };
   reRenderAndroidStepModal();
   updateAndroidCard();
 }
@@ -2488,6 +2519,8 @@ function answerSteamContentItem(itemId, value) {
   const current = sca[itemId];
   const newVal  = (current === value) ? null : value;
   sca[itemId] = newVal;
+  // Mark human-confirmed — removes AI badge
+  state.steamAnswerMeta[itemId] = { ...(state.steamAnswerMeta[itemId] || {}), humanConfirmed: true };
 
   // Auto-cascade for mature declarations chain
   const CHAIN = ['gen_mature', 'some_nudity', 'freq_nudity', 'adult_sexual'];
@@ -2564,4 +2597,23 @@ function toggleSteamAccessibility(featureId, checked) {
   if (checked) { if (!feats.includes(featureId)) feats.push(featureId); }
   else { state.steamSubmitAnswers.accessibilityFeatures = feats.filter(f => f !== featureId); }
   updateSteamCard();
+}
+
+/* Retry inference for any platform+step */
+async function _retryInference(pid, stepId) {
+  const key = pid + ':' + stepId;
+  delete state.platformInferenceCache[key];
+  state.stepModal.inferenceStatus = 'loading';
+  const rerender = pid === 'android' ? reRenderAndroidStepModal
+                 : pid === 'steam'   ? reRenderSteamStepModal
+                 : reRenderStepModal;
+  rerender();
+  try {
+    await runInference(pid, stepId);
+    state.stepModal.inferenceStatus = 'done';
+  } catch(err) {
+    state.stepModal.inferenceStatus  = 'error';
+    state.stepModal.inferenceError   = err.message;
+  }
+  rerender();
 }

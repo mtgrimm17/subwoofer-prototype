@@ -1499,21 +1499,24 @@ function renderStepModal() {
   const p    = PLATFORMS[platformId];
   const step = p.steps.find(s => s.id === stepId);
 
-  // Inference banner (only for steps with hasInference)
+  // Inference banner — shared across all platforms/steps with hasInference
   let inferenceBanner = '';
   if (step?.hasInference) {
+    const cacheKey    = platformId + ':' + stepId;
+    const hasRun      = platformId === 'ios' ? !!state.claudeCache : !!state.platformInferenceCache[cacheKey];
+    const retryFn     = platformId === 'ios' ? '_runClaudeAnalysis()' : `_retryInference('${platformId}','${stepId}')`;
     if (inferenceStatus === 'loading') {
       inferenceBanner = `
         <div class="ai-banner ai-banner-loading">
           <span class="ai-spinner"></span>
           <span>Subwoofer is pre-populating responses based on the information you provided…</span>
         </div>`;
-    } else if (state.claudeCache && inferenceStatus !== 'error') {
+    } else if (hasRun && inferenceStatus !== 'error') {
       inferenceBanner = `
         <div class="sw-tip-box sw-tip-box-inference">
           <div class="sw-tip-box-row">
             <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on the information you provided.</span>
+            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on your game info and answers from other platforms.</span>
           </div>
         </div>`;
     } else if (inferenceStatus === 'error') {
@@ -1521,7 +1524,7 @@ function renderStepModal() {
         <div class="ai-banner ai-banner-error">
           <span class="ai-banner-icon">⚠</span>
           <div class="ai-banner-text"><strong>Analysis failed:</strong> ${inferenceError || 'Unknown error'}</div>
-          <button class="ai-autofill-btn" onclick="_runClaudeAnalysis()">Retry</button>
+          <button class="ai-autofill-btn" onclick="${retryFn}">Retry</button>
         </div>`;
     }
   }
@@ -2719,9 +2722,16 @@ function buildAndroidContentRatingSection() {
     const ttHTML  = `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${escHtml(tooltip)}</span></span>`;
 
     if (q.type === 'yn') {
-      return ynRow(label + ttHTML, ans,
+      const yc2 = ans === 'yes' ? _cqInfClass(q.id, 'yes') : '';
+      const nc2 = ans === 'no'  ? _cqInfClass(q.id, 'no')  : '';
+      const yb2 = ans === 'yes' ? 'YES' + _cqInfBadge(q.id, 'yes') : 'YES';
+      const nb2 = ans === 'no'  ? 'NO'  + _cqInfBadge(q.id, 'no')  : 'NO';
+      // Ensure label is one line (long text → tooltip)
+      const qShort = label.length > 52 ? label.slice(0, 52).replace(/[;,]?\s*$/, '') + '…' : label;
+      return ynRow(qShort + ttHTML, ans,
         `answerAndroidCR('${q.id}','yes')`,
-        `answerAndroidCR('${q.id}','no')`);
+        `answerAndroidCR('${q.id}','no')`,
+        '', false, yc2.trim(), nc2.trim(), yb2, nb2);
     }
 
     if (q.type === 'single') {
@@ -2770,12 +2780,15 @@ function buildAndroidContentRatingSection() {
       const answered = current.length > 0;
       // Render each option as its own ynRow — skip "None" option since not-selected = none
       const checks = q.options.filter(o => !/^none$/i.test(o.trim())).map((o, optIdx) => {
-        const val = current.includes(o) ? 'yes' : null;
-        const short = o.length > 52 ? o.slice(0, 52) + '…' : o;
+        const val   = current.includes(o) ? 'yes' : null;
+        const short = o.length > 48 ? o.slice(0, 48).replace(/[;,]?\s*$/, '') + '…' : o;
+        const tip   = o.length > 48 ? o : '';
+        const yc    = val === 'yes' ? _cqInfClass(q.id, o) : '';
+        const nb2   = val === 'yes' ? 'YES' + _cqInfBadge(q.id, o) : 'YES';
         return ynRow(escHtml(short), val,
           `answerAndroidCRMultiOpt('${q.id}',${optIdx},'yes')`,
           `answerAndroidCRMultiOpt('${q.id}',${optIdx},'no')`,
-          o.length > 52 ? o : '');
+          tip, false, yc.trim(), '', nb2);
       }).join('');
       return `
         <div class="ios-q-row" data-answered="${answered ? '1' : '0'}" style="flex-direction:column;align-items:flex-start;">
@@ -3134,18 +3147,52 @@ function buildSteamActiveCard(pid) {
     </div>`;
 }
 
+/* ── Shared AI badge helpers (Steam + Android) ──────── */
+
+function _steamInfClass(itemId) {
+  const meta = state.steamAnswerMeta[itemId];
+  if (!meta || meta.humanConfirmed) return '';
+  return ' ai-confident';
+}
+function _steamInfBadge(itemId) {
+  const meta = state.steamAnswerMeta[itemId];
+  if (!meta || meta.humanConfirmed) return '';
+  return '<span class="ai-badge">✦</span>';
+}
+function _cqInfClass(qid, val) {
+  const meta = state.cqAnswerMeta[qid];
+  if (!meta || meta.humanConfirmed) return '';
+  const ans  = state.cqAnswers[qid];
+  const match = Array.isArray(ans) ? ans.includes(val) : ans === val;
+  return match ? ' ai-confident' : '';
+}
+function _cqInfBadge(qid, val) {
+  const meta = state.cqAnswerMeta[qid];
+  if (!meta || meta.humanConfirmed) return '';
+  const ans  = state.cqAnswers[qid];
+  const match = Array.isArray(ans) ? ans.includes(val) : ans === val;
+  return match ? '<span class="ai-badge">✦</span>' : '';
+}
+
 /* ── Steam: Content Rating (PDF 7) ──────────────────── */
 function buildSteamContentRatingSection() {
   const a   = state.steamSubmitAnswers;
   const sca = a.steamContentAnswers || {};
 
-  // Helper: ynRow for a Steam content item (stored in steamContentAnswers)
+  // Helper: ynRow for a Steam content item with AI badge support
   function steamItemRow(itemId, label, tooltip) {
-    const val = sca[itemId] || null;
-    return ynRow(label, val,
+    const val  = sca[itemId] || null;
+    const yc   = val === 'yes' ? _steamInfClass(itemId) : '';
+    const nc   = val === 'no'  ? _steamInfClass(itemId) : '';
+    const yb   = val === 'yes' ? 'YES' + _steamInfBadge(itemId) : 'YES';
+    const nb   = val === 'no'  ? 'NO'  + _steamInfBadge(itemId) : 'NO';
+    // Ensure label fits one line (truncate at 50 chars, rest goes to tooltip)
+    const shortLabel = label.length > 50 ? label.slice(0, 50).replace(/[;,]?\s*$/, '') + '…' : label;
+    const fullTip    = tooltip && tooltip !== label ? tooltip : (label.length > 50 ? label : '');
+    return ynRow(shortLabel, val,
       `answerSteamContentItem('${itemId}','yes')`,
       `answerSteamContentItem('${itemId}','no')`,
-      tooltip);
+      fullTip, false, yc.trim(), nc.trim(), yb, nb);
   }
 
   // Content categories — each item is a ynRow

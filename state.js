@@ -636,7 +636,7 @@ const PLATFORMS = {
   android: {
     id: 'android', label: 'Google Play', color: '#34A853',
     steps: [
-      { id: 'contentRating', label: 'Content Rating',     hasInference: false },
+      { id: 'contentRating', label: 'Content Rating',     hasInference: true  },
       { id: 'dataSafety',    label: 'Data Safety',        hasInference: false },
       { id: 'business',      label: 'Business',           hasInference: false },
       { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
@@ -645,7 +645,7 @@ const PLATFORMS = {
   steam: {
     id: 'steam', label: 'Steam', color: '#4c6b8a',
     steps: [
-      { id: 'contentRating', label: 'Content Rating',     hasInference: false },
+      { id: 'contentRating', label: 'Content Rating',     hasInference: true  },
       { id: 'storeTags',     label: 'Store Tags',         hasInference: false },
       { id: 'technical',     label: 'Technical',          hasInference: false },
       { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
@@ -1654,6 +1654,13 @@ const state = {
 
   // Steam submission questionnaire answers
   steamSubmitAnswers: makeBlankSteamAnswers(),
+
+  // Per-field AI inference metadata for Steam (mirrors iosAnswerMeta)
+  steamAnswerMeta: {},
+
+  // Cache tracking which platform+step inferences have already run
+  // { 'android:contentRating': true, 'steam:contentRating': true, ... }
+  platformInferenceCache: {},
 
   // Android data matrix expansion state
   androidMatrixExpanded: false,
