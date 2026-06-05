@@ -2124,6 +2124,34 @@ function handleCQMulti(el) {
    These update cqAnswers (shared with the CQ modal) but re-render
    the step modal instead of the CQ modal.                      */
 
+/* Handle YES/NO on individual options within a multi-select CQ question */
+function answerAndroidCRMultiOpt(qid, optIdx, yesOrNo) {
+  const q = CQ_QUESTIONS.find(x => x.id === qid);
+  if (!q) return;
+  const opt = q.options[optIdx];
+  if (!opt) return;
+  const current = Array.isArray(state.cqAnswers[qid]) ? state.cqAnswers[qid] : [];
+  const inArray  = current.includes(opt);
+
+  if (yesOrNo === 'yes') {
+    const NONE_RE = /^none$/i;
+    if (!inArray) {
+      const filtered = current.filter(v => !NONE_RE.test(v));
+      filtered.push(opt);
+      state.cqAnswers[qid] = filtered;
+    } else {
+      // Already YES — toggle off (same as clicking selected button again)
+      state.cqAnswers[qid] = current.filter(v => v !== opt);
+    }
+  } else {
+    // NO — remove from array
+    state.cqAnswers[qid] = current.filter(v => v !== opt);
+  }
+  _confirmCQHuman(qid);
+  reRenderAndroidStepModal();
+  updateAndroidCard();
+}
+
 function answerAndroidCR(qid, value) {
   const current = state.cqAnswers[qid];
   state.cqAnswers[qid] = (current === value) ? undefined : value;
@@ -2451,49 +2479,38 @@ function answerSteamTextField(fieldId, value) {
   updateSteamCard();
 }
 
-function toggleSteamCategory(itemId, checked) {
-  const cats = state.steamSubmitAnswers.contentCategories;
-  if (checked) { if (!cats.includes(itemId)) cats.push(itemId); }
-  else { state.steamSubmitAnswers.contentCategories = cats.filter(c => c !== itemId); }
-  updateSteamCard();
-}
+/* Unified handler for all Steam content survey yes/no items */
+function answerSteamContentItem(itemId, value) {
+  if (!state.steamSubmitAnswers.steamContentAnswers) {
+    state.steamSubmitAnswers.steamContentAnswers = {};
+  }
+  const sca = state.steamSubmitAnswers.steamContentAnswers;
+  const current = sca[itemId];
+  const newVal  = (current === value) ? null : value;
+  sca[itemId] = newVal;
 
-function toggleSteamMature(optId, checked) {
-  const decl = state.steamSubmitAnswers.matureDeclarations;
-  // Auto-select chain: adult_sexual → freq_nudity → some_nudity → gen_mature
-  const CHAIN = ['gen_mature','some_nudity','freq_nudity','adult_sexual'];
-  const idx = CHAIN.indexOf(optId);
-  if (checked) {
-    // Select this and all preceding in chain
-    for (let i = 0; i <= idx; i++) {
-      if (!decl.includes(CHAIN[i])) decl.push(CHAIN[i]);
-    }
-  } else {
-    // Deselect this and all following in chain
-    for (let i = idx; i < CHAIN.length; i++) {
-      state.steamSubmitAnswers.matureDeclarations = decl.filter(d => d !== CHAIN[i]);
+  // Auto-cascade for mature declarations chain
+  const CHAIN = ['gen_mature', 'some_nudity', 'freq_nudity', 'adult_sexual'];
+  const idx = CHAIN.indexOf(itemId);
+  if (idx !== -1) {
+    if (newVal === 'yes') {
+      // Set all preceding chain members to 'yes' if not already answered
+      for (let i = 0; i < idx; i++) {
+        if (!sca[CHAIN[i]]) sca[CHAIN[i]] = 'yes';
+      }
+    } else {
+      // Set all following chain members to 'no'
+      for (let i = idx + 1; i < CHAIN.length; i++) {
+        sca[CHAIN[i]] = 'no';
+      }
     }
   }
-  // freq_violence doesn't chain but does require gen_mature
-  if (optId === 'freq_violence' && checked) {
-    const d2 = state.steamSubmitAnswers.matureDeclarations;
-    if (!d2.includes('gen_mature')) d2.push('gen_mature');
+  // freq_violence also requires gen_mature
+  if (itemId === 'freq_violence' && newVal === 'yes' && !sca['gen_mature']) {
+    sca['gen_mature'] = 'yes';
   }
+
   reRenderSteamStepModal();
-  updateSteamCard();
-}
-
-function toggleSteamViolentTag(tagId, checked) {
-  const tags = state.steamSubmitAnswers.violentTags;
-  if (checked) { if (!tags.includes(tagId)) tags.push(tagId); }
-  else { state.steamSubmitAnswers.violentTags = tags.filter(t => t !== tagId); }
-  updateSteamCard();
-}
-
-function toggleSteamNudityTag(tagId, checked) {
-  const tags = state.steamSubmitAnswers.nudityTags;
-  if (checked) { if (!tags.includes(tagId)) tags.push(tagId); }
-  else { state.steamSubmitAnswers.nudityTags = tags.filter(t => t !== tagId); }
   updateSteamCard();
 }
 

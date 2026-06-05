@@ -1843,11 +1843,8 @@ const STEAM_ACCESSIBILITY_FEATURES = [
 /* ── State factory ──────────────────────────────────── */
 function makeBlankSteamAnswers() {
   return {
-    // Content Survey
-    contentCategories:  [],
-    matureDeclarations: [],
-    violentTags:        [],
-    nudityTags:         [],
+    // Content Survey — all yes/no items stored in one object {[id]: 'yes'|'no'|null}
+    steamContentAnswers: {},
     matureDescription:  '',
     matureAccess:       '',
     // Generative AI
@@ -1883,7 +1880,7 @@ function isSteamSectionComplete(sectionId) {
   const a = state.steamSubmitAnswers;
   if (sectionId === 'contentRating') {
     if (a.usesAI === null) return false;
-    if (a.matureDeclarations.includes('gen_mature')) {
+    if (a.steamContentAnswers && a.steamContentAnswers['gen_mature'] === 'yes') {
       if (!a.matureDescription.trim() || !a.matureAccess.trim()) return false;
     }
     return true;

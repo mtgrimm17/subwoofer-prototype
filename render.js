@@ -2768,14 +2768,14 @@ function buildAndroidContentRatingSection() {
     if (q.type === 'multi') {
       const current = Array.isArray(ans) ? ans : [];
       const answered = current.length > 0;
-      const checks = q.options.map(o => {
-        const checked = current.includes(o);
-        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-          <input type="checkbox" ${checked ? 'checked' : ''}
-                 onchange="toggleAndroidCRMulti('${q.id}', this.value, this.checked)"
-                 value="${escHtml(o)}">
-          <span>${escHtml(o)}</span>
-        </label>`;
+      // Render each option as its own ynRow — skip "None" option since not-selected = none
+      const checks = q.options.filter(o => !/^none$/i.test(o.trim())).map((o, optIdx) => {
+        const val = current.includes(o) ? 'yes' : null;
+        const short = o.length > 52 ? o.slice(0, 52) + '…' : o;
+        return ynRow(escHtml(short), val,
+          `answerAndroidCRMultiOpt('${q.id}',${optIdx},'yes')`,
+          `answerAndroidCRMultiOpt('${q.id}',${optIdx},'no')`,
+          o.length > 52 ? o : '');
       }).join('');
       return `
         <div class="ios-q-row" data-answered="${answered ? '1' : '0'}" style="flex-direction:column;align-items:flex-start;">
@@ -3136,65 +3136,56 @@ function buildSteamActiveCard(pid) {
 
 /* ── Steam: Content Rating (PDF 7) ──────────────────── */
 function buildSteamContentRatingSection() {
-  const a = state.steamSubmitAnswers;
+  const a   = state.steamSubmitAnswers;
+  const sca = a.steamContentAnswers || {};
 
-  // Content categories — grouped multi-select
+  // Helper: ynRow for a Steam content item (stored in steamContentAnswers)
+  function steamItemRow(itemId, label, tooltip) {
+    const val = sca[itemId] || null;
+    return ynRow(label, val,
+      `answerSteamContentItem('${itemId}','yes')`,
+      `answerSteamContentItem('${itemId}','no')`,
+      tooltip);
+  }
+
+  // Content categories — each item is a ynRow
   let catHtml = '';
   STEAM_CONTENT_CATEGORIES.forEach(grp => {
-    const checks = grp.items.map(item => {
-      const checked = a.contentCategories.includes(item.id);
-      return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-        <input type="checkbox" ${checked ? 'checked' : ''}
-               onchange="toggleSteamCategory('${item.id}', this.checked)">
-        <span>${escHtml(item.label)}</span>
-      </label>`;
-    }).join('');
-    catHtml += `<div class="ios-content-step-label">${escHtml(grp.group)}</div>
-      <div class="cq-check-list">${checks}</div>`;
+    catHtml += `<div class="ios-content-step-label">${escHtml(grp.group)}</div>`;
+    grp.items.forEach(item => {
+      catHtml += steamItemRow(item.id, item.label, item.label);
+    });
   });
 
-  // Mature declarations
+  // Mature declarations — each option is a ynRow with cascade
   const MATURE_OPTS = [
-    { id: 'gen_mature',    label: 'General mature content: Content that deals with mature topics and may not be appropriate for all audiences' },
-    { id: 'freq_violence', label: 'Frequent violence or gore: Contains extremely violent or gory content' },
-    { id: 'some_nudity',   label: 'Some nudity or sexual content: Contains occasional nudity or sexual content' },
-    { id: 'freq_nudity',   label: 'Frequent nudity or sexual content: Primarily about explicit or frequent nudity or sexual content' },
-    { id: 'adult_sexual',  label: 'Adult only sexual content: Contains sexual content that is explicit or graphic and is intended for adults only' },
+    { id: 'gen_mature',    label: 'General mature content',               tip: 'Content that deals with mature topics and may not be appropriate for all audiences' },
+    { id: 'freq_violence', label: 'Frequent violence or gore',            tip: 'Contains extremely violent or gory content that may not be appropriate for all audiences' },
+    { id: 'some_nudity',   label: 'Some nudity or sexual content',        tip: 'Contains occasional nudity or sexual content — auto-selects General mature content' },
+    { id: 'freq_nudity',   label: 'Frequent nudity or sexual content',    tip: 'Primarily about explicit or frequent nudity/sexual content — auto-selects preceding categories' },
+    { id: 'adult_sexual',  label: 'Adult only sexual content',            tip: 'Explicit or graphic sexual content for adults only — auto-selects all preceding categories' },
   ];
-  const matureHtml = MATURE_OPTS.map(opt => {
-    const checked = a.matureDeclarations.includes(opt.id);
-    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-      <input type="checkbox" ${checked ? 'checked' : ''}
-             onchange="toggleSteamMature('${opt.id}', this.checked)">
-      <span>${escHtml(opt.label)}</span>
-    </label>`;
-  }).join('');
 
-  const violentTagBlock = a.matureDeclarations.includes('freq_violence') ? `
+  let matureHtml = MATURE_OPTS.map(opt => steamItemRow(opt.id, opt.label, opt.tip)).join('');
+
+  // Violent tag sub-rows (if freq_violence = yes)
+  const violentSub = sca['freq_violence'] === 'yes' ? `
     <div class="ios-followup">
-      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;">Please specify (adds store tags):</div>
-      ${['violent','gore'].map(t => {
-        const checked = a.violentTags.includes(t);
-        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-          <input type="checkbox" ${checked ? 'checked' : ''}
-                 onchange="toggleSteamViolentTag('${t}', this.checked)">
-          <span>${t.charAt(0).toUpperCase() + t.slice(1)}</span></label>`;
-      }).join('')}
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:4px;">Specify for store tags:</div>
+      ${steamItemRow('violent_tag', 'Violent', 'Adds the "Violent" store tag to your game')}
+      ${steamItemRow('gore_tag',    'Gore',    'Adds the "Gore" store tag to your game')}
     </div>` : '';
 
-  const nudityTagBlock = a.matureDeclarations.includes('freq_nudity') ? `
+  // Nudity tag sub-rows (if freq_nudity = yes)
+  const nuditySub = sca['freq_nudity'] === 'yes' ? `
     <div class="ios-followup">
-      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;">Please specify (adds store tags):</div>
-      ${[{id:'nudity',label:'Nudity'},{id:'sexual_content',label:'Sexual Content'}].map(t => {
-        const checked = a.nudityTags.includes(t.id);
-        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-          <input type="checkbox" ${checked ? 'checked' : ''}
-                 onchange="toggleSteamNudityTag('${t.id}', this.checked)">
-          <span>${escHtml(t.label)}</span></label>`;
-      }).join('')}
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:4px;">Specify for store tags:</div>
+      ${steamItemRow('nudity_tag',         'Nudity',         'Adds the "Nudity" store tag to your game')}
+      ${steamItemRow('sexual_content_tag', 'Sexual Content', 'Adds the "Sexual Content" store tag to your game')}
     </div>` : '';
 
-  const matureFieldBlock = a.matureDeclarations.includes('gen_mature') ? `
+  // Mature text fields (if gen_mature = yes)
+  const matureFieldBlock = sca['gen_mature'] === 'yes' ? `
     <div class="ios-followup">
       <div class="form-group" style="margin-bottom:10px;">
         <label class="form-label">What should customers know about the mature content?
@@ -3203,16 +3194,16 @@ function buildSteamContentRatingSection() {
         <textarea class="form-input" rows="3"
                   placeholder="Describe the mature content players will encounter…"
                   oninput="answerSteamTextField('matureDescription', this.value)">${escHtml(a.matureDescription)}</textarea>
-        ${!a.matureDescription.trim() ? '<div class="ios-risk-note risk-HIGH">Required.</div>' : ''}
+        ${!a.matureDescription.trim() ? '<div class="ios-risk-note risk-HIGH">Required when General mature content is selected.</div>' : ''}
       </div>
       <div class="form-group">
         <label class="form-label">How do we access the mature content? <span style="color:var(--text-faint);font-weight:400;">(Review team only)</span>
-          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Is the content on a certain map or scene? Does the player need to reach a certain level? Not visible to customers.</span></span>
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Not visible to customers. Is the content on a specific map? Does the player need to reach a certain level?</span></span>
         </label>
         <textarea class="form-input" rows="2"
                   placeholder="e.g. Content is accessible after reaching level 10…"
                   oninput="answerSteamTextField('matureAccess', this.value)">${escHtml(a.matureAccess)}</textarea>
-        ${!a.matureAccess.trim() ? '<div class="ios-risk-note risk-HIGH">Required.</div>' : ''}
+        ${!a.matureAccess.trim() ? '<div class="ios-risk-note risk-HIGH">Required when General mature content is selected.</div>' : ''}
       </div>
     </div>` : '';
 
@@ -3234,16 +3225,15 @@ function buildSteamContentRatingSection() {
         'Does this game use AI to generate content or code during active gameplay?')}
       ${a.aiLiveGenerated === 'yes' ? `
         <div class="ios-followup">
-          <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;">Types of live-generated content:</div>
-          <div class="cq-check-list">${AI_LIVE_TYPES.map(t => {
+          <div class="ios-content-step-label" style="margin-top:6px;">Types of live-generated content</div>
+          ${AI_LIVE_TYPES.map(t => {
             const id = t.toLowerCase().replace(/[^a-z0-9]/g,'_');
-            const checked = a.aiLiveTypes.includes(id);
-            return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-              <input type="checkbox" ${checked ? 'checked' : ''}
-                     onchange="toggleSteamAIType('${id}', this.checked)">
-              <span>${escHtml(t)}</span></label>`;
-          }).join('')}</div>
-          ${a.aiLiveTypes.includes('code') ? `<div class="form-group" style="margin-top:8px;"><label class="form-label">Describe code generation and safeguards</label>
+            const val = (a.aiLiveTypes || []).includes(id) ? 'yes' : null;
+            return ynRow(t, val,
+              `toggleSteamAIType('${id}', true)`,
+              `toggleSteamAIType('${id}', false)`);
+          }).join('')}
+          ${(a.aiLiveTypes||[]).includes('code') ? `<div class="form-group" style="margin-top:8px;"><label class="form-label">Describe code generation and safeguards</label>
             <textarea class="form-input" rows="2" oninput="answerSteamTextField('aiCodeDesc', this.value)">${escHtml(a.aiCodeDesc)}</textarea></div>` : ''}
           <div class="form-group" style="margin-top:8px;"><label class="form-label">Copyright protection measures</label>
             <textarea class="form-input" rows="2"
@@ -3253,8 +3243,7 @@ function buildSteamContentRatingSection() {
             <textarea class="form-input" rows="2"
                       placeholder="How do you ensure generated content adheres to Steam's guidelines?"
                       oninput="answerSteamTextField('aiModerationDesc', this.value)">${escHtml(a.aiModerationDesc)}</textarea></div>
-          ${a.matureDeclarations.includes('adult_sexual') ?
-            '<div class="ios-risk-note risk-HIGH" style="margin-top:8px;"><strong>Warning:</strong> Steam cannot support Adult Only Sexual Content created with live-generated AI. Contact Steamworks support to request a refund of your app fee.</div>' : ''}
+          ${sca['adult_sexual'] === 'yes' ? '<div class="ios-risk-note risk-HIGH" style="margin-top:8px;"><strong>Warning:</strong> Steam cannot support Adult Only Sexual Content created with live-generated AI.</div>' : ''}
         </div>` : ''}
       ${ynRow('Connects to external third-party AI service during gameplay', a.aiThirdParty,
         "answerSteamField('aiThirdParty','yes')",
@@ -3275,13 +3264,14 @@ function buildSteamContentRatingSection() {
     </div>` : '';
 
   return `
-    <div class="ios-content-step-label" style="margin-top:0;">Content Categories</div>
-    <p style="font-size:12px;color:var(--text-faint);margin:0 0 10px;">Select all that apply to your game. If none apply, leave all unchecked and proceed.</p>
+    <p style="font-size:12px;color:var(--text-faint);margin:0 0 10px;">Select Yes for every category that applies to your game. If nothing applies, answer No.</p>
     ${catHtml}
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Mature Content</div>
-    <div class="cq-check-list">${matureHtml}</div>
-    ${violentTagBlock}${nudityTagBlock}${matureFieldBlock}
+    ${matureHtml}
+    ${violentSub}
+    ${nuditySub}
+    ${matureFieldBlock}
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Generative AI</div>
     ${ynRow('Uses generative AI', a.usesAI,
