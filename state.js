@@ -627,8 +627,8 @@ const PLATFORMS = {
   ios: {
     id: 'ios', label: 'iOS App Store', color: '#007AFF',
     steps: [
-      { id: 'privacy',       label: 'Data Privacy',      hasInference: false },
       { id: 'contentRating', label: 'Content Rating',    hasInference: true  },
+      { id: 'privacy',       label: 'Data Privacy',      hasInference: false },
       { id: 'business',      label: 'Business',          hasInference: true  },
       { id: 'storePreview',  label: 'Store Page Preview',hasInference: false },
     ],
@@ -636,8 +636,8 @@ const PLATFORMS = {
   android: {
     id: 'android', label: 'Google Play', color: '#34A853',
     steps: [
-      { id: 'dataSafety',    label: 'Data Safety',        hasInference: false },
       { id: 'contentRating', label: 'Content Rating',     hasInference: false },
+      { id: 'dataSafety',    label: 'Data Safety',        hasInference: false },
       { id: 'business',      label: 'Business',           hasInference: false },
       { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
     ],
@@ -645,13 +645,10 @@ const PLATFORMS = {
   steam: {
     id: 'steam', label: 'Steam', color: '#4c6b8a',
     steps: [
-      { id: 'reviewStorePage',    label: 'Review Store Page' },
-      { id: 'confirmMedia',       label: 'Confirm Media & Capsule Art' },
-      { id: 'systemRequirements', label: 'System Requirements' },
-      { id: 'releaseSettings',    label: 'Release Settings' },
-      { id: 'storePreview',       label: 'Store Page Preview' },
-      { id: 'reviewSubmission',   label: 'Review Submission',     isReview: true },
-      { id: 'submit',             label: 'Submit for Review',     isSubmit: true },
+      { id: 'contentRating', label: 'Content Rating',     hasInference: false },
+      { id: 'storeTags',     label: 'Store Tags',         hasInference: false },
+      { id: 'technical',     label: 'Technical',          hasInference: false },
+      { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
     ],
   },
   egs: {
@@ -725,6 +722,11 @@ function platformStepCount(platformId) {
   // Android: completion is computed from androidSubmitAnswers
   if (platformId === 'android') {
     const complete = p.steps.filter(s => isAndroidSectionComplete(s.id)).length;
+    return { total: p.steps.length, complete, submitDone: false, allRequired: complete === p.steps.length };
+  }
+  // Steam: completion is computed from steamSubmitAnswers
+  if (platformId === 'steam') {
+    const complete = p.steps.filter(s => isSteamSectionComplete(s.id)).length;
     return { total: p.steps.length, complete, submitDone: false, allRequired: complete === p.steps.length };
   }
   const required = p.steps.filter(s => !s.isSubmit);
@@ -1650,6 +1652,9 @@ const state = {
   // Google Play submission questionnaire answers
   androidSubmitAnswers: makeBlankAndroidAnswers(),
 
+  // Steam submission questionnaire answers
+  steamSubmitAnswers: makeBlankSteamAnswers(),
+
   // Android data matrix expansion state
   androidMatrixExpanded: false,
 
@@ -1690,3 +1695,213 @@ const state = {
   // { status: 'loading'|'done'|'error', found: bool, title, description, source, confidence, confirmed: bool, error: string }
   liveSearch: null,
 };
+
+/* ══════════════════════════════════════════════════════
+   STEAM SUBMISSION
+   ══════════════════════════════════════════════════════ */
+
+/* ── Content Survey categories (PDF 7) ─────────────── */
+const STEAM_CONTENT_CATEGORIES = [
+  { group: 'Fantasy / Mild Violence', items: [
+    { id: 'fmv_blood',   label: 'Unrealistic blood color' },
+    { id: 'fmv_cartoon', label: 'Cartoon violence / fantasy violence' },
+    { id: 'fmv_fights',  label: 'Fights without gore or blood; display of weapons; bones/skeletons; derogatory language; anguish' },
+  ]},
+  { group: 'Realistic Violence', items: [
+    { id: 'rv_blood',     label: 'Realistic blood; violent acts; accidental death; bodily injury; corpses; violence description' },
+    { id: 'rv_killing',   label: 'Killing' },
+    { id: 'rv_minorities',label: 'Violence against minorities or vulnerable groups' },
+  ]},
+  { group: 'High Impact Violence / Cruelty', items: [
+    { id: 'hiv_extreme',    label: 'Contains extremely violent or gory content (e.g. mutilation; torture; detailed deaths)' },
+    { id: 'hiv_glorify',    label: 'Glamorization of / incitement to violence' },
+    { id: 'hiv_gratuitous', label: 'Realistic excessive/gratuitous violence; grotesque violence' },
+  ]},
+  { group: 'Suicide', items: [
+    { id: 'sui_depiction', label: 'Depiction of suicide' },
+  ]},
+  { group: 'Crime', items: [
+    { id: 'crime_acts',     label: 'Depiction of criminal acts' },
+    { id: 'crime_favorable',label: 'Favorable depiction of criminal behavior' },
+  ]},
+  { group: 'Horror', items: [
+    { id: 'hor_bleak',       label: 'Fear — settings are bleak and dark, but not realistic' },
+    { id: 'hor_frightening', label: 'Very frightening scenes; psychological horror' },
+  ]},
+  { group: 'Language', items: [
+    { id: 'lang_mild',     label: 'Mild profanity, swearing, cursing' },
+    { id: 'lang_moderate', label: 'Moderate crude language; occasional swearing' },
+  ]},
+  { group: 'Crude Humor', items: [
+    { id: 'crude_adult',  label: 'Adult humor — comedic references to bodily functions, death, killing, crime, mental health, substance abuse, social and/or political issues' },
+    { id: 'crude_sexual', label: 'Adult humor with sexual connotations' },
+  ]},
+  { group: 'Nudity or Sexual Content', items: [
+    { id: 'sex_revealing',        label: 'Revealing outfits; sexual stimulation; sexual innuendo; sex-related language; masturbation' },
+    { id: 'sex_veiled',           label: 'Veiled nudity — body form implied by tight-fitting clothing or objects barely covering a naked body' },
+    { id: 'sex_nonexplicit',      label: 'Non-explicit sexual content; prostitution; exaggerated eroticism or excessive erotic content' },
+    { id: 'sex_somenudity',       label: 'Some nudity — breasts or buttocks visible, but no genitalia' },
+    { id: 'sex_violence',         label: 'Depictions of sexual violence (rape, abuse)' },
+    { id: 'sex_minor_suggest',    label: 'Suggestion of a minor involved in a sexual context' },
+    { id: 'sex_minor_insinuate',  label: 'Suggestion or insinuation of minors engaged in sexual activity' },
+  ]},
+  { group: 'Explicit Sexual Content', items: [
+    { id: 'esex_explicit',   label: 'Contains sexual content that is explicit or graphic and is intended for adults only' },
+    { id: 'esex_genitalia',  label: 'Clear depiction of genitalia' },
+  ]},
+  { group: 'Legal Drugs', items: [
+    { id: 'drug_legal',     label: 'Insinuated consumption of alcohol or tobacco' },
+    { id: 'drug_illegal',   label: 'Insinuated consumption of illegal drugs; description of illegal drug use' },
+    { id: 'drug_depiction', label: 'Depiction of use of any illegal drugs; drug traffic' },
+    { id: 'drug_favorable', label: 'Favorable speech about illicit drug use' },
+  ]},
+  { group: 'Social Themes', items: [
+    { id: 'social_abortion', label: 'References to abortion' },
+  ]},
+  { group: 'Elements of Extremism', items: [
+    { id: 'ext_nazi',     label: 'Includes symbols of Nazi organizations (e.g. swastikas, SS runes). NOTE: may prevent sale in Germany.' },
+    { id: 'ext_hateful',  label: 'Disparaging or hateful messages directed at certain population groups' },
+    { id: 'ext_genocide', label: 'Glorification, denial, or gross trivialization of the Holocaust or other events of genocide' },
+  ]},
+  { group: 'Simulated Gambling / Speculative Acts', items: [
+    { id: 'gamb_refs',        label: 'References to real-world gambling games or environments; not visible on screen' },
+    { id: 'gamb_resembles',   label: 'Depiction of an environment resembling a real-world betting or gambling service' },
+    { id: 'gamb_interaction', label: 'Interaction with gambling-like mechanics and chance-based outcomes' },
+    { id: 'gamb_realmoney',   label: 'Participation requires real money or in-game currency purchased with real money' },
+  ]},
+  { group: 'Interactive Elements', items: [
+    { id: 'int_purchases', label: 'In-game purchases' },
+    { id: 'int_chance',    label: 'Chance-based in-game purchases' },
+    { id: 'int_chat',      label: 'In-game chat — text and/or voice chat' },
+    { id: 'int_filtered',  label: 'Filtered in-game text chat only (no voice, filters curse words and sexual terms)' },
+    { id: 'int_online',    label: 'Online interactivity' },
+  ]},
+];
+
+/* ── Tag Wizard constants (PDF 9) ───────────────────── */
+const STEAM_TOP_GENRES = [
+  'Action','Adventure','Casual','Racing','RPG','Simulation','Software','Sports','Strategy',
+];
+
+const STEAM_GENRES = [
+  '2D Fighter','3D Fighter','4X','Action Roguelike','Action RPG','Action-Adventure',
+  'Animation & Modeling','Arcade','Audio Production','Auto Battler','Automobile Sim',
+  'Base Building','Baseball','Basketball','Battle Royale',"Beat 'em up",'BMX',
+  'Board Game','Bowling','Building','Card Game','City Builder','Colony Sim',
+  'Character Action Game','Chess','Clicker','Cycling','Dating Sim',
+  'Design & Illustration','Diplomacy','Education','eSports','Experimental',
+  'Exploration','Farming Sim','Fighting','Football','God Game','Golf',
+  'Grand Strategy','Hacking','Hidden Object','Hockey','Idler','Interactive Fiction',
+  'JRPG','Life Sim','Management','Match 3','Medical Sim','Mini Golf','Mining',
+  'MMORPG','MOBA','Motocross','Open World','Outbreak Sim','Party Game',
+  'Party-Based RPG','Photo Editing','Pinball','Platformer','Point & Click',
+  'Puzzle','Rhythm','Roguelike','RTS','Sandbox','Shooter','Skateboarding',
+  'Skating','Skiing','Snowboarding','Soccer','Space Sim','Stealth','Strategy RPG',
+  'Survival','Tabletop','Tennis','Tower Defense','Trivia','Turn-Based Strategy',
+  'Utilities','Video Production','Visual Novel','Walking Simulator','Word Game','Wrestling',
+];
+
+const STEAM_SUB_GENRES = [
+  '2D Platformer','3D Platformer','Action RTS','Arena Shooter','Boomer Shooter',
+  'Bullet Hell','Card Battler','Choose Your Own Adventure','Collectathon',
+  'Combat Racing','Creature Collector','CRPG','Dungeon Crawler','Flight','FPS',
+  'Hack and Slash','Heist','Hero Shooter','Horror','Idler','Immersive Sim',
+  'Investigation','Looter Shooter','Mahjong','Metroidvania','Mystery Dungeon',
+  'On-Rails Shooter','Open World Survival Craft','Outbreak Sim','Political Sim',
+  'Precision Platformer','Puzzle Platformer','Real Time Tactics','Roguelite',
+  'Runner',"Shoot 'Em Up",'Shop Keeper','Side Scroller','Sokoban','Solitaire',
+  'Souls-like','Spectacle Fighter','Survival Horror','Tactical RPG',
+  'Third-Person Shooter','Time Management','Top-Down Shooter','Traditional Roguelike',
+  'Turn-Based Tactics','Twin Stick Shooter','Typing','Wargame',
+];
+
+const STEAM_AI_LIVE_TYPES = ['Code','Text','Textures','3D Models','Sound Effects','Music','Voice','Other'];
+
+/* ── Accessibility features (PDF 11 Summary) ────────── */
+const STEAM_ACCESSIBILITY_FEATURES = [
+  { id: 'adj_difficulty',  label: 'Adjustable Difficulty',          desc: 'Difficulty settings allow players to match their experience to their abilities' },
+  { id: 'save_anytime',    label: 'Save Anytime',                   desc: 'Players can save at any point in the game' },
+  { id: 'custom_volume',   label: 'Custom Volume Controls',         desc: 'Volume for different audio types can be adjusted independently' },
+  { id: 'narrated_menus',  label: 'Narrated Game Menus',            desc: 'Players can listen to game menus with narrated audio' },
+  { id: 'stereo_sound',    label: 'Stereo Sound',                   desc: 'Players can identify how far left or right sounds are coming from' },
+  { id: 'surround_sound',  label: 'Surround Sound',                 desc: 'Players can identify direction of sounds in any direction' },
+  { id: 'adj_text_size',   label: 'Adjustable Text Size',           desc: 'Players can adjust in-game text, menu text, subtitles' },
+  { id: 'subtitle_opts',   label: 'Subtitle Options',               desc: 'Players can customize subtitle display including background opacity, text color and size' },
+  { id: 'color_alt',       label: 'Color Alternatives',             desc: "Gameplay doesn't rely on colors, or players can adjust distinguishing colors" },
+  { id: 'contrast',        label: 'Contrast Controls',              desc: 'Contrast is adjustable, e.g. dark/light mode' },
+  { id: 'camera_comfort',  label: 'Camera Comfort',                 desc: 'Players can adjust or disable screen shaking, camera bob, motion blur' },
+  { id: 'no_vision',       label: 'Playable without Vision',        desc: 'Players can play fully without ever seeing the screen' },
+  { id: 'keyboard_only',   label: 'Keyboard Only Option',           desc: 'Game can be played with just a keyboard' },
+  { id: 'mouse_only',      label: 'Mouse Only Option',              desc: 'Game can be played with just a mouse' },
+  { id: 'touch_only',      label: 'Touch Only Option',              desc: 'Game can be played with just touch controls' },
+  { id: 'no_qte',          label: 'Playable without Quick Time Events', desc: 'Players can avoid sequences of precisely timed inputs' },
+  { id: 'own_pace',        label: 'Playable at Your Own Pace',      desc: 'Players can take as long as they need for any input' },
+  { id: 'chat_tts',        label: 'Chat Text-to-speech',            desc: 'Text chat between players can be narrated out loud in real time' },
+  { id: 'chat_stt',        label: 'Chat Speech-to-text',            desc: 'Voice chat between players can be read as text transcript in real time' },
+];
+
+/* ── State factory ──────────────────────────────────── */
+function makeBlankSteamAnswers() {
+  return {
+    // Content Survey
+    contentCategories:  [],
+    matureDeclarations: [],
+    violentTags:        [],
+    nudityTags:         [],
+    matureDescription:  '',
+    matureAccess:       '',
+    // Generative AI
+    usesAI:             null,
+    aiDescription:      '',
+    aiLiveGenerated:    null,
+    aiThirdParty:       null,
+    aiLiveTypes:        [],
+    aiCodeDesc:         '',
+    aiCopyrightDesc:    '',
+    aiModerationDesc:   '',
+    aiThirdPartyName:   '',
+    aiThirdPartyUrl:    '',
+    aiAvailabilityDesc: '',
+    aiMonetizationDesc: '',
+    // Tag Wizard
+    topGenres:          [],
+    genres:             [],
+    subGenres:          [],
+    // Technical
+    inputSupport:       null,
+    xboxFullSupport:    null,
+    psControllers:      [],
+    steamInputAPI:      null,
+    // Accessibility
+    accessibilityFeatures: [],
+    // Store Preview
+    storePreviewSeen:   false,
+  };
+}
+
+function isSteamSectionComplete(sectionId) {
+  const a = state.steamSubmitAnswers;
+  if (sectionId === 'contentRating') {
+    if (a.usesAI === null) return false;
+    if (a.matureDeclarations.includes('gen_mature')) {
+      if (!a.matureDescription.trim() || !a.matureAccess.trim()) return false;
+    }
+    return true;
+  }
+  if (sectionId === 'storeTags')  return a.topGenres.length >= 1;
+  if (sectionId === 'technical')  {
+    if (a.inputSupport === null) return false;
+    if (a.inputSupport !== 'keyboard_only' && a.xboxFullSupport === null) return false;
+    return true;
+  }
+  if (sectionId === 'storePreview') return !!a.storePreviewSeen;
+  return false;
+}
+
+function computeSteamSectionRisk(sectionId) {
+  const a = state.steamSubmitAnswers;
+  if (sectionId === 'contentRating') return a.usesAI === null ? 'HIGH' : 'LOW';
+  if (sectionId === 'storeTags')     return a.topGenres.length === 0 ? 'HIGH' : 'LOW';
+  if (sectionId === 'technical')     return a.inputSupport === null  ? 'HIGH' : 'LOW';
+  return 'LOW';
+}

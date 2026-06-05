@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function showMainApp() {
   document.getElementById('onboarding-overlay').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
-  seedOnboardingToIOS();      // pre-populate iOS answers so Data Privacy shows correct state
-  seedOnboardingToAndroid();  // same for Android
+  seedOnboardingToIOS();
+  seedOnboardingToAndroid();
   renderDashboard();
 }
 
@@ -271,6 +271,13 @@ async function openStepModal(pid, stepId) {
     document.body.style.overflow = 'hidden';
     return;
   }
+  if (pid === 'steam') {
+    state.stepModal = { platformId: pid, stepId, inferenceStatus: null };
+    renderStepModal();
+    document.getElementById('submit-overlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    return;
+  }
 
   seedOnboardingToIOS();
 
@@ -312,6 +319,7 @@ function closeStepModal() {
   document.body.style.overflow = '';
   updateIOSCard();
   updateAndroidCard();
+  updateSteamCard();
 }
 
 function submitOverlayClick(e) {
@@ -2378,4 +2386,165 @@ Rules:
 
   reRenderAndroidStepModal();
   updateAndroidCard();
+}
+
+/* ═══════════════════════════════════════════════════
+   STEAM HANDLERS
+   ═══════════════════════════════════════════════════ */
+
+function reRenderSteamStepModal() {
+  const bodyEl = document.getElementById('step-modal-body');
+  const scrollTop = bodyEl ? bodyEl.scrollTop : 0;
+  renderStepModal();
+  const newBodyEl = document.getElementById('step-modal-body');
+  if (newBodyEl) newBodyEl.scrollTop = scrollTop;
+}
+
+function updateSteamCard() {
+  if (!state.activePlatforms.has('steam')) return;
+  const counts = platformStepCount('steam');
+  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+
+  const barFill = document.getElementById('bar-fill-steam');
+  if (barFill) barFill.style.width = pct + '%';
+  const stepCountEl = document.getElementById('step-count-steam');
+  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
+
+  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  PLATFORMS.steam.steps.forEach((step, i) => {
+    const card = document.getElementById(`steam-step-card-${step.id}`);
+    if (!card) return;
+    const done = isSteamSectionComplete(step.id);
+    card.classList.toggle('is-complete', done);
+    const numEl = card.querySelector('.ios-step-num');
+    if (numEl) {
+      numEl.classList.toggle('is-done', done);
+      numEl.classList.remove('is-risk-warn','is-risk-high');
+      numEl.innerHTML = done ? checkSVG : String(i + 1);
+    }
+  });
+
+  const submitBtn = document.getElementById('submit-btn-steam');
+  if (submitBtn) {
+    const allDone = counts.allRequired;
+    submitBtn.classList.toggle('is-locked', !allDone);
+    if (allDone) {
+      submitBtn.removeAttribute('disabled');
+      submitBtn.setAttribute('onclick', "finalSubmit('steam')");
+    } else {
+      submitBtn.setAttribute('disabled', '');
+      submitBtn.setAttribute('onclick', '');
+    }
+  }
+}
+
+/* Toggle/answer helpers */
+function answerSteamField(fieldId, value) {
+  const current = state.steamSubmitAnswers[fieldId];
+  state.steamSubmitAnswers[fieldId] = (current === value) ? null : value;
+  reRenderSteamStepModal();
+  updateSteamCard();
+}
+
+function answerSteamTextField(fieldId, value) {
+  state.steamSubmitAnswers[fieldId] = value;
+  updateSteamCard();
+}
+
+function toggleSteamCategory(itemId, checked) {
+  const cats = state.steamSubmitAnswers.contentCategories;
+  if (checked) { if (!cats.includes(itemId)) cats.push(itemId); }
+  else { state.steamSubmitAnswers.contentCategories = cats.filter(c => c !== itemId); }
+  updateSteamCard();
+}
+
+function toggleSteamMature(optId, checked) {
+  const decl = state.steamSubmitAnswers.matureDeclarations;
+  // Auto-select chain: adult_sexual → freq_nudity → some_nudity → gen_mature
+  const CHAIN = ['gen_mature','some_nudity','freq_nudity','adult_sexual'];
+  const idx = CHAIN.indexOf(optId);
+  if (checked) {
+    // Select this and all preceding in chain
+    for (let i = 0; i <= idx; i++) {
+      if (!decl.includes(CHAIN[i])) decl.push(CHAIN[i]);
+    }
+  } else {
+    // Deselect this and all following in chain
+    for (let i = idx; i < CHAIN.length; i++) {
+      state.steamSubmitAnswers.matureDeclarations = decl.filter(d => d !== CHAIN[i]);
+    }
+  }
+  // freq_violence doesn't chain but does require gen_mature
+  if (optId === 'freq_violence' && checked) {
+    const d2 = state.steamSubmitAnswers.matureDeclarations;
+    if (!d2.includes('gen_mature')) d2.push('gen_mature');
+  }
+  reRenderSteamStepModal();
+  updateSteamCard();
+}
+
+function toggleSteamViolentTag(tagId, checked) {
+  const tags = state.steamSubmitAnswers.violentTags;
+  if (checked) { if (!tags.includes(tagId)) tags.push(tagId); }
+  else { state.steamSubmitAnswers.violentTags = tags.filter(t => t !== tagId); }
+  updateSteamCard();
+}
+
+function toggleSteamNudityTag(tagId, checked) {
+  const tags = state.steamSubmitAnswers.nudityTags;
+  if (checked) { if (!tags.includes(tagId)) tags.push(tagId); }
+  else { state.steamSubmitAnswers.nudityTags = tags.filter(t => t !== tagId); }
+  updateSteamCard();
+}
+
+function toggleSteamAIType(typeId, checked) {
+  const types = state.steamSubmitAnswers.aiLiveTypes;
+  if (checked) { if (!types.includes(typeId)) types.push(typeId); }
+  else { state.steamSubmitAnswers.aiLiveTypes = types.filter(t => t !== typeId); }
+  reRenderSteamStepModal();
+  updateSteamCard();
+}
+
+function toggleSteamTag(field, value, checked, maxCount) {
+  const arr = state.steamSubmitAnswers[field];
+  if (checked) {
+    if (arr.length < maxCount && !arr.includes(value)) arr.push(value);
+    else if (arr.length >= maxCount) {
+      // Uncheck the box visually — can't add more
+      event.target.checked = false;
+    }
+  } else {
+    state.steamSubmitAnswers[field] = arr.filter(v => v !== value);
+  }
+  updateSteamCard();
+}
+
+function toggleSteamPS(controllerId, checked) {
+  const ps = state.steamSubmitAnswers.psControllers;
+  if (checked) {
+    if (controllerId === 'ps_none') {
+      state.steamSubmitAnswers.psControllers = ['ps_none'];
+    } else {
+      state.steamSubmitAnswers.psControllers = ps
+        .filter(c => c !== 'ps_none')
+        .concat(ps.includes(controllerId) ? [] : [controllerId]);
+      // Auto-select USB if BT+USB selected
+      if (controllerId === 'ps_dualshock_bt' && !ps.includes('ps_dualshock_usb')) {
+        state.steamSubmitAnswers.psControllers.push('ps_dualshock_usb');
+      }
+      if (controllerId === 'ps_dualsense_bt' && !ps.includes('ps_dualsense_usb')) {
+        state.steamSubmitAnswers.psControllers.push('ps_dualsense_usb');
+      }
+    }
+  } else {
+    state.steamSubmitAnswers.psControllers = ps.filter(c => c !== controllerId);
+  }
+  reRenderSteamStepModal();
+}
+
+function toggleSteamAccessibility(featureId, checked) {
+  const feats = state.steamSubmitAnswers.accessibilityFeatures;
+  if (checked) { if (!feats.includes(featureId)) feats.push(featureId); }
+  else { state.steamSubmitAnswers.accessibilityFeatures = feats.filter(f => f !== featureId); }
+  updateSteamCard();
 }

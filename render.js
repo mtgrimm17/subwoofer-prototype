@@ -593,7 +593,7 @@ function buildObPlatTilesHTML() {
   const PLATFORMS_OB = [
     { id:'ios',      label:'App Store',         comingSoon: false },
     { id:'android',  label:'Google Play',        comingSoon: false },
-    { id:'steam',    label:'Steam',              comingSoon: true  },
+    { id:'steam',    label:'Steam',              comingSoon: false },
     { id:'psn',      label:'PlayStation Store',  comingSoon: true  },
     { id:'xbox',     label:'Xbox Store',         comingSoon: true  },
     { id:'egs',      label:'Epic Games Store',   comingSoon: true  },
@@ -1237,6 +1237,7 @@ function renderDashboard() {
 function buildActiveCard(pid) {
   if (pid === 'ios')     return buildIOSActiveCard(pid);
   if (pid === 'android') return buildAndroidActiveCard(pid);
+  if (pid === 'steam')   return buildSteamActiveCard(pid);
 
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
@@ -1379,7 +1380,7 @@ function buildAndroidActiveCard(pid) {
     </div>`;
 }
 
-const COMING_SOON_PLATFORMS = new Set(['steam', 'egs', 'psn', 'xbox', 'nintendo']);
+const COMING_SOON_PLATFORMS = new Set(['egs', 'psn', 'xbox', 'nintendo']);
 
 function buildInactiveCard(pid) {
   const p          = PLATFORMS[pid];
@@ -1530,19 +1531,24 @@ function renderStepModal() {
   if (inferenceStatus === 'loading') {
     body = `<div class="step-loading-placeholder"><div class="step-loading-shimmer"></div><div class="step-loading-shimmer"></div><div class="step-loading-shimmer short"></div></div>`;
   } else if (platformId === 'android') {
-    if (stepId === 'dataSafety')    body = buildAndroidDataSafetySection();
-    else if (stepId === 'contentRating') body = buildAndroidContentRatingSection();
+    if (stepId === 'contentRating')      body = buildAndroidContentRatingSection();
+    else if (stepId === 'dataSafety')    body = buildAndroidDataSafetySection();
     else if (stepId === 'business')      body = buildAndroidBusinessSection();
     else if (stepId === 'storePreview')  body = buildAndroidStorePreviewSection();
+  } else if (platformId === 'steam') {
+    if (stepId === 'contentRating')      body = buildSteamContentRatingSection();
+    else if (stepId === 'storeTags')     body = buildSteamStoreTagsSection();
+    else if (stepId === 'technical')     body = buildSteamTechnicalSection();
+    else if (stepId === 'storePreview')  body = buildSteamStorePreviewSection();
   } else if (stepId === 'privacy')        body = buildPrivacySection();
   else if (stepId === 'contentRating')    body = buildContentRatingSection();
   else if (stepId === 'business')         body = buildBusinessSection() + buildExportComplianceSection();
   else if (stepId === 'distribution')     body = buildDistributionSection();
   else if (stepId === 'storePreview')     body = buildStorePreviewSection();
 
-  const complete = platformId === 'android'
-    ? isAndroidSectionComplete(stepId)
-    : isIOSSectionComplete(stepId);
+  const complete = platformId === 'android' ? isAndroidSectionComplete(stepId)
+               : platformId === 'steam'   ? isSteamSectionComplete(stepId)
+               : isIOSSectionComplete(stepId);
 
   modal.innerHTML = `
     <div class="submit-modal-header" style="border-top-color:${p.color};">
@@ -3079,5 +3085,366 @@ function buildAndroidDataMatrix(a) {
         </button>
       </div>
       ${tableHtml}
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   STEAM STEP SECTIONS
+   ═══════════════════════════════════════════════════ */
+
+function buildSteamActiveCard(pid) {
+  const p      = PLATFORMS[pid];
+  const counts = platformStepCount(pid);
+  const locked = !counts.allRequired;
+  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  const stepCards = p.steps.map((step, i) => {
+    const done = isSteamSectionComplete(step.id);
+    return `
+      <div class="ios-step-card ${done ? 'is-complete' : ''}" id="steam-step-card-${step.id}"
+           onclick="openStepModal('${pid}','${step.id}')">
+        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
+        <div class="ios-step-info">
+          <div class="ios-step-name">${step.label}</div>
+        </div>
+        <span class="ios-step-arrow">›</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="active-card" id="active-card-${pid}">
+      <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
+        <div class="active-card-platform">
+          <div class="active-card-icon">${platformIcon(pid, 18)}</div>
+          <div>
+            <div class="active-card-name">${p.label}</div>
+            <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-bar-wrap">
+        <div class="card-bar"><div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div></div>
+        <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
+                id="submit-btn-${pid}"
+                onclick="${locked ? '' : `finalSubmit('${pid}')`}"
+                title="${locked ? 'Complete all steps first' : 'Submit to Steam'}"
+                ${locked ? 'disabled' : ''}>Submit</button>
+      </div>
+      <div class="ios-step-cards">${stepCards}</div>
+    </div>`;
+}
+
+/* ── Steam: Content Rating (PDF 7) ──────────────────── */
+function buildSteamContentRatingSection() {
+  const a = state.steamSubmitAnswers;
+
+  // Content categories — grouped multi-select
+  let catHtml = '';
+  STEAM_CONTENT_CATEGORIES.forEach(grp => {
+    const checks = grp.items.map(item => {
+      const checked = a.contentCategories.includes(item.id);
+      return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+        <input type="checkbox" ${checked ? 'checked' : ''}
+               onchange="toggleSteamCategory('${item.id}', this.checked)">
+        <span>${escHtml(item.label)}</span>
+      </label>`;
+    }).join('');
+    catHtml += `<div class="ios-content-step-label">${escHtml(grp.group)}</div>
+      <div class="cq-check-list">${checks}</div>`;
+  });
+
+  // Mature declarations
+  const MATURE_OPTS = [
+    { id: 'gen_mature',    label: 'General mature content: Content that deals with mature topics and may not be appropriate for all audiences' },
+    { id: 'freq_violence', label: 'Frequent violence or gore: Contains extremely violent or gory content' },
+    { id: 'some_nudity',   label: 'Some nudity or sexual content: Contains occasional nudity or sexual content' },
+    { id: 'freq_nudity',   label: 'Frequent nudity or sexual content: Primarily about explicit or frequent nudity or sexual content' },
+    { id: 'adult_sexual',  label: 'Adult only sexual content: Contains sexual content that is explicit or graphic and is intended for adults only' },
+  ];
+  const matureHtml = MATURE_OPTS.map(opt => {
+    const checked = a.matureDeclarations.includes(opt.id);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamMature('${opt.id}', this.checked)">
+      <span>${escHtml(opt.label)}</span>
+    </label>`;
+  }).join('');
+
+  const violentTagBlock = a.matureDeclarations.includes('freq_violence') ? `
+    <div class="ios-followup">
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;">Please specify (adds store tags):</div>
+      ${['violent','gore'].map(t => {
+        const checked = a.violentTags.includes(t);
+        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''}
+                 onchange="toggleSteamViolentTag('${t}', this.checked)">
+          <span>${t.charAt(0).toUpperCase() + t.slice(1)}</span></label>`;
+      }).join('')}
+    </div>` : '';
+
+  const nudityTagBlock = a.matureDeclarations.includes('freq_nudity') ? `
+    <div class="ios-followup">
+      <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;">Please specify (adds store tags):</div>
+      ${[{id:'nudity',label:'Nudity'},{id:'sexual_content',label:'Sexual Content'}].map(t => {
+        const checked = a.nudityTags.includes(t.id);
+        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''}
+                 onchange="toggleSteamNudityTag('${t.id}', this.checked)">
+          <span>${escHtml(t.label)}</span></label>`;
+      }).join('')}
+    </div>` : '';
+
+  const matureFieldBlock = a.matureDeclarations.includes('gen_mature') ? `
+    <div class="ios-followup">
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">What should customers know about the mature content?
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Visible on your store page. Describe depictions of violence, sexual acts, or other topics players should know about.</span></span>
+        </label>
+        <textarea class="form-input" rows="3"
+                  placeholder="Describe the mature content players will encounter…"
+                  oninput="answerSteamTextField('matureDescription', this.value)">${escHtml(a.matureDescription)}</textarea>
+        ${!a.matureDescription.trim() ? '<div class="ios-risk-note risk-HIGH">Required.</div>' : ''}
+      </div>
+      <div class="form-group">
+        <label class="form-label">How do we access the mature content? <span style="color:var(--text-faint);font-weight:400;">(Review team only)</span>
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Is the content on a certain map or scene? Does the player need to reach a certain level? Not visible to customers.</span></span>
+        </label>
+        <textarea class="form-input" rows="2"
+                  placeholder="e.g. Content is accessible after reaching level 10…"
+                  oninput="answerSteamTextField('matureAccess', this.value)">${escHtml(a.matureAccess)}</textarea>
+        ${!a.matureAccess.trim() ? '<div class="ios-risk-note risk-HIGH">Required.</div>' : ''}
+      </div>
+    </div>` : '';
+
+  // Generative AI
+  const AI_LIVE_TYPES = STEAM_AI_LIVE_TYPES;
+  const aiLiveBlock = a.usesAI === 'yes' ? `
+    <div style="margin-top:10px;">
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">Describe to players how this game uses generative AI
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Shown under "About This Game" on your store page.</span></span>
+        </label>
+        <textarea class="form-input" rows="2"
+                  placeholder="Describe how AI is used in your game…"
+                  oninput="answerSteamTextField('aiDescription', this.value)">${escHtml(a.aiDescription)}</textarea>
+      </div>
+      ${ynRow('Generates content or code during gameplay', a.aiLiveGenerated,
+        "answerSteamField('aiLiveGenerated','yes')",
+        "answerSteamField('aiLiveGenerated','no')",
+        'Does this game use AI to generate content or code during active gameplay?')}
+      ${a.aiLiveGenerated === 'yes' ? `
+        <div class="ios-followup">
+          <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px;">Types of live-generated content:</div>
+          <div class="cq-check-list">${AI_LIVE_TYPES.map(t => {
+            const id = t.toLowerCase().replace(/[^a-z0-9]/g,'_');
+            const checked = a.aiLiveTypes.includes(id);
+            return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+              <input type="checkbox" ${checked ? 'checked' : ''}
+                     onchange="toggleSteamAIType('${id}', this.checked)">
+              <span>${escHtml(t)}</span></label>`;
+          }).join('')}</div>
+          ${a.aiLiveTypes.includes('code') ? `<div class="form-group" style="margin-top:8px;"><label class="form-label">Describe code generation and safeguards</label>
+            <textarea class="form-input" rows="2" oninput="answerSteamTextField('aiCodeDesc', this.value)">${escHtml(a.aiCodeDesc)}</textarea></div>` : ''}
+          <div class="form-group" style="margin-top:8px;"><label class="form-label">Copyright protection measures</label>
+            <textarea class="form-input" rows="2"
+                      placeholder="What steps ensure users can't generate copyrighted material?"
+                      oninput="answerSteamTextField('aiCopyrightDesc', this.value)">${escHtml(a.aiCopyrightDesc)}</textarea></div>
+          <div class="form-group" style="margin-top:8px;"><label class="form-label">Content moderation strategy</label>
+            <textarea class="form-input" rows="2"
+                      placeholder="How do you ensure generated content adheres to Steam's guidelines?"
+                      oninput="answerSteamTextField('aiModerationDesc', this.value)">${escHtml(a.aiModerationDesc)}</textarea></div>
+          ${a.matureDeclarations.includes('adult_sexual') ?
+            '<div class="ios-risk-note risk-HIGH" style="margin-top:8px;"><strong>Warning:</strong> Steam cannot support Adult Only Sexual Content created with live-generated AI. Contact Steamworks support to request a refund of your app fee.</div>' : ''}
+        </div>` : ''}
+      ${ynRow('Connects to external third-party AI service during gameplay', a.aiThirdParty,
+        "answerSteamField('aiThirdParty','yes')",
+        "answerSteamField('aiThirdParty','no')")}
+      ${a.aiThirdParty === 'yes' ? `
+        <div class="ios-followup">
+          <div class="form-group" style="margin-bottom:8px;"><label class="form-label">Service name <span style="color:var(--text-faint);">(shown on store page)</span></label>
+            <input class="form-input" type="text" value="${escHtml(a.aiThirdPartyName)}"
+                   placeholder="e.g. OpenAI" oninput="answerSteamTextField('aiThirdPartyName', this.value)"></div>
+          <div class="form-group" style="margin-bottom:8px;"><label class="form-label">Service URL <span style="color:var(--text-faint);">(shown on store page)</span></label>
+            <input class="form-input" type="url" value="${escHtml(a.aiThirdPartyUrl)}"
+                   placeholder="https://" oninput="answerSteamTextField('aiThirdPartyUrl', this.value)"></div>
+          <div class="form-group" style="margin-bottom:8px;"><label class="form-label">How is generative content made available to players?</label>
+            <textarea class="form-input" rows="2" oninput="answerSteamTextField('aiAvailabilityDesc', this.value)">${escHtml(a.aiAvailabilityDesc)}</textarea></div>
+          <div class="form-group"><label class="form-label">Monetization strategy for live AI services</label>
+            <textarea class="form-input" rows="2" oninput="answerSteamTextField('aiMonetizationDesc', this.value)">${escHtml(a.aiMonetizationDesc)}</textarea></div>
+        </div>` : ''}
+    </div>` : '';
+
+  return `
+    <div class="ios-content-step-label" style="margin-top:0;">Content Categories</div>
+    <p style="font-size:12px;color:var(--text-faint);margin:0 0 10px;">Select all that apply to your game. If none apply, leave all unchecked and proceed.</p>
+    ${catHtml}
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Mature Content</div>
+    <div class="cq-check-list">${matureHtml}</div>
+    ${violentTagBlock}${nudityTagBlock}${matureFieldBlock}
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Generative AI</div>
+    ${ynRow('Uses generative AI', a.usesAI,
+      "answerSteamField('usesAI','yes')",
+      "answerSteamField('usesAI','no')",
+      'Does this game use generative AI to create content — including the game, store page, or marketing materials?')}
+    ${aiLiveBlock}`;
+}
+
+/* ── Steam: Store Tags (PDF 9) ──────────────────────── */
+function buildSteamStoreTagsSection() {
+  const a = state.steamSubmitAnswers;
+
+  const topGenreChecks = STEAM_TOP_GENRES.map(g => {
+    const checked = a.topGenres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('topGenres','${g}',this.checked,2)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
+
+  const genreChecks = STEAM_GENRES.map(g => {
+    const checked = a.genres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('genres','${g}',this.checked,2)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
+
+  const subGenreChecks = STEAM_SUB_GENRES.map(g => {
+    const checked = a.subGenres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('subGenres','${g}',this.checked,3)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
+
+  const topCount = a.topGenres.length;
+  const genreCount = a.genres.length;
+  const subCount = a.subGenres.length;
+
+  return `
+    <div class="ios-content-step-label" style="margin-top:0;">Top-Level Genre
+      <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Required. Choose one or two top-level genres to categorize your title on Steam.</span></span>
+    </div>
+    ${topCount === 0 ? '<div class="ios-risk-note risk-HIGH" style="margin-bottom:8px;">Required — select at least one.</div>' : ''}
+    <div class="cq-check-list">${topGenreChecks}</div>
+
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 2${genreCount > 0 ? ', ' + genreCount + ' selected' : ''})</span></div>
+    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${genreChecks}</div>
+
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Sub-genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 3${subCount > 0 ? ', ' + subCount + ' selected' : ''})</span></div>
+    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${subGenreChecks}</div>`;
+}
+
+/* ── Steam: Technical (PDFs 10 + 11) ───────────────── */
+function buildSteamTechnicalSection() {
+  const a = state.steamSubmitAnswers;
+
+  const INPUT_OPTS = [
+    { id: 'keyboard_only',     label: 'Mouse and keyboard only' },
+    { id: 'keyboard_plus',     label: 'Mouse and keyboard, plus gamepads' },
+    { id: 'gamepad_preferred', label: 'Mouse and keyboard, but gamepad is preferred' },
+    { id: 'gamepad_required',  label: 'Gamepad required; no support for mouse and keyboard' },
+  ];
+
+  const inputHtml = singleSelectRow(
+    'Input devices',
+    a.inputSupport,
+    INPUT_OPTS.map(o => ({
+      value: o.id, label: o.label,
+      selectedClass: 'is-sel-none',
+      onSelect: `answerSteamField('inputSupport','${o.id}')`,
+    })),
+    'What kind of devices can be used to comfortably play your game?'
+  );
+
+  const gamepadBlock = a.inputSupport && a.inputSupport !== 'keyboard_only' ? `
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Controller Support</div>
+    ${ynRow('Full Xbox Controller support', a.xboxFullSupport,
+      "answerSteamField('xboxFullSupport','yes')",
+      "answerSteamField('xboxFullSupport','no')",
+      'Player can launch, configure, play, and exit using only an Xbox controller. Game displays correct glyphs and any text prompts open an on-screen keyboard.')}
+
+    <div style="margin-top:10px;">
+      <div class="form-label" style="margin-bottom:6px;">PlayStation Controller support <span style="color:var(--text-faint);font-weight:400;">(select all that apply)</span></div>
+      <div class="cq-check-list">${[
+        {id:'ps_dualshock_usb',   label:'DualShock Controller (USB)'},
+        {id:'ps_dualshock_bt',    label:'DualShock Controller (USB + Bluetooth)'},
+        {id:'ps_dualsense_usb',   label:'DualSense Controller (USB)'},
+        {id:'ps_dualsense_bt',    label:'DualSense Controller (USB + Bluetooth)'},
+        {id:'ps_none',            label:'No PlayStation controller support'},
+      ].map(c => {
+        const checked = a.psControllers.includes(c.id);
+        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''}
+                 onchange="toggleSteamPS('${c.id}', this.checked)">
+          <span>${escHtml(c.label)}</span></label>`;
+      }).join('')}</div>
+    </div>
+
+    ${ynRow('Full Steam Input API integration', a.steamInputAPI,
+      "answerSteamField('steamInputAPI','yes')",
+      "answerSteamField('steamInputAPI','no')",
+      'Game fully integrates the Steam Input API, implements action bindings, queries action origins for correct glyph display, and allows button remapping through the Steam configurator.')}
+  ` : '';
+
+  const accessChecks = STEAM_ACCESSIBILITY_FEATURES.map(f => {
+    const checked = a.accessibilityFeatures.includes(f.id);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}" title="${escHtml(f.desc)}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamAccessibility('${f.id}', this.checked)">
+      <span>${escHtml(f.label)}</span></label>`;
+  }).join('');
+
+  return `
+    <div class="ios-content-step-label" style="margin-top:0;">Input Support</div>
+    ${inputHtml}
+    ${gamepadBlock}
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Accessibility Features <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — select all that apply)</span></div>
+    <div class="cq-check-list">${accessChecks}</div>`;
+}
+
+/* ── Steam: Store Page Preview ──────────────────────── */
+function buildSteamStorePreviewSection() {
+  const fd   = state.formData;
+  const ups  = state.uploads;
+  const icon = ups.appIcon;
+  const shots = ups.screenshots || [];
+  const title = escHtml(fd.title || 'Your Game Title');
+  const descRaw = fd.description || '';
+  const descShort = escHtml(descRaw.slice(0, 160) + (descRaw.length > 160 ? '…' : ''));
+  const topGenres = state.steamSubmitAnswers.topGenres.slice(0, 2).join(', ') || 'Game';
+
+  const iconHtml = icon
+    ? `<img src="${icon.dataUrl}" style="width:108px;height:50px;border-radius:4px;object-fit:cover;">`
+    : `<div style="width:108px;height:50px;border-radius:4px;background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:9px;">Capsule</div>`;
+
+  const screenshotStrip = shots.length
+    ? `<div style="display:flex;gap:4px;overflow-x:auto;margin-top:10px;">${shots.slice(0,5).map(s => `<img src="${s.dataUrl}" style="height:90px;border-radius:4px;flex-shrink:0;">`).join('')}</div>`
+    : `<div style="height:60px;background:var(--bg-2);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:12px;margin-top:10px;">No screenshots uploaded</div>`;
+
+  state.steamSubmitAnswers.storePreviewSeen = true;
+
+  return `
+    <p style="font-size:12px;color:var(--text-faint);margin:0 0 14px;">Approximate Steam store listing appearance.</p>
+    <div style="background:#1b2838;border-radius:6px;padding:14px;font-family:inherit;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        ${iconHtml}
+        <div>
+          <div style="font-size:15px;font-weight:600;color:#c6d4df;">${title}</div>
+          <div style="font-size:11px;color:#8f98a0;margin-top:3px;">${escHtml(topGenres)}</div>
+          <div style="margin-top:8px;display:flex;gap:6px;">
+            <button style="background:#4c7b8a;color:#c6d4df;border:none;border-radius:2px;padding:5px 16px;font-size:12px;cursor:pointer;">Add to Cart</button>
+            <button style="background:#5c7e10;color:#fff;border:none;border-radius:2px;padding:5px 16px;font-size:12px;cursor:pointer;">Play Game</button>
+          </div>
+        </div>
+      </div>
+      ${screenshotStrip}
+      <div style="font-size:12px;color:#8f98a0;margin-top:10px;line-height:1.5;">${descShort}</div>
     </div>`;
 }
