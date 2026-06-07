@@ -683,20 +683,50 @@ function applyCQResults(result) {
    Claude, and applies results to the right answer store.
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Per-platform context extractors ─────────────────────────── */
+// Returns a formatted string block for the given platform's filled
+// content-rating answers, or null if the platform has no answers yet.
+// Add a new case here whenever a platform gets its own answer store.
+
+function _extractPlatformContext(pid) {
+  if (pid === 'ios') {
+    const ios    = state.iosSubmitAnswers;
+    const fields = [...IOS_INTENSITY_QUESTIONS, ...IOS_CONTENT_YN_QUESTIONS];
+    const filled = fields.filter(q => ios[q.id] !== null && ios[q.id] !== undefined);
+    if (!filled.length) return null;
+    const lines  = filled.map(q => `  ${q.label}: ${ios[q.id]}`);
+    return `iOS APP STORE CONTENT RATING:\n${lines.join('\n')}`;
+  }
+
+  if (pid === 'steam') {
+    const sca    = (state.steamSubmitAnswers || {}).steamContentAnswers || {};
+    const filled = Object.entries(sca).filter(([, v]) => v === 'yes' || v === 'no');
+    if (!filled.length) return null;
+    const yesItems = filled.filter(([, v]) => v === 'yes').map(([k]) => k);
+    if (!yesItems.length) return null;
+    return `STEAM CONTENT SURVEY — categories marked YES: ${yesItems.join(', ')}`;
+  }
+
+  // android: content-rating answers live in state.cqAnswers (the shared IARC
+  // store), which buildSharedContext() already includes as its own section.
+  // egs, psn, xbox, nintendo: coming-soon — no answer stores yet.
+  return null;
+}
+
 /* ── Shared context builder ──────────────────────────────────── */
+// Gathers all accumulated game knowledge regardless of which platforms
+// the user filled first. Iterates state.activePlatforms so inference
+// is always order-agnostic: Steam→Android is identical to Android→Steam.
 
 function buildSharedContext() {
   const fd  = state.formData;
   const qa  = state.questionAnswers;
-  const ios = state.iosSubmitAnswers;
-  const and = state.androidSubmitAnswers;
-  const stm = state.steamSubmitAnswers;
   const cq  = state.cqAnswers;
   const parts = [];
 
   // ── Game basics ──────────────────────────────────────────────
   parts.push(`GAME TITLE: ${fd.title || '(not provided)'}`);
-  parts.push(`DESCRIPTION: ${fd.description || '(not provided)'}`);
+  parts.push(`DESCRIPTION: ${fd.description || '(none provided)'}`);
   if (fd.genre) parts.push(`GENRE: ${fd.genre}`);
 
   // ── Onboarding compliance answers ────────────────────────────
@@ -705,37 +735,29 @@ function buildSharedContext() {
                   inAppPurchases:'In-app purchases' };
   const qaLines = Object.entries(qaMap)
     .filter(([k]) => qa[k] !== null)
-    .map(([k,label]) => `  ${label}: ${qa[k]}`);
+    .map(([k, label]) => `  ${label}: ${qa[k]}`);
   if (qaLines.length) parts.push(`ONBOARDING COMPLIANCE:\n${qaLines.join('\n')}`);
 
-  // ── CQ answers (if any filled) ───────────────────────────────
+  // ── CQ/IARC answers (platform-agnostic shared questionnaire) ─
+  // These are gathered independently of active-platform iteration because
+  // the IARC questionnaire is shared across iOS and Android and has its own store.
   const filledCQ = Object.entries(cq)
     .filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0));
   if (filledCQ.length) {
     const cqLines = filledCQ.slice(0, 40).map(([k, v]) => {
-      const q = CQ_QUESTIONS.find(x => x.id === k);
+      const q     = CQ_QUESTIONS.find(x => x.id === k);
       const label = q ? q.text.slice(0, 60) : k;
       return `  ${label}: ${Array.isArray(v) ? v.join(', ') : v}`;
     });
     parts.push(`CONTENT QUESTIONNAIRE ANSWERS (IARC/Google):\n${cqLines.join('\n')}`);
   }
 
-  // ── iOS Content Rating answers (if filled) ───────────────────
-  const iosFields = [...IOS_INTENSITY_QUESTIONS, ...IOS_CONTENT_YN_QUESTIONS];
-  const filledIOS = iosFields.filter(q => ios[q.id] !== null && ios[q.id] !== undefined);
-  if (filledIOS.length) {
-    const iosLines = filledIOS.map(q => `  ${q.label}: ${ios[q.id]}`);
-    parts.push(`iOS APP STORE CONTENT RATING:\n${iosLines.join('\n')}`);
-  }
-
-  // ── Steam content answers (if any filled) ────────────────────
-  const sca = stm.steamContentAnswers || {};
-  const filledSteam = Object.entries(sca).filter(([, v]) => v === 'yes' || v === 'no');
-  if (filledSteam.length) {
-    const steamYes = filledSteam.filter(([, v]) => v === 'yes').map(([k]) => k);
-    if (steamYes.length) {
-      parts.push(`STEAM CONTENT SURVEY — categories marked YES: ${steamYes.join(', ')}`);
-    }
+  // ── Per-platform content answers (all active platforms) ──────
+  // Iterate every active platform so inference always has full context
+  // regardless of the order the user filled them in.
+  for (const pid of state.activePlatforms) {
+    const section = _extractPlatformContext(pid);
+    if (section) parts.push(section);
   }
 
   return parts.join('\n\n');
