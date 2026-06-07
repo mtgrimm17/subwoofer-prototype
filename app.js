@@ -269,10 +269,15 @@ async function openStepModal(pid, stepId) {
     document.getElementById('submit-overlay').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     const andStep = PLATFORMS[pid].steps.find(s => s.id === stepId);
-    if (andStep?.hasInference && CLAUDE_API_KEY && !state.platformInferenceCache[pid+':'+stepId]) {
+    if (andStep?.hasInference && CLAUDE_API_KEY) {
       state.stepModal.inferenceStatus = 'loading';
       renderStepModal();
       try {
+        // Clear stale AI-inferred CQ meta before fresh run
+        state.cqAnswerMeta = Object.fromEntries(
+          Object.entries(state.cqAnswerMeta).filter(([, v]) => v.humanConfirmed)
+        );
+        delete state.platformInferenceCache[pid + ':' + stepId];
         await runInference(pid, stepId);
         state.stepModal.inferenceStatus = 'done';
       } catch(err) {
@@ -291,10 +296,15 @@ async function openStepModal(pid, stepId) {
     document.getElementById('submit-overlay').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     const stmStep = PLATFORMS[pid].steps.find(s => s.id === stepId);
-    if (stmStep?.hasInference && CLAUDE_API_KEY && !state.platformInferenceCache[pid+':'+stepId]) {
+    if (stmStep?.hasInference && CLAUDE_API_KEY) {
       state.stepModal.inferenceStatus = 'loading';
       renderStepModal();
       try {
+        // Clear stale AI-inferred Steam meta before fresh run
+        state.steamAnswerMeta = Object.fromEntries(
+          Object.entries(state.steamAnswerMeta).filter(([, v]) => v.humanConfirmed)
+        );
+        delete state.platformInferenceCache[pid + ':' + stepId];
         await runInference(pid, stepId);
         state.stepModal.inferenceStatus = 'done';
       } catch(err) {
@@ -321,18 +331,19 @@ async function openStepModal(pid, stepId) {
   document.getElementById('submit-overlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
-  // For inference steps: run analysis the first time (cache thereafter)
+  // For inference steps: re-run every open to use latest accumulated knowledge
   const step = PLATFORMS[pid].steps.find(s => s.id === stepId);
-  if (step?.hasInference && !state.claudeCache) {
+  if (step?.hasInference) {
     state.stepModal.inferenceStatus = 'loading';
     renderStepModal();
     try {
-      const result = await analyzeGameWithClaude();
-      state.claudeCache = { result };
-      // Preserve human-confirmed answers, clear only AI-inferred meta
+      // Clear stale AI-inferred meta (preserve human-confirmed answers)
       state.iosAnswerMeta = Object.fromEntries(
         Object.entries(state.iosAnswerMeta).filter(([, v]) => v.humanConfirmed)
       );
+      state.claudeCache = null;
+      const result = await analyzeGameWithClaude();
+      state.claudeCache = { result };
       applyClaudeResults(result);
       state.stepModal.inferenceStatus = 'done';
     } catch(err) {
