@@ -437,15 +437,21 @@ async function _searchITunes(title) {
   };
 }
 
-/* ── Source 2: Steam Store API (direct; silently skipped on CORS failure) ── */
+/* ── Source 2: Steam Store API (via CORS proxy) ─────────────── */
+// Steam's API blocks direct browser requests from github.io (no CORS headers).
+// Routing through corsproxy.io resolves this with no other changes required.
+
+const CORS_PROXY = 'https://corsproxy.io/?';
 
 async function _searchSteam(title) {
-  console.log('[Search] Trying Steam...');
+  console.log('[Search] Trying Steam (via CORS proxy)...');
 
   // Step 1: search by name
-  const searchUrl = 'https://store.steampowered.com/api/storesearch/?term='
-                  + encodeURIComponent(title) + '&l=english&cc=US';
-  const searchRes  = await _fetchWithTimeout(searchUrl, 7000);
+  const searchUrl = CORS_PROXY + encodeURIComponent(
+    'https://store.steampowered.com/api/storesearch/?term='
+    + encodeURIComponent(title) + '&l=english&cc=US'
+  );
+  const searchRes  = await _fetchWithTimeout(searchUrl, 10000);
   if (!searchRes.ok) return null;
   const searchData = await searchRes.json();
   if (!Array.isArray(searchData.items) || !searchData.items.length) return null;
@@ -455,9 +461,11 @@ async function _searchSteam(title) {
   console.log('[Search] Steam search hit:', match.item.name, 'id:', match.item.id);
 
   // Step 2: fetch app details for description
-  const detailUrl  = 'https://store.steampowered.com/api/appdetails?appids='
-                   + match.item.id + '&l=english';
-  const detailRes  = await _fetchWithTimeout(detailUrl, 7000);
+  const detailUrl  = CORS_PROXY + encodeURIComponent(
+    'https://store.steampowered.com/api/appdetails?appids='
+    + match.item.id + '&l=english'
+  );
+  const detailRes  = await _fetchWithTimeout(detailUrl, 10000);
   if (!detailRes.ok) return null;
   const detailData = await detailRes.json();
   const appData    = detailData[match.item.id] && detailData[match.item.id].data;
