@@ -1701,6 +1701,10 @@ const state = {
   // Transient state for the game search widget (scenarios: new_platform, update)
   // { status: 'loading'|'done'|'error', found: bool, title, description, source, confidence, confirmed: bool, error: string }
   liveSearch: null,
+
+  // Picklist results from IGDB while user is typing a game title
+  // [{ id, name, coverUrl, platforms, summary }]
+  titlePicklist: [],
 };
 
 /* ══════════════════════════════════════════════════════

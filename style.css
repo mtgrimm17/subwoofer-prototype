@@ -537,6 +537,83 @@ body {
   color: var(--green);
 }
 
+/* ── IGDB title picklist ── */
+.title-search-wrap {
+  position: relative;
+}
+.title-picklist {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 200;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+.title-picklist:empty { display: none; }
+.picklist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.picklist-row:last-child { border-bottom: none; }
+.picklist-row:hover { background: var(--panel-3, #2a2a2e); }
+.picklist-thumb {
+  width: 34px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--panel);
+}
+.picklist-thumb-empty {
+  background: var(--panel);
+}
+.picklist-info {
+  flex: 1;
+  min-width: 0;
+}
+.picklist-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picklist-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picklist-plats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+  max-width: 80px;
+}
+.picklist-plat {
+  font-size: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
 /* ── Store search result card ── */
 .ob-search-result {
   margin-top: 10px;

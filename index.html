@@ -188,11 +188,15 @@
   <div id="g-tip" class="g-tip"></div>
 
   <!-- Version badge -->
-  <div class="build-badge">v1.22</div>
+  <div class="build-badge">v1.23</div>
 
   <script src="state.js"></script>
   <script>
-    const CONFIG = { CLAUDE_API_KEY: '__CLAUDE_API_KEY__' };
+    const CONFIG = {
+      CLAUDE_API_KEY:     '__CLAUDE_API_KEY__',
+      IGDB_CLIENT_ID:     '__IGDB_CLIENT_ID__',
+      IGDB_CLIENT_SECRET: '__IGDB_CLIENT_SECRET__',
+    };
   </script>
   <script src="claude.js"></script>
   <script src="render.js"></script>

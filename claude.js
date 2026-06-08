@@ -354,290 +354,129 @@ async function analyzeCQWithClaude() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   GAME SEARCH — find existing listing by title
-   Chain: iTunes App Store → Steam → Claude knowledge fallback
+   GAME SEARCH — IGDB (Internet Game Database, powered by Twitch)
+   Replaces the old iTunes + Steam + Claude-knowledge waterfall.
+   IGDB covers Steam, iOS, Android, console, and indie games in
+   a single API with cover art and platform metadata.
 ══════════════════════════════════════════════════════════════ */
 
-/* ── Shared helpers ─────────────────────────────────────────── */
+const IGDB_CLIENT_ID     = (typeof CONFIG !== 'undefined' &&
+                            CONFIG.IGDB_CLIENT_ID &&
+                            CONFIG.IGDB_CLIENT_ID !== '__IGDB_CLIENT_ID__')
+                           ? CONFIG.IGDB_CLIENT_ID : '';
+const IGDB_CLIENT_SECRET = (typeof CONFIG !== 'undefined' &&
+                            CONFIG.IGDB_CLIENT_SECRET &&
+                            CONFIG.IGDB_CLIENT_SECRET !== '__IGDB_CLIENT_SECRET__')
+                           ? CONFIG.IGDB_CLIENT_SECRET : '';
+const IGDB_ENDPOINT      = 'https://api.igdb.com/v4/games';
+const TWITCH_TOKEN_URL   = 'https://id.twitch.tv/oauth2/token';
 
-function _fetchWithTimeout(url, ms) {
-  const ctrl = new AbortController();
-  const id   = setTimeout(() => ctrl.abort(), ms);
-  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
-}
+// Cached for the page session (token is valid ~60 days)
+let _igdbAccessToken = null;
 
-function _normTitle(s) {
-  return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-function _titleScore(query, candidate) {
-  const q = _normTitle(query);
-  const c = _normTitle(candidate);
-  if (!c || !q) return 0;
-  if (c === q)                               return 100;
-  if (c.startsWith(q) || q.startsWith(c))   return 85;
-  if (c.includes(q)   || q.includes(c))     return 70;
-  return 0;
-}
-
-function _bestMatch(query, items, getName) {
-  let best = null, bestScore = 0;
-  for (const item of items) {
-    const score = _titleScore(query, getName(item));
-    if (score > bestScore) { bestScore = score; best = item; }
-  }
-  return bestScore >= 70 ? { item: best, score: bestScore } : null;
-}
-
-function _stripHtml(html) {
-  return (html || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function _trimDesc(text, maxLen) {
-  maxLen = maxLen || 600;
-  const clean = _stripHtml(text);
-  if (!clean) return '';
-  if (clean.length <= maxLen) return clean;
-  const cut     = clean.substring(0, maxLen);
-  const lastDot = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
-  return lastDot > maxLen * 0.6 ? cut.substring(0, lastDot + 1) : cut + '…';
-}
-
-/* ── Source 1: iTunes App Store (CORS-friendly, no key needed) ── */
-
-async function _searchITunes(title) {
-  console.log('[Search] Trying iTunes App Store...');
-  const url = 'https://itunes.apple.com/search?term=' + encodeURIComponent(title)
-            + '&entity=software&media=software&limit=10&country=us';
-  const res = await _fetchWithTimeout(url, 7000);
-  if (!res.ok) return null;
+async function _getIgdbToken() {
+  if (_igdbAccessToken) return _igdbAccessToken;
+  if (!IGDB_CLIENT_ID || !IGDB_CLIENT_SECRET) throw new Error('NO_IGDB_KEY');
+  const res = await fetch(
+    `${TWITCH_TOKEN_URL}?client_id=${IGDB_CLIENT_ID}&client_secret=${IGDB_CLIENT_SECRET}&grant_type=client_credentials`,
+    { method: 'POST' }
+  );
+  if (!res.ok) throw new Error('IGDB auth failed (' + res.status + ')');
   const data = await res.json();
-  if (!Array.isArray(data.results) || !data.results.length) return null;
-
-  // Prefer results in the Games category
-  const games = data.results.filter(r =>
-    r.primaryGenreName && r.primaryGenreName.toLowerCase().includes('game'));
-  const pool  = games.length ? games : data.results;
-
-  const match = _bestMatch(title, pool, r => r.trackName);
-  if (!match) return null;
-
-  const r    = match.item;
-  const desc = _trimDesc(r.description || r.longDescription || '');
-  if (!desc) return null;
-
-  console.log('[Search] iTunes hit:', r.trackName, '(score', match.score + ')');
-  return {
-    found:       true,
-    title:       r.trackName,
-    description: desc,
-    source:      'iOS App Store',
-    allStores:   ['iOS App Store'],
-    confidence:  match.score,
-  };
+  _igdbAccessToken = data.access_token;
+  return _igdbAccessToken;
 }
 
-/* ── Source 2: Steam Store API (via CORS proxy) ─────────────── */
-// Steam's API blocks direct browser requests from github.io (no CORS headers).
-// Routing through corsproxy.io resolves this with no other changes required.
+// IGDB website category IDs → our platform IDs
+const IGDB_WEBSITE_TO_PID = { 10: 'ios', 11: 'ios', 12: 'android', 13: 'steam', 16: 'egs' };
+// IGDB platform slugs → our platform IDs (console + mobile fallback)
+const IGDB_SLUG_TO_PID    = {
+  ios: 'ios', android: 'android',
+  ps4: 'psn', ps5: 'psn',
+  xboxone: 'xbox', 'xbox-series-x': 'xbox',
+  switch: 'nintendo',
+};
 
-const CORS_PROXY = 'https://corsproxy.io/?';
-
-async function _searchSteam(title) {
-  console.log('[Search] Trying Steam (via CORS proxy)...');
-
-  // Step 1: search by name
-  const searchUrl = CORS_PROXY + encodeURIComponent(
-    'https://store.steampowered.com/api/storesearch/?term='
-    + encodeURIComponent(title) + '&l=english&cc=US'
-  );
-  const searchRes  = await _fetchWithTimeout(searchUrl, 10000);
-  if (!searchRes.ok) return null;
-  const searchData = await searchRes.json();
-  if (!Array.isArray(searchData.items) || !searchData.items.length) return null;
-
-  const match = _bestMatch(title, searchData.items, i => i.name);
-  if (!match) return null;
-  console.log('[Search] Steam search hit:', match.item.name, 'id:', match.item.id);
-
-  // Step 2: fetch app details for description
-  const detailUrl  = CORS_PROXY + encodeURIComponent(
-    'https://store.steampowered.com/api/appdetails?appids='
-    + match.item.id + '&l=english'
-  );
-  const detailRes  = await _fetchWithTimeout(detailUrl, 10000);
-  if (!detailRes.ok) return null;
-  const detailData = await detailRes.json();
-  const appData    = detailData[match.item.id] && detailData[match.item.id].data;
-  if (!appData) return null;
-
-  const desc = _trimDesc(appData.short_description || appData.about_the_game || '');
-  if (!desc) return null;
-
-  console.log('[Search] Steam detail hit:', appData.name);
-  return {
-    found:       true,
-    title:       appData.name,
-    description: desc,
-    source:      'Steam',
-    allStores:   ['Steam'],
-    confidence:  match.score,
-  };
-}
-
-/* ── Source 3: Claude knowledge fallback ─────────────────────── */
-
-async function _searchClaudeKnowledge(title) {
-  // Gracefully degrade when no API key — don't throw, just return not found
-  if (!CLAUDE_API_KEY) {
-    console.warn('[Search] No Claude API key — skipping knowledge fallback.');
-    return { found: false, title: null, description: null, source: null, allStores: [], confidence: 0 };
+function _igdbPlatforms(platforms, websites) {
+  const pids = new Set();
+  // Prefer website-based detection — more accurate for storefronts
+  for (const w of (websites || [])) {
+    const pid = IGDB_WEBSITE_TO_PID[w.category];
+    if (pid) pids.add(pid);
   }
-
-  console.log('[Search] Falling back to Claude knowledge...');
-
-  const prompt = `You are a game store database expert with knowledge of published game listings. Search your knowledge for a game titled: "${title}"
-
-Return ONLY a valid JSON object — no markdown fences, no explanation.
-
-If you find this game:
-{
-  "found": true,
-  "title": "<exact store title>",
-  "description": "<3-5 sentences suitable for a store submission form>",
-  "source": "<human-readable store name, e.g. 'PlayStation Store'>",
-  "allStores": ["<platform IDs>"],
-  "confidence": <0-100>
+  // Add console platforms via platform slug
+  for (const p of (platforms || [])) {
+    const pid = IGDB_SLUG_TO_PID[(p.slug || '').toLowerCase()];
+    if (pid) pids.add(pid);
+  }
+  // Filter to only platforms we support (not coming soon)
+  return [...pids].filter(pid => !!PLATFORMS[pid] && !COMING_SOON_PLATFORMS.has(pid));
 }
 
-CRITICAL: In the allStores array, use ONLY these exact platform ID strings (lowercase):
-  "ios"       → Apple App Store / iOS
-  "android"   → Google Play Store
-  "steam"     → Steam (PC/Mac)
-  "nintendo"  → Nintendo Switch eShop
-  "psn"       → PlayStation Store (PS4/PS5)
-  "xbox"      → Xbox / Microsoft Store
-  "egs"       → Epic Games Store
+/* ── IGDB picklist search — returns up to 5 results ─────────── */
 
-Example: a game on Switch and PlayStation would be: "allStores": ["nintendo", "psn"]
+async function igdbSearch(title) {
+  const token = await _getIgdbToken();
+  const safe  = title.replace(/"/g, '');   // prevent query injection
+  const body  = [
+    `fields name, cover.url, platforms.slug, summary, websites.url, websites.category;`,
+    `search "${safe}";`,
+    `where version_parent = null;`,         // exclude DLC / editions
+    `limit 5;`,
+  ].join('\n');
 
-If not found or uncertain:
-{
-  "found": false,
-  "title": null,
-  "description": null,
-  "source": null,
-  "allStores": [],
-  "confidence": 0
-}
-
-Rules:
-- Return found:true if confidence ≥ 60.
-- In allStores, include EVERY platform you know this game is on — be inclusive, not conservative.
-- Steam games are frequently missed by other APIs, so if you know the game is on Steam, always include "steam".
-- Do NOT fabricate descriptions — use only what you know from published store listings.`;
-
-  const res = await fetch(CLAUDE_ENDPOINT, {
-    method:  'POST',
+  const res = await fetch(IGDB_ENDPOINT, {
+    method: 'POST',
     headers: {
-      'x-api-key':                                 CLAUDE_API_KEY,
-      'anthropic-version':                         '2023-06-01',
-      'content-type':                              'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Client-ID':     IGDB_CLIENT_ID,
+      'Authorization': 'Bearer ' + token,
+      'Content-Type':  'text/plain',
     },
-    body: JSON.stringify({
-      model:      CLAUDE_MODEL,
-      max_tokens: 600,
-      messages:   [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
-    }),
+    body,
   });
 
-  if (!res.ok) {
-    let rawBody = {};
-    try { rawBody = await res.json(); } catch (_) {}
-    const raw = rawBody.error?.message || '';
-    let msg = 'Request failed (' + res.status + ')';
-    if (res.status === 429) msg = 'Rate limit reached — please retry in a moment.';
-    else if (res.status === 401) msg = 'API key rejected.';
-    else msg = raw || msg;
-    throw new Error(msg);
+  if (res.status === 401) {
+    _igdbAccessToken = null;               // invalidate and let caller retry
+    throw new Error('IGDB auth expired — please retry');
   }
+  if (!res.ok) throw new Error('IGDB search failed (' + res.status + ')');
 
-  const apiData = await res.json();
-  const text    = apiData.content && apiData.content[0] && apiData.content[0].text;
-  if (!text) throw new Error('Empty response');
-
-  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-  return JSON.parse(cleaned);
+  const games = await res.json();
+  return games.map(g => ({
+    id:        g.id,
+    name:      g.name || '',
+    // Upgrade thumbnail from t_thumb (32px) to t_cover_small (90×128)
+    coverUrl:  g.cover?.url
+                 ? 'https:' + g.cover.url.replace('t_thumb', 't_cover_small')
+                 : null,
+    platforms: _igdbPlatforms(g.platforms, g.websites),
+    summary:   g.summary || '',
+  }));
 }
 
-/* ── Orchestrator ────────────────────────────────────────────── */
-
-// Canonical ID lookup shared between searchGameByTitle and confirmGameImport
+/* ── Backward-compat wrapper (used by _triggerScenarioSearch) ── */
+// STORE_NAME_TO_PID is kept so confirmGameImport still works if called
+// via the old scenario path; IGDB returns our PIDs directly so the
+// mapping is an identity pass-through for all known IDs.
 const STORE_NAME_TO_PID = {
-  'ios': 'ios', 'app store': 'ios', 'apple app store': 'ios', 'itunes': 'ios',
-  'android': 'android', 'google play': 'android', 'google play store': 'android',
-  'steam': 'steam',
-  'nintendo': 'nintendo', 'nintendo switch': 'nintendo', 'nintendo eshop': 'nintendo',
-  'nintendo switch eshop': 'nintendo', 'eshop': 'nintendo',
-  'psn': 'psn', 'playstation': 'psn', 'playstation store': 'psn',
-  'ps4': 'psn', 'ps5': 'psn', 'playstation 4': 'psn', 'playstation 5': 'psn',
-  'xbox': 'xbox', 'xbox one': 'xbox', 'xbox series x': 'xbox', 'microsoft store': 'xbox',
-  'egs': 'egs', 'epic': 'egs', 'epic games': 'egs', 'epic games store': 'egs',
+  ios: 'ios', android: 'android', steam: 'steam', egs: 'egs',
+  psn: 'psn', xbox: 'xbox', nintendo: 'nintendo',
 };
 
 async function searchGameByTitle(title) {
   if (!title || !title.trim()) throw new Error('NO_TITLE');
-  const t = title.trim();
-
-  // Run all three sources in parallel — Claude knowledge fills store gaps iTunes/Steam can't cover
-  const [itunesSettled, steamSettled, claudeSettled] = await Promise.allSettled([
-    _searchITunes(t),
-    _searchSteam(t),
-    _searchClaudeKnowledge(t),
-  ]);
-
-  if (itunesSettled.status === 'rejected') console.warn('[Search] iTunes failed:', itunesSettled.reason?.message);
-  if (steamSettled.status  === 'rejected') console.warn('[Search] Steam failed:',  steamSettled.reason?.message);
-  if (claudeSettled.status === 'rejected') console.warn('[Search] Claude failed:', claudeSettled.reason?.message);
-
-  const itunes = itunesSettled.status === 'fulfilled' ? itunesSettled.value : null;
-  const steam  = steamSettled.status  === 'fulfilled' ? steamSettled.value  : null;
-  const claude = claudeSettled.status === 'fulfilled' ? claudeSettled.value : null;
-
-  // Merge all platform IDs from every source
-  const storeSet = new Set();
-  if (itunes?.found) storeSet.add('ios');
-  if (steam?.found)  storeSet.add('steam');
-  if (claude?.found && Array.isArray(claude.allStores)) {
-    claude.allStores.forEach(s => {
-      const pid = STORE_NAME_TO_PID[(s || '').toLowerCase().trim()] || s;
-      if (pid) storeSet.add(pid);
-    });
-  }
-
-  const allStores = [...storeSet];
-
-  // Nothing found anywhere
-  if (!itunes?.found && !steam?.found && !claude?.found) {
+  const results = await igdbSearch(title.trim());
+  if (!results.length) {
     return { found: false, title: null, description: null, source: null, allStores: [], confidence: 0 };
   }
-
-  // Prefer real store description (Steam > iTunes) over Claude knowledge
-  const primary = steam?.found ? steam : itunes?.found ? itunes : claude;
-
-  const sourceLabels = [];
-  if (itunes?.found) sourceLabels.push('iOS App Store');
-  if (steam?.found)  sourceLabels.push('Steam');
-  if (claude?.found && !itunes?.found && !steam?.found) sourceLabels.push(claude.source || 'Claude Knowledge');
-
+  const top = results[0];
   return {
     found:       true,
-    title:       primary.title,
-    description: primary.description,
-    source:      sourceLabels.join(' & ') || 'Store',
-    allStores,
-    confidence:  primary.confidence,
+    title:       top.name,
+    description: top.summary,
+    source:      'IGDB',
+    allStores:   top.platforms,
+    confidence:  90,
   };
 }
 

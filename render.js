@@ -113,11 +113,16 @@ function buildAboutTab() {
         
         <div class="ob-q" id="ob-q-title" data-answered="${fd.title?.trim() ? '1' : '0'}">
           <label class="form-label" for="ob-title">Game Title</label>
-          <div class="form-group">
-            <input class="form-input" id="ob-title" type="text" maxlength="50" required
-                   placeholder="e.g. Go Ape Ship!"
-                   oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)">
-            <div class="char-count" id="ob-title-count">0 / 30</div>
+          <div class="title-search-wrap">
+            <div class="form-group">
+              <input class="form-input" id="ob-title" type="text" maxlength="50" required
+                     placeholder="e.g. Go Ape Ship!"
+                     autocomplete="off"
+                     oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)"
+                     onblur="_onTitleBlur()">
+              <div class="char-count" id="ob-title-count">0 / 30</div>
+            </div>
+            <div id="ob-title-picklist" class="title-picklist"></div>
           </div>
         </div>
 
@@ -406,6 +411,34 @@ const OB_REG_TIPS = {
 
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
+
+/* ── IGDB title picklist ─────────────────────────────── */
+const _PLAT_SHORT = { ios: 'iOS', android: 'Android', steam: 'Steam', egs: 'Epic', xbox: 'Xbox', nintendo: 'Switch', psn: 'PS' };
+
+function buildTitlePicklist() {
+  const items = state.titlePicklist || [];
+  if (!items.length) return '';
+  return items.map(item => {
+    const thumb = item.coverUrl
+      ? `<img src="${escHtml(item.coverUrl)}" alt="" class="picklist-thumb" loading="lazy">`
+      : `<div class="picklist-thumb picklist-thumb-empty"></div>`;
+    const plats = item.platforms.slice(0, 4)
+      .map(pid => `<span class="picklist-plat">${escHtml(_PLAT_SHORT[pid] || pid)}</span>`)
+      .join('');
+    const desc  = item.summary
+      ? (item.summary.length > 90 ? item.summary.slice(0, 90) + '…' : item.summary)
+      : '';
+    return `
+      <div class="picklist-row" onmousedown="_cancelPicklistClose()" onclick="selectPicklistItem(${item.id})">
+        ${thumb}
+        <div class="picklist-info">
+          <div class="picklist-name">${escHtml(item.name)}</div>
+          ${desc ? `<div class="picklist-desc">${escHtml(desc)}</div>` : ''}
+        </div>
+        ${plats ? `<div class="picklist-plats">${plats}</div>` : ''}
+      </div>`;
+  }).join('');
+}
 
 /* ── Store search result widget ──────────────────────── */
 function buildScenarioWidget() {

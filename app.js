@@ -1483,22 +1483,123 @@ function dashSetDate(value) {
   _refreshDashTimeline();
 }
 
-// Debounce-search on every title keystroke (no scenario gate)
-let _titleSearchTimer = null;
+/* ── IGDB title picklist ─────────────────────────────────── */
+
+let _titleSearchTimer  = null;
+let _closePicklistTimer = null;
+
+function _renderTitlePicklist() {
+  const el = document.getElementById('ob-title-picklist');
+  if (el) el.innerHTML = buildTitlePicklist();
+}
+
+// Called from picklist row onmousedown — prevents blur from closing
+// the list before the click registers
+function _cancelPicklistClose() {
+  clearTimeout(_closePicklistTimer);
+}
+
+// Called from title input onblur — close picklist shortly after
+function _onTitleBlur() {
+  _closePicklistTimer = setTimeout(() => {
+    state.titlePicklist = [];
+    _renderTitlePicklist();
+  }, 200);
+}
+
+// Debounce-search on every title keystroke
 function _onTitleInputScenario(value) {
-  // Don't re-search if user already confirmed a match
-  if (state.liveSearch && state.liveSearch.confirmed) return;
+  // If user edits after confirming, clear confirmation so search can re-run
+  if (state.liveSearch && state.liveSearch.confirmed) {
+    state.liveSearch = null;
+    _renderScenarioSection();
+  }
   clearTimeout(_titleSearchTimer);
   const trimmed = (value || '').trim();
   if (trimmed.length < 3) {
-    // Clear stale result when title is too short
-    if (state.liveSearch) {
-      state.liveSearch = null;
-      _renderScenarioSection();
-    }
+    state.titlePicklist = [];
+    _renderTitlePicklist();
     return;
   }
-  _titleSearchTimer = setTimeout(() => _triggerScenarioSearch(), 800);
+  _titleSearchTimer = setTimeout(() => _runTitlePicklist(trimmed), 400);
+}
+
+async function _runTitlePicklist(title) {
+  if (!IGDB_CLIENT_ID) return;   // no key configured — silent no-op
+  try {
+    const results = await igdbSearch(title);
+    // Only apply if the title hasn't changed since the search started
+    if ((state.formData.title || '').trim() === title) {
+      state.titlePicklist = results;
+      _renderTitlePicklist();
+    }
+  } catch (err) {
+    console.warn('[Picklist] IGDB search failed:', err.message);
+    state.titlePicklist = [];
+    _renderTitlePicklist();
+  }
+}
+
+function selectPicklistItem(igdbId) {
+  const item = (state.titlePicklist || []).find(x => x.id === igdbId);
+  if (!item) return;
+
+  // Close picklist immediately
+  clearTimeout(_closePicklistTimer);
+  state.titlePicklist = [];
+  _renderTitlePicklist();
+
+  // Set game title
+  state.formData.title = item.name;
+  const titleEl = document.getElementById('ob-title');
+  if (titleEl) {
+    titleEl.value = item.name;
+    charCount('ob-title-count', item.name, 30);
+  }
+
+  // Pre-fill description
+  if (item.summary) {
+    state.formData.description = item.summary;
+    const descEl = document.getElementById('ob-desc');
+    if (descEl) {
+      descEl.value = item.summary;
+      charCount('ob-desc-count', item.summary, 4000);
+    }
+  }
+
+  // Auto-activate platforms found in IGDB
+  const validPids = (item.platforms || []).filter(pid => !!PLATFORMS[pid] && !COMING_SOON_PLATFORMS.has(pid));
+  if (validPids.length) {
+    state.activePlatforms.clear();
+    validPids.forEach(pid => {
+      state.activePlatforms.add(pid);
+      if (!state.platformStepStatus[pid]) {
+        state.platformStepStatus[pid] = makeEmptyPlatformSteps()[pid] || {};
+      }
+    });
+    const gridWrap = document.getElementById('ob-plat-grid-wrap');
+    if (gridWrap) {
+      gridWrap.innerHTML = buildObPlatTilesHTML();
+      gridWrap.classList.remove('is-req-empty');
+    }
+    renderOnboardingFooter();
+  }
+
+  // Show confirmed state in the scenario widget
+  state.liveSearch = {
+    status:    'done',
+    found:     true,
+    confirmed: true,
+    title:     item.name,
+    allStores: item.platforms,
+    source:    'IGDB',
+  };
+  _renderScenarioSection();
+  updateObSectionStates();
+
+  // Mark title question as answered
+  const qTitle = document.getElementById('ob-q-title');
+  if (qTitle) qTitle.dataset.answered = '1';
 }
 
 /* ── Prompt drawer (debug) ───────────────────────────────── */

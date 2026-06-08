@@ -24,8 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject API key
-        run: sed -i 's/__CLAUDE_API_KEY__/${{ secrets.CLAUDE_API_KEY }}/g' index.html
+      - name: Inject secrets
+        run: |
+          sed -i 's/__CLAUDE_API_KEY__/${{ secrets.CLAUDE_API_KEY }}/g' index.html
+          sed -i 's/__IGDB_CLIENT_ID__/${{ secrets.IGDB_CLIENT_ID }}/g' index.html
+          sed -i 's/__IGDB_CLIENT_SECRET__/${{ secrets.IGDB_CLIENT_SECRET }}/g' index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
