@@ -389,24 +389,13 @@ async function _getIgdbToken() {
 
 // IGDB website category IDs → our platform IDs
 const IGDB_WEBSITE_TO_PID = { 10: 'ios', 11: 'ios', 12: 'android', 13: 'steam', 16: 'egs' };
-// IGDB platform slugs → our platform IDs
-// Covers full platform family trees so legacy entries in a series
-// (e.g. DS, PS3, original Xbox) still surface the right tag.
+// IGDB platform slugs → our platform IDs (current-gen only)
 const IGDB_SLUG_TO_PID    = {
-  // Mobile
   ios: 'ios', android: 'android',
-  // PC — all desktop platforms map to Steam
   win: 'steam', mac: 'steam', linux: 'steam',
-  // PlayStation (current + legacy)
-  ps5: 'psn', ps4: 'psn', ps3: 'psn', ps2: 'psn', ps1: 'psn',
-  psp: 'psn', 'ps-vita': 'psn', pvita: 'psn',
-  // Xbox (current + legacy)
-  'xbox-series-x': 'xbox', xboxone: 'xbox', xbox360: 'xbox', xbox: 'xbox',
-  // Nintendo (current + legacy)
-  switch: 'nintendo', wiiu: 'nintendo', wii: 'nintendo',
-  'n3ds': 'nintendo', '3ds': 'nintendo', nds: 'nintendo',
-  ngc: 'nintendo', n64: 'nintendo', snes: 'nintendo', nes: 'nintendo',
-  gba: 'nintendo', gbc: 'nintendo', gb: 'nintendo',
+  ps4: 'psn', ps5: 'psn',
+  xboxone: 'xbox', 'xbox-series-x': 'xbox',
+  switch: 'nintendo',
 };
 
 function _igdbPlatforms(platforms, websites) {
