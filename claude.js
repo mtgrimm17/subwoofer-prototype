@@ -412,9 +412,10 @@ function _igdbPlatforms(platforms, websites) {
     const pid = IGDB_WEBSITE_TO_PID[w.category];
     if (pid) pids.add(pid);
   }
-  // Secondary: platform ID mapping (catches consoles not listed as websites)
+  // Secondary: platform ID mapping — IGDB returns raw integers when
+  // `platforms` (no subfield) is requested, e.g. [6, 48, 49, 130]
   for (const p of (platforms || [])) {
-    const pid = IGDB_PLATFORM_ID_TO_PID[p.id];
+    const pid = IGDB_PLATFORM_ID_TO_PID[p];
     if (pid) pids.add(pid);
   }
   return [...pids].filter(pid => !!PLATFORMS[pid] && !COMING_SOON_PLATFORMS.has(pid));
@@ -430,7 +431,7 @@ async function igdbSearch(title) {
   // "Monument Valley". Sort by popularity so the most relevant games
   // surface first even without relevance ranking.
   const body  = [
-    `fields name, cover.url, platforms.id, summary, websites.url, websites.category;`,
+    `fields name, cover.url, platforms, summary, websites.url, websites.category;`,
     `where name ~ *"${safe}"* & version_parent = null;`,
     `sort aggregated_rating_count desc;`,
     `limit 5;`,
