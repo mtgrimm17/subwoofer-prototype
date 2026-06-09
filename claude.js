@@ -389,9 +389,12 @@ async function _getIgdbToken() {
 
 // IGDB website category IDs → our platform IDs
 const IGDB_WEBSITE_TO_PID = { 10: 'ios', 11: 'ios', 12: 'android', 13: 'steam', 16: 'egs' };
-// IGDB platform slugs → our platform IDs (console + mobile fallback)
+// IGDB platform slugs → our platform IDs
+// PC slugs (win/mac/linux) map to steam — the dominant PC distribution
+// channel and a safe default for any game available on desktop.
 const IGDB_SLUG_TO_PID    = {
   ios: 'ios', android: 'android',
+  win: 'steam', mac: 'steam', linux: 'steam',
   ps4: 'psn', ps5: 'psn',
   xboxone: 'xbox', 'xbox-series-x': 'xbox',
   switch: 'nintendo',
