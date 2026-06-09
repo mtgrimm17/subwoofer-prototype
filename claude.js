@@ -368,7 +368,7 @@ const IGDB_CLIENT_SECRET = (typeof CONFIG !== 'undefined' &&
                             CONFIG.IGDB_CLIENT_SECRET &&
                             CONFIG.IGDB_CLIENT_SECRET !== '__IGDB_CLIENT_SECRET__')
                            ? CONFIG.IGDB_CLIENT_SECRET : '';
-const IGDB_ENDPOINT      = 'https://api.igdb.com/v4/games';
+const IGDB_ENDPOINT      = 'https://corsproxy.io/?https://api.igdb.com/v4/games';
 const TWITCH_TOKEN_URL   = 'https://id.twitch.tv/oauth2/token';
 
 // Cached for the page session (token is valid ~60 days)
