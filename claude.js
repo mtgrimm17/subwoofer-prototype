@@ -421,10 +421,14 @@ function _igdbPlatforms(platforms, websites) {
 async function igdbSearch(title) {
   const token = await _getIgdbToken();
   const safe  = title.replace(/"/g, '');   // prevent query injection
+  // Use case-insensitive substring match (~~ *"..."*) instead of IGDB's
+  // full-text `search` so partial input like "Monument Val" matches
+  // "Monument Valley". Sort by popularity so the most relevant games
+  // surface first even without relevance ranking.
   const body  = [
     `fields name, cover.url, platforms.slug, summary, websites.url, websites.category;`,
-    `search "${safe}";`,
-    `where version_parent = null;`,         // exclude DLC / editions
+    `where name ~~ *"${safe}"* & version_parent = null;`,
+    `sort aggregated_rating_count desc;`,
     `limit 5;`,
   ].join('\n');
 
