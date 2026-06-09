@@ -454,6 +454,8 @@ async function igdbSearch(title) {
   if (!res.ok) throw new Error('IGDB search failed (' + res.status + ')');
 
   const games = await res.json();
+  // DEBUG v1.32 — log raw platform data to diagnose console tag issue
+  if (games.length) console.log('[IGDB] raw platforms for', games[0].name, ':', JSON.stringify(games[0].platforms), '| websites:', JSON.stringify(games[0].websites));
   return games.map(g => ({
     id:        g.id,
     name:      g.name || '',
