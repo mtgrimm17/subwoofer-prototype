@@ -427,7 +427,7 @@ async function igdbSearch(title) {
   // surface first even without relevance ranking.
   const body  = [
     `fields name, cover.url, platforms.slug, summary, websites.url, websites.category;`,
-    `where name ~~ *"${safe}"* & version_parent = null;`,
+    `where name ~ *"${safe}"* & version_parent = null;`,
     `sort aggregated_rating_count desc;`,
     `limit 5;`,
   ].join('\n');
