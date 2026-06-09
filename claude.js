@@ -389,28 +389,34 @@ async function _getIgdbToken() {
 
 // IGDB website category IDs → our platform IDs
 const IGDB_WEBSITE_TO_PID = { 10: 'ios', 11: 'ios', 12: 'android', 13: 'steam', 16: 'egs' };
-// IGDB platform slugs → our platform IDs (current-gen only)
-const IGDB_SLUG_TO_PID    = {
-  ios: 'ios', android: 'android',
-  win: 'steam', mac: 'steam', linux: 'steam',
-  ps4: 'psn', ps5: 'psn',
-  xboxone: 'xbox', 'xbox-series-x': 'xbox',
-  switch: 'nintendo',
+
+// IGDB platform IDs → our platform IDs (IDs are stable; slugs can vary)
+// Source: https://api.igdb.com/v4/platforms
+const IGDB_PLATFORM_ID_TO_PID = {
+  6:   'steam',    // PC (Windows)
+  14:  'steam',    // Mac
+  3:   'steam',    // Linux
+  34:  'android',  // Android
+  39:  'ios',      // iOS
+  48:  'psn',      // PlayStation 4
+  167: 'psn',      // PlayStation 5
+  49:  'xbox',     // Xbox One
+  169: 'xbox',     // Xbox Series X|S
+  130: 'nintendo', // Nintendo Switch
 };
 
 function _igdbPlatforms(platforms, websites) {
   const pids = new Set();
-  // Prefer website-based detection — more accurate for storefronts
+  // Primary: website-based detection (most accurate for storefronts)
   for (const w of (websites || [])) {
     const pid = IGDB_WEBSITE_TO_PID[w.category];
     if (pid) pids.add(pid);
   }
-  // Add console platforms via platform slug
+  // Secondary: platform ID mapping (catches consoles not listed as websites)
   for (const p of (platforms || [])) {
-    const pid = IGDB_SLUG_TO_PID[(p.slug || '').toLowerCase()];
+    const pid = IGDB_PLATFORM_ID_TO_PID[p.id];
     if (pid) pids.add(pid);
   }
-  // Filter to only platforms we support (not coming soon)
   return [...pids].filter(pid => !!PLATFORMS[pid] && !COMING_SOON_PLATFORMS.has(pid));
 }
 
@@ -424,7 +430,7 @@ async function igdbSearch(title) {
   // "Monument Valley". Sort by popularity so the most relevant games
   // surface first even without relevance ranking.
   const body  = [
-    `fields name, cover.url, platforms.slug, summary, websites.url, websites.category;`,
+    `fields name, cover.url, platforms.id, summary, websites.url, websites.category;`,
     `where name ~ *"${safe}"* & version_parent = null;`,
     `sort aggregated_rating_count desc;`,
     `limit 5;`,
