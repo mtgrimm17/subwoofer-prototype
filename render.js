@@ -428,8 +428,8 @@ const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" s
 
 /* ── IGDB title picklist ─────────────────────────────── */
 
-// Fixed 2×3 grid order — row 1: PC+mobile, row 2: consoles
-const _PLAT_GRID = ['steam', 'ios', 'android', 'psn', 'xbox', 'nintendo'];
+// Canonical sort order for platform icons in the picklist
+const _PLAT_ORDER = ['steam', 'ios', 'android', 'psn', 'xbox', 'nintendo'];
 
 function buildTitlePicklist() {
   const items = state.titlePicklist || [];
@@ -438,13 +438,16 @@ function buildTitlePicklist() {
     const thumb = item.coverUrl
       ? `<img src="${escHtml(item.coverUrl)}" alt="" class="picklist-thumb" loading="lazy">`
       : `<div class="picklist-thumb picklist-thumb-empty"></div>`;
-    const platSet = new Set(item.platforms);
-    const grid = _PLAT_GRID.map(pid => {
-      const active = platSet.has(pid);
-      const label  = (PLATFORMS[pid] && PLATFORMS[pid].label) || pid;
-      const icon   = platformIcon(pid, 14);
-      return `<div class="plat-tile${active ? ' active' : ''}" title="${escHtml(label)}">${icon}</div>`;
+    // Sort found platforms into canonical order, then cap at 6
+    const platSet   = new Set(item.platforms);
+    const sorted    = _PLAT_ORDER.filter(p => platSet.has(p));
+    // Any platforms not in canonical order go at the end
+    item.platforms.forEach(p => { if (!_PLAT_ORDER.includes(p)) sorted.push(p); });
+    const tiles = sorted.slice(0, 6).map(pid => {
+      const label = (PLATFORMS[pid] && PLATFORMS[pid].label) || pid;
+      return `<div class="plat-tile active" title="${escHtml(label)}">${platformIcon(pid, 14)}</div>`;
     }).join('');
+    const grid = tiles ? `<div class="picklist-plat-grid">${tiles}</div>` : '';
     const desc = item.summary
       ? (item.summary.length > 90 ? item.summary.slice(0, 90) + '…' : item.summary)
       : '';
@@ -455,7 +458,7 @@ function buildTitlePicklist() {
           <div class="picklist-name">${escHtml(item.name)}</div>
           ${desc ? `<div class="picklist-desc">${escHtml(desc)}</div>` : ''}
         </div>
-        <div class="picklist-plat-grid">${grid}</div>
+        ${grid}
       </div>`;
   }).join('');
 }
@@ -1117,7 +1120,7 @@ function buildDashboardTimeline() {
         const solidW  = (100 - subPct).toFixed(1);
         return `
           <div class="dash-tl-row">
-            <div class="dash-tl-plat-name" style="color:${r.color}">${escHtml(r.shortLabel)}</div>
+            <div class="dash-tl-plat-name">${platformIcon(r.id, 18)}</div>
             <div class="dash-tl-track">
               <div class="dash-tl-faint-line" style="width:${recPct}%"></div>
               <div class="dash-tl-dash-line"  style="left:${recPct}%;width:${dashW}%"></div>

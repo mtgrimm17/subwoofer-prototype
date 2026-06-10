@@ -605,22 +605,14 @@ body {
   margin-left: 12px;
 }
 .plat-tile {
-  width: 22px;
-  height: 22px;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;          /* invisible when platform not present */
-  color: var(--text-dim);
 }
-.plat-tile.active {
-  opacity: 1;
-  color: var(--text);
-  border-color: rgba(255,255,255,0.18);
-}
-.plat-tile img {
+.plat-tile img,
+.plat-tile svg {
   width: 14px;
   height: 14px;
   object-fit: contain;
@@ -3401,9 +3393,16 @@ select.form-input {
 .dash-tl-plat-name {
   width: 42px;
   flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 500;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.dash-tl-plat-name img,
+.dash-tl-plat-name svg {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
 }
 
 /* Track: the horizontal line area */
