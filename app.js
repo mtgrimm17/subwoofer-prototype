@@ -1519,6 +1519,16 @@ function _onTitleBlur() {
 }
 
 // Debounce-search on every title keystroke
+function _onTitleFocus(value) {
+  // If there's already text when the field is focused, show the picklist immediately
+  const trimmed = (value || '').trim();
+  if (trimmed.length >= 3 && !state.titlePicklist?.length) {
+    _runTitlePicklist(trimmed);
+  } else if (state.titlePicklist?.length) {
+    _renderTitlePicklist(); // re-show if results are cached
+  }
+}
+
 function _onTitleInputScenario(value) {
   // If user edits after confirming, clear confirmation so search can re-run
   if (state.liveSearch && state.liveSearch.confirmed) {
@@ -1532,7 +1542,7 @@ function _onTitleInputScenario(value) {
     _renderTitlePicklist();
     return;
   }
-  _titleSearchTimer = setTimeout(() => _runTitlePicklist(trimmed), 400);
+  _titleSearchTimer = setTimeout(() => _runTitlePicklist(trimmed), 150);
 }
 
 async function _runTitlePicklist(title) {
