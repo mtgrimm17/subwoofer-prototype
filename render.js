@@ -414,8 +414,8 @@ const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" s
 
 /* ── IGDB title picklist ─────────────────────────────── */
 
-// Fixed 2×3 grid order — row 1: mobile+PC, row 2: consoles
-const _PLAT_GRID = ['ios', 'android', 'steam', 'psn', 'xbox', 'nintendo'];
+// Fixed 2×3 grid order — row 1: PC+mobile, row 2: consoles
+const _PLAT_GRID = ['steam', 'ios', 'android', 'psn', 'xbox', 'nintendo'];
 
 function buildTitlePicklist() {
   const items = state.titlePicklist || [];
