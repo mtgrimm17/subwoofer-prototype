@@ -413,7 +413,9 @@ const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" s
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
 /* ── IGDB title picklist ─────────────────────────────── */
-const _PLAT_SHORT = { ios: 'iOS', android: 'Android', steam: 'Steam', egs: 'Epic', xbox: 'Xbox', nintendo: 'Switch', psn: 'PS' };
+
+// Fixed 2×3 grid order — row 1: mobile+PC, row 2: consoles
+const _PLAT_GRID = ['ios', 'android', 'steam', 'psn', 'xbox', 'nintendo'];
 
 function buildTitlePicklist() {
   const items = state.titlePicklist || [];
@@ -422,10 +424,15 @@ function buildTitlePicklist() {
     const thumb = item.coverUrl
       ? `<img src="${escHtml(item.coverUrl)}" alt="" class="picklist-thumb" loading="lazy">`
       : `<div class="picklist-thumb picklist-thumb-empty"></div>`;
-    const plats = item.platforms.slice(0, 4)
-      .map(pid => `<span class="picklist-plat">${escHtml(_PLAT_SHORT[pid] || pid)}</span>`)
-      .join('');
-    const desc  = item.summary
+    const platSet = new Set(item.platforms);
+    const grid = _PLAT_GRID.map(pid => {
+      const active = platSet.has(pid);
+      const label  = (PLATFORMS[pid] && PLATFORMS[pid].label) || pid;
+      const path   = PLATFORM_ICONS[pid] || '';
+      const icon   = path ? `<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="${path}"/></svg>` : '';
+      return `<div class="plat-tile${active ? ' active' : ''}" title="${escHtml(label)}">${icon}</div>`;
+    }).join('');
+    const desc = item.summary
       ? (item.summary.length > 90 ? item.summary.slice(0, 90) + '…' : item.summary)
       : '';
     return `
@@ -435,7 +442,7 @@ function buildTitlePicklist() {
           <div class="picklist-name">${escHtml(item.name)}</div>
           ${desc ? `<div class="picklist-desc">${escHtml(desc)}</div>` : ''}
         </div>
-        ${plats ? `<div class="picklist-plats">${plats}</div>` : ''}
+        <div class="picklist-plat-grid">${grid}</div>
       </div>`;
   }).join('');
 }

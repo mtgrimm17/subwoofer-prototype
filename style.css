@@ -596,22 +596,29 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.picklist-plats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.picklist-plat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  grid-template-rows: repeat(2, 22px);
   gap: 3px;
   flex-shrink: 0;
-  max-width: 80px;
+  margin-left: 12px;
 }
-.picklist-plat {
-  font-size: 10px;
-  background: var(--panel);
+.plat-tile {
+  width: 22px;
+  height: 22px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 1px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.18;
   color: var(--text-dim);
-  white-space: nowrap;
+}
+.plat-tile.active {
+  opacity: 1;
+  color: var(--text);
+  border-color: rgba(255,255,255,0.22);
 }
 
 /* ── Store search result card ── */
