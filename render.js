@@ -13,7 +13,21 @@ function escHtml(str) {
 // iOS and PSN are solid compound paths — nonzero (default) renders them correctly.
 const EVENODD_ICONS = new Set(['android', 'steam', 'egs', 'xbox', 'nintendo']);
 
+// Asset image files for platform icons — keyed by platform ID.
+// Missing entries fall back to the inline SVG path from PLATFORM_ICONS.
+const PLATFORM_ASSET = {
+  ios:      'Assets/AppStore.png',
+  android:  'Assets/GooglePlay.webp',
+  steam:    'Assets/Steam.png',
+  psn:      'Assets/PlayStation.png',
+  xbox:     'Assets/Xbox.png',
+  nintendo: 'Assets/Nintendo.png',
+};
+
 function platformIcon(id, size = 20) {
+  if (PLATFORM_ASSET[id]) {
+    return `<img src="${PLATFORM_ASSET[id]}" width="${size}" height="${size}" alt="${id}" style="object-fit:contain;display:block;" aria-hidden="true">`;
+  }
   const fillRule = EVENODD_ICONS.has(id) ? ' fill-rule="evenodd" clip-rule="evenodd"' : '';
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"${fillRule} aria-hidden="true"><path d="${PLATFORM_ICONS[id]}"/></svg>`;
 }
@@ -428,8 +442,7 @@ function buildTitlePicklist() {
     const grid = _PLAT_GRID.map(pid => {
       const active = platSet.has(pid);
       const label  = (PLATFORMS[pid] && PLATFORMS[pid].label) || pid;
-      const path   = PLATFORM_ICONS[pid] || '';
-      const icon   = path ? `<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="${path}"/></svg>` : '';
+      const icon   = platformIcon(pid, 14);
       return `<div class="plat-tile${active ? ' active' : ''}" title="${escHtml(label)}">${icon}</div>`;
     }).join('');
     const desc = item.summary
