@@ -24,6 +24,9 @@ function showOnboarding() {
   document.getElementById('onboarding-overlay').classList.remove('hidden');
   document.getElementById('main-app').classList.add('hidden');
   renderOnboarding();
+  // Re-apply highlight state after every render (ob-modal is re-used across sessions)
+  _setObValidating(false); // triggers the latch logic inside _setObValidating
+  updateObSectionStates();
 }
 
 
@@ -31,6 +34,9 @@ function showOnboarding() {
 
 function openOnboarding(tab = 0) {
   state.onboardingTab = tab;
+  // Trigger B: user is returning to the modal after completing onboarding →
+  // enable highlights so unanswered fields are visually flagged.
+  if (state.onboardingComplete) state.showHighlights = true;
   showOnboarding();
 }
 
@@ -54,7 +60,12 @@ const OB_TAB_REQUIRED = [
 ];
 
 function _setObValidating(on) {
-  document.getElementById('ob-modal')?.classList.toggle('is-validating', on);
+  // Once highlights are enabled by a trigger (returning visit or AI pre-pop),
+  // callers can't turn them off — state.showHighlights latches it permanently.
+  const active = on || state.showHighlights;
+  document.getElementById('ob-modal')?.classList.toggle('is-validating', active);
+  document.getElementById('submit-modal')?.classList.toggle('is-validating', active);
+  document.getElementById('cq-modal')?.classList.toggle('is-validating', active);
 }
 
 function nextOnboardingTab() {
@@ -2094,8 +2105,15 @@ async function runCQInference() {
   renderDashboard(); // show loading state in banner
   try {
     const result = await analyzeCQWithClaude();
-    applyCQResults(result);
+    const { applied, skipped } = applyCQResults(result);
     state.cqInferenceStatus = 'done';
+    // Trigger A: AI filled ≥80% of questions → enable highlights so users
+    // can immediately see what still needs attention.
+    const total = applied + skipped;
+    if (total > 0 && applied / total >= 0.8) {
+      state.showHighlights = true;
+      _setObValidating(true);
+    }
   } catch (err) {
     state.cqInferenceStatus = 'error';
     state.cqInferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;

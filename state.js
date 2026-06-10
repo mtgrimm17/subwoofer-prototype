@@ -1705,6 +1705,11 @@ const state = {
   // Picklist results from IGDB while user is typing a game title
   // [{ id, name, coverUrl, platforms, summary }]
   titlePicklist: [],
+
+  // Whether incomplete-question highlights (amber rails) are enabled.
+  // Starts false — enabled only after AI pre-population (≥80% filled)
+  // or when the user returns to the onboarding modal after completing it.
+  showHighlights: false,
 };
 
 /* ══════════════════════════════════════════════════════

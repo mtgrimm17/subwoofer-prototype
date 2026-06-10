@@ -1533,7 +1533,7 @@ function renderStepModal() {
   const { platformId, stepId, inferenceStatus, inferenceError } = state.stepModal || {};
   // Privacy / Data Safety sections need extra width for the data matrix
   const isWide = stepId === 'privacy' || (platformId === 'android' && stepId === 'dataSafety');
-  modal.className = 'submit-modal' + (isWide ? ' submit-modal-wide' : '');
+  modal.className = 'submit-modal' + (isWide ? ' submit-modal-wide' : '') + (state.showHighlights ? ' is-validating' : '');
   if (!platformId || !stepId) return;
 
   const p    = PLATFORMS[platformId];
@@ -2570,6 +2570,7 @@ function buildCQQuestion(q) {
 function renderCQModal() {
   const modal = document.getElementById('cq-modal');
   if (!modal) return;
+  modal.classList.toggle('is-validating', !!state.showHighlights);
 
   const { total, answered } = cqProgress();
   const pct = total ? Math.round(answered / total * 100) : 0;
