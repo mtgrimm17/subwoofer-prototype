@@ -618,6 +618,10 @@ body {
   object-fit: contain;
   display: block;
 }
+/* Render platform icons white against the dark picklist background */
+.plat-tile .plat-img {
+  filter: brightness(0) invert(1);
+}
 
 /* ── Store search result card ── */
 .ob-search-result {
@@ -2053,10 +2057,11 @@ body {
   overflow: hidden;
 }
 .active-card-icon .plat-img {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
   display: block;
+  filter: brightness(0) invert(1);
 }
 
 .active-card-name {
@@ -2571,10 +2576,11 @@ body {
   overflow: hidden;
 }
 .inactive-card-icon .plat-img {
-  width: 30px;
-  height: 30px;
-  object-fit: cover;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
   display: block;
+  filter: brightness(0) invert(1);
 }
 
 .inactive-card-name {
