@@ -18,15 +18,17 @@ const EVENODD_ICONS = new Set(['android', 'steam', 'egs', 'xbox', 'nintendo']);
 const PLATFORM_ASSET = {
   ios:      'Assets/Platform_Icons/AppStore.png',
   android:  'Assets/Platform_Icons/GooglePlay.webp',
-  steam:    'Assets/Platform_Icons/Steam.png',
+  steam:    'Assets/Platform_Icons/Steam.svg',
   psn:      'Assets/Platform_Icons/PlayStation.jpg',
   xbox:     'Assets/Platform_Icons/Xbox.png',
   nintendo: 'Assets/Platform_Icons/Nintendo.png',
 };
+// SVG files with transparent backgrounds work in both maps — CSS filter handles whitening.
+// PNG/JPG files with opaque backgrounds still need the _white variant for the filter trick.
 const PLATFORM_ASSET_WHITE = {
   ios:      'Assets/Platform_Icons/AppStore_white.png',
   android:  'Assets/Platform_Icons/GooglePlay_white.png',
-  steam:    'Assets/Platform_Icons/Steam_white.png',
+  steam:    'Assets/Platform_Icons/Steam.svg',
   psn:      'Assets/Platform_Icons/PlayStation_white.jpg',
   xbox:     'Assets/Platform_Icons/Xbox_white.png',
   nintendo: 'Assets/Platform_Icons/Nintendo_white.png',
