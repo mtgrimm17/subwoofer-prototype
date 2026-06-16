@@ -610,6 +610,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text); /* currentColor → white fill for inline SVGs */
 }
 .plat-tile img,
 .plat-tile svg {
@@ -618,7 +619,6 @@ body {
   object-fit: contain;
   display: block;
 }
-/* White-variant PNGs are pre-whitened — no filter needed */
 
 /* ── Store search result card ── */
 .ob-search-result {
@@ -2050,7 +2050,7 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--text);
+  color: var(--text); /* currentColor → white fill for inline SVGs */
   overflow: hidden;
 }
 .active-card-icon .plat-img {
