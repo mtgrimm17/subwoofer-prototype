@@ -39,7 +39,7 @@ function platformIcon(id, size = 20, variant = 'color') {
     return `<img src="${map[id]}" width="${size}" height="${size}" alt="${id}" class="plat-img" aria-hidden="true">`;
   }
   const fillRule = EVENODD_ICONS.has(id) ? ' fill-rule="evenodd" clip-rule="evenodd"' : '';
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"${fillRule} aria-hidden="true"><path d="${PLATFORM_ICONS[id]}"/></svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" overflow="visible" fill="currentColor"${fillRule} aria-hidden="true"><path d="${PLATFORM_ICONS[id]}"/></svg>`;
 }
 
 
