@@ -619,6 +619,9 @@ body {
   object-fit: contain;
   display: block;
 }
+.plat-tile .plat-img {
+  filter: brightness(0) invert(1); /* whitens transparent-bg PNGs */
+}
 
 /* ── Store search result card ── */
 .ob-search-result {
@@ -2058,6 +2061,11 @@ body {
   height: 28px;
   object-fit: contain;
   display: block;
+  filter: brightness(0) invert(1); /* whitens transparent-bg PNGs (Xbox, Nintendo) */
+}
+.active-card-icon svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .active-card-name {
@@ -2576,6 +2584,11 @@ body {
   height: 20px;
   object-fit: contain;
   display: block;
+  filter: brightness(0) invert(1);
+}
+.inactive-card-icon svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .inactive-card-name {

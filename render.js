@@ -23,10 +23,14 @@ const PLATFORM_ASSET = {
   xbox:     'Assets/Platform_Icons/Xbox.png',
   nintendo: 'Assets/Platform_Icons/Nintendo.png',
 };
-// White-variant: empty map so platformIcon always falls back to the inline
-// PLATFORM_ICONS SVG paths (fill="currentColor") — clean vector marks,
-// transparent background, color inherited from parent.
-const PLATFORM_ASSET_WHITE = {};
+// White-variant: user's actual PNG files for platforms where the PNG has a
+// transparent background — CSS filter whitens the opaque logo pixels.
+// Platforms not listed here (ios, android, steam) fall back to inline SVG paths.
+const PLATFORM_ASSET_WHITE = {
+  psn:      'Assets/Platform_Icons/PlayStation_white.png', // pre-processed transparent bg
+  xbox:     'Assets/Platform_Icons/Xbox.png',              // transparent bg → filter whitens
+  nintendo: 'Assets/Platform_Icons/Nintendo.png',          // transparent bg → filter whitens
+};
 
 // variant: 'color' (default) | 'white'
 function platformIcon(id, size = 20, variant = 'color') {
@@ -1322,7 +1326,7 @@ function buildActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
+          <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
@@ -1372,7 +1376,7 @@ function buildIOSActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
+          <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
@@ -1421,7 +1425,7 @@ function buildAndroidActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
+          <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
@@ -1459,7 +1463,7 @@ function buildInactiveCard(pid) {
     <div class="inactive-card ${isCS ? 'is-coming-soon' : ''}" ${clickAttr} style="cursor:${isCS ? 'default' : 'pointer'};">
       <div class="inactive-card-head">
         <div class="inactive-card-platform">
-          <div class="inactive-card-icon">${platformIcon(pid, 30, 'white')}</div>
+          <div class="inactive-card-icon">${platformIcon(pid, 20, 'white')}</div>
           <span class="inactive-card-name">${p.label}</span>
         </div>
         ${isCS ? `<span class="coming-soon-badge" id="cs-badge-${pid}">Coming Soon</span>` : ''}
@@ -3193,7 +3197,7 @@ function buildSteamActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
+          <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
