@@ -32,8 +32,15 @@ const PLATFORM_ASSET_WHITE = {
   nintendo: 'Assets/Platform_Icons/Nintendo.png',          // transparent bg → filter whitens
 };
 
+// Per-platform visual scale tweaks (applied on top of the requested size).
+const PLATFORM_ICON_SCALE = {
+  ios: 1.15,
+  psn: 1.15,
+};
+
 // variant: 'color' (default) | 'white'
 function platformIcon(id, size = 20, variant = 'color') {
+  size = Math.round(size * (PLATFORM_ICON_SCALE[id] || 1));
   const map = variant === 'white' ? PLATFORM_ASSET_WHITE : PLATFORM_ASSET;
   if (map[id]) {
     return `<img src="${map[id]}" width="${size}" height="${size}" alt="${id}" class="plat-img" aria-hidden="true">`;
