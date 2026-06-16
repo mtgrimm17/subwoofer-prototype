@@ -618,10 +618,7 @@ body {
   object-fit: contain;
   display: block;
 }
-/* Render platform icons white against the dark picklist background */
-.plat-tile .plat-img {
-  filter: brightness(0) invert(1);
-}
+/* White-variant PNGs are pre-whitened — no filter needed */
 
 /* ── Store search result card ── */
 .ob-search-result {
@@ -2061,7 +2058,6 @@ body {
   height: 28px;
   object-fit: contain;
   display: block;
-  filter: brightness(0) invert(1);
 }
 
 .active-card-name {
@@ -2580,7 +2576,6 @@ body {
   height: 20px;
   object-fit: contain;
   display: block;
-  filter: brightness(0) invert(1);
 }
 
 .inactive-card-name {

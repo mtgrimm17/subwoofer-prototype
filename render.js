@@ -18,18 +18,18 @@ const EVENODD_ICONS = new Set(['android', 'steam', 'egs', 'xbox', 'nintendo']);
 const PLATFORM_ASSET = {
   ios:      'Assets/Platform_Icons/AppStore.png',
   android:  'Assets/Platform_Icons/GooglePlay.webp',
-  steam:    'Assets/Platform_Icons/Steam.svg',
+  steam:    'Assets/Platform_Icons/Steam.png',
   psn:      'Assets/Platform_Icons/PlayStation.jpg',
   xbox:     'Assets/Platform_Icons/Xbox.png',
   nintendo: 'Assets/Platform_Icons/Nintendo.png',
 };
-// SVG files with transparent backgrounds work in both maps — CSS filter handles whitening.
-// PNG/JPG files with opaque backgrounds still need the _white variant for the filter trick.
+// _white variants are pre-processed PNGs: white icon on transparent background.
+// No CSS filter needed — display directly on any dark surface.
 const PLATFORM_ASSET_WHITE = {
   ios:      'Assets/Platform_Icons/AppStore_white.png',
   android:  'Assets/Platform_Icons/GooglePlay_white.png',
-  steam:    'Assets/Platform_Icons/Steam.svg',
-  psn:      'Assets/Platform_Icons/PlayStation_white.jpg',
+  steam:    'Assets/Platform_Icons/Steam_white.png',
+  psn:      'Assets/Platform_Icons/PlayStation_white.png',
   xbox:     'Assets/Platform_Icons/Xbox_white.png',
   nintendo: 'Assets/Platform_Icons/Nintendo_white.png',
 };
@@ -458,7 +458,7 @@ function buildTitlePicklist() {
     item.platforms.forEach(p => { if (!_PLAT_ORDER.includes(p)) sorted.push(p); });
     const tiles = sorted.slice(0, 6).map(pid => {
       const label = (PLATFORMS[pid] && PLATFORMS[pid].label) || pid;
-      const icon  = platformIcon(pid, 14); // CSS filter makes it white
+      const icon  = platformIcon(pid, 14, 'white');
       return `<div class="plat-tile active" title="${escHtml(label)}">${icon}</div>`;
     }).join('');
     const grid = tiles ? `<div class="picklist-plat-grid">${tiles}</div>` : '';
@@ -1134,7 +1134,7 @@ function buildDashboardTimeline() {
         const solidW  = (100 - subPct).toFixed(1);
         return `
           <div class="dash-tl-row">
-            <div class="dash-tl-plat-name">${platformIcon(r.id, 18)}</div>
+            <div class="dash-tl-plat-name">${platformIcon(r.id, 18, 'white')}</div>
             <div class="dash-tl-track">
               <div class="dash-tl-faint-line" style="width:${recPct}%"></div>
               <div class="dash-tl-dash-line"  style="left:${recPct}%;width:${dashW}%"></div>
@@ -1328,7 +1328,7 @@ function buildActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40)}</div>
+          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
@@ -1378,7 +1378,7 @@ function buildIOSActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40)}</div>
+          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
@@ -1427,7 +1427,7 @@ function buildAndroidActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40)}</div>
+          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
@@ -1465,7 +1465,7 @@ function buildInactiveCard(pid) {
     <div class="inactive-card ${isCS ? 'is-coming-soon' : ''}" ${clickAttr} style="cursor:${isCS ? 'default' : 'pointer'};">
       <div class="inactive-card-head">
         <div class="inactive-card-platform">
-          <div class="inactive-card-icon">${platformIcon(pid, 30)}</div>
+          <div class="inactive-card-icon">${platformIcon(pid, 30, 'white')}</div>
           <span class="inactive-card-name">${p.label}</span>
         </div>
         ${isCS ? `<span class="coming-soon-badge" id="cs-badge-${pid}">Coming Soon</span>` : ''}
@@ -3199,7 +3199,7 @@ function buildSteamActiveCard(pid) {
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
-          <div class="active-card-icon">${platformIcon(pid, 40)}</div>
+          <div class="active-card-icon">${platformIcon(pid, 40, 'white')}</div>
           <div>
             <div class="active-card-name">${p.label}</div>
             <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
