@@ -114,7 +114,7 @@ function completeOnboarding() {
 
   if (state._newProjectMode) {
     // Creating a 2nd+ project — preserve activePlatforms selected during onboarding
-    const sub  = makeEmptySubmission('Submission 1.0');
+    const ver  = makeEmptyVersion('1.0');
     const proj = {
       id:               generateId('proj'),
       name:             state.formData.title,
@@ -122,17 +122,18 @@ function completeOnboarding() {
       uploads:          JSON.parse(JSON.stringify(state.uploads)),
       questionAnswers:  JSON.parse(JSON.stringify(state.questionAnswers)),
       questionInferred: JSON.parse(JSON.stringify(state.questionInferred)),
-      submissions:      [sub],
+      versions:         [ver],
+      buildCounters:    makeBuildCounters(),
     };
     state.projects.push(proj);
-    state.activeProjectId    = proj.id;
-    state.activeSubmissionId = sub.id;
+    state.activeProjectId = proj.id;
+    state.activeVersionId = ver.id;
     // Keep state.activePlatforms — already populated by platform tiles in onboarding
     state.platformStepStatus = makeEmptyPlatformSteps();
     state._newProjectMode    = false;
   } else {
     // First project ever
-    const sub  = makeEmptySubmission('Submission 1.0');
+    const ver  = makeEmptyVersion('1.0');
     const proj = {
       id:               generateId('proj'),
       name:             state.formData.title,
@@ -140,11 +141,12 @@ function completeOnboarding() {
       uploads:          JSON.parse(JSON.stringify(state.uploads)),
       questionAnswers:  JSON.parse(JSON.stringify(state.questionAnswers)),
       questionInferred: JSON.parse(JSON.stringify(state.questionInferred)),
-      submissions:      [sub],
+      versions:         [ver],
+      buildCounters:    makeBuildCounters(),
     };
     state.projects.push(proj);
-    state.activeProjectId    = proj.id;
-    state.activeSubmissionId = sub.id;
+    state.activeProjectId = proj.id;
+    state.activeVersionId = ver.id;
     // Keep state.activePlatforms — already populated by platform-select tab in onboarding
     state.platformStepStatus = makeEmptyPlatformSteps();
   }
@@ -836,7 +838,20 @@ function confirmAndSubmit(platformId) {
   renderDashboard();
 }
 
+// Reads the selected track from the card's track dropdown (if one exists for
+// this platform) and mints a ReleaseRecord under the active version. Build
+// numbers / version strings are always derived automatically — never typed.
 function finalSubmit(platformId) {
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  const ver  = proj?.versions.find(v => v.id === state.activeVersionId);
+  if (proj && ver) {
+    const trackSelect = document.getElementById('track-select-' + platformId);
+    const trackId = trackSelect ? trackSelect.value : 'production';
+    if (!ver.platformReleases) ver.platformReleases = {};
+    if (!ver.platformReleases[platformId]) ver.platformReleases[platformId] = [];
+    const rel = makeReleaseRecord(proj, platformId, trackId, ver.versionNumber);
+    ver.platformReleases[platformId].push(rel);
+  }
   state.platformStepStatus[platformId]['submit'] = 'complete';
   renderDashboard();
 }
@@ -1816,8 +1831,8 @@ function answerQuestion(key, value) {
 
 function closeAllDropdowns() {
   document.getElementById('projectSelectorWrap')?.classList.remove('open');
-  document.getElementById('submissionSelectorWrap')?.classList.remove('open');
-  document.getElementById('submissionMenu')?.classList.remove('open');
+  document.getElementById('versionSelectorWrap')?.classList.remove('open');
+  document.getElementById('versionMenu')?.classList.remove('open');
   document.getElementById('profileMenu')?.classList.remove('open');
   document.getElementById('loc-primary-wrap')?.classList.remove('is-open');
   // Close all swSelect dropdowns
@@ -1852,7 +1867,7 @@ function toggleProfileMenu(e) {
   if (!isOpen) menu.classList.add('open');
 }
 
-/* ── Multi-project / submission management ───────────── */
+/* ── Multi-project / version management ──────────────── */
 
 function createNewProject() {
   saveCurrentToProject();
@@ -1868,15 +1883,21 @@ function createNewProject() {
   openOnboarding(0);
 }
 
-function createNewSubmission() {
+// Creating a new version is a single click — no form. The version number
+// auto-bumps the minor digit, and active platforms carry forward from the
+// current version (most updates touch the same platforms). Both are
+// editable afterward, neither is ever a required prompt.
+function createNewVersion() {
   saveCurrentToProject();
   const proj = state.projects.find(p => p.id === state.activeProjectId);
   if (!proj) return;
-  const subNum = proj.submissions.length + 1;
-  const sub    = makeEmptySubmission('Submission ' + subNum + '.0');
-  proj.submissions.push(sub);
-  state.activeSubmissionId   = sub.id;
-  state.activePlatforms      = new Set();
+  const currentVer  = proj.versions.find(v => v.id === state.activeVersionId);
+  const nextNumber  = bumpMinorVersion(currentVer ? currentVer.versionNumber : '1.0');
+  const carryPlats  = currentVer ? currentVer.activePlatforms : [];
+  const ver = makeEmptyVersion(nextNumber, carryPlats);
+  proj.versions.push(ver);
+  state.activeVersionId      = ver.id;
+  state.activePlatforms      = new Set(ver.activePlatforms);
   state.platformStepStatus   = makeEmptyPlatformSteps();
   closeAllDropdowns();
   renderDashboard();
@@ -1884,20 +1905,20 @@ function createNewSubmission() {
 
 function switchProject(projectId) {
   if (projectId === state.activeProjectId) { closeAllDropdowns(); return; }
-  loadProjectAndSubmission(projectId, null);
+  loadProjectAndVersion(projectId, null);
   closeAllDropdowns();
   renderDashboard();
 }
 
-function switchSubmission(submissionId) {
-  if (submissionId === state.activeSubmissionId) { closeAllDropdowns(); return; }
+function switchVersion(versionId) {
+  if (versionId === state.activeVersionId) { closeAllDropdowns(); return; }
   saveCurrentToProject();
   const proj = state.projects.find(p => p.id === state.activeProjectId);
-  const sub  = proj?.submissions.find(s => s.id === submissionId);
-  if (!sub) return;
-  state.activeSubmissionId   = sub.id;
-  state.activePlatforms      = new Set(sub.activePlatforms);
-  state.platformStepStatus   = JSON.parse(JSON.stringify(sub.platformStepStatus));
+  const ver  = proj?.versions.find(v => v.id === versionId);
+  if (!ver) return;
+  state.activeVersionId      = ver.id;
+  state.activePlatforms      = new Set(ver.activePlatforms);
+  state.platformStepStatus   = JSON.parse(JSON.stringify(ver.platformStepStatus));
   closeAllDropdowns();
   renderDashboard();
 }
@@ -1910,17 +1931,17 @@ function toggleProjectDropdown(e) {
   if (!isOpen) wrap.classList.add('open');
 }
 
-function toggleSubmissionDropdown(e) {
+function toggleVersionDropdown(e) {
   e.stopPropagation();
-  const wrap = document.getElementById('submissionSelectorWrap');
+  const wrap = document.getElementById('versionSelectorWrap');
   const isOpen = wrap.classList.contains('open');
   closeAllDropdowns();
   if (!isOpen) wrap.classList.add('open');
 }
 
-function toggleSubmissionMenu(e) {
+function toggleVersionMenu(e) {
   e.stopPropagation();
-  const menu = document.getElementById('submissionMenu');
+  const menu = document.getElementById('versionMenu');
   const isOpen = menu.classList.contains('open');
   closeAllDropdowns();
   if (!isOpen) menu.classList.add('open');
@@ -1968,64 +1989,64 @@ function closeConfirmModal() {
 }
 
 
-/* ── Delete Submission ───────────────────────────────── */
+/* ── Delete Version ───────────────────────────────────── */
 
-function deleteCurrentSubmission() {
+function _versionHasReleases(ver) {
+  return Object.values(ver.platformReleases || {}).some(list => list && list.length > 0);
+}
+
+function deleteCurrentVersion() {
   closeAllDropdowns();
   const proj = state.projects.find(p => p.id === state.activeProjectId);
   if (!proj) return;
 
-  // Case 1: Only one submission — can't delete
-  if (proj.submissions.length === 1) {
+  // Case 1: Only one version — can't delete
+  if (proj.versions.length === 1) {
     openInfoModal(
-      'Can\'t delete this submission',
-      'This is the only submission for this project. Create a new submission first, then delete this one.'
+      'Can\'t delete this version',
+      'This is the only version for this project. Create a new version first, then delete this one.'
     );
     return;
   }
 
-  const sub = proj.submissions.find(s => s.id === state.activeSubmissionId);
-  if (!sub) return;
+  const ver = proj.versions.find(v => v.id === state.activeVersionId);
+  if (!ver) return;
 
-  // Check if any platform has been submitted in this submission
-  const hasSubmitted = Object.keys(PLATFORMS).some(
-    pid => sub.platformStepStatus[pid]?.submit === 'complete'
-  );
-
-  // Check if any platform is active (in-progress but not submitted)
-  const hasActivePlatforms = sub.activePlatforms && sub.activePlatforms.length > 0;
+  const hasSubmitted      = _versionHasReleases(ver);
+  const hasActivePlatforms = ver.activePlatforms && ver.activePlatforms.length > 0;
+  const label = 'v' + ver.versionNumber;
 
   if (hasSubmitted) {
-    // Case 2: Submission has live store submissions
+    // Case 2: Version has release records (submitted to at least one track)
     openConfirmModal(
-      'Delete submitted build?',
-      `"${sub.name}" has been submitted to one or more stores. Deleting it removes all submission records — this won't unpublish anything already live.`,
+      'Delete submitted version?',
+      `"${label}" has been submitted to one or more stores. Deleting it removes all release records — this won't unpublish anything already live.`,
       'Delete anyway',
-      () => _deleteSubmission(proj, sub.id),
+      () => _deleteVersion(proj, ver.id),
       true
     );
   } else if (hasActivePlatforms) {
     // Case 3: Active platforms but nothing submitted yet
     openConfirmModal(
-      'Delete submission?',
-      `Delete "${sub.name}"? Any progress on this submission will be lost.`,
+      'Delete version?',
+      `Delete "${label}"? Any progress on this version will be lost.`,
       'Delete',
-      () => _deleteSubmission(proj, sub.id),
+      () => _deleteVersion(proj, ver.id),
       true
     );
   } else {
-    // Empty submission — delete without ceremony
-    _deleteSubmission(proj, sub.id);
+    // Empty version — delete without ceremony
+    _deleteVersion(proj, ver.id);
   }
 }
 
-function _deleteSubmission(proj, subId) {
-  proj.submissions = proj.submissions.filter(s => s.id !== subId);
-  // Switch to the last remaining submission
-  const newSub = proj.submissions[proj.submissions.length - 1];
-  state.activeSubmissionId = newSub.id;
-  state.activePlatforms    = new Set(newSub.activePlatforms);
-  state.platformStepStatus = JSON.parse(JSON.stringify(newSub.platformStepStatus));
+function _deleteVersion(proj, verId) {
+  proj.versions = proj.versions.filter(v => v.id !== verId);
+  // Switch to the last remaining version
+  const newVer = proj.versions[proj.versions.length - 1];
+  state.activeVersionId    = newVer.id;
+  state.activePlatforms    = new Set(newVer.activePlatforms);
+  state.platformStepStatus = JSON.parse(JSON.stringify(newVer.platformStepStatus));
   closeConfirmModal();
   renderDashboard();
 }
@@ -2048,15 +2069,13 @@ function deleteCurrentProject() {
   const proj = state.projects.find(p => p.id === state.activeProjectId);
   if (!proj) return;
 
-  // Check if any submission has live store submissions
-  const hasSubmitted = proj.submissions.some(sub =>
-    Object.keys(PLATFORMS).some(pid => sub.platformStepStatus[pid]?.submit === 'complete')
-  );
+  // Check if any version has release records
+  const hasSubmitted = proj.versions.some(_versionHasReleases);
 
   if (hasSubmitted) {
     openConfirmModal(
       'Delete project with live submissions?',
-      `"${proj.name}" has active store submissions. All project data and submission records will be permanently deleted. This won't unpublish anything already live.`,
+      `"${proj.name}" has active store submissions. All project data and release records will be permanently deleted. This won't unpublish anything already live.`,
       'Delete project',
       () => _deleteProject(proj.id),
       true
@@ -2064,7 +2083,7 @@ function deleteCurrentProject() {
   } else {
     openConfirmModal(
       'Delete project?',
-      `Delete "${proj.name}" and all its submissions? This cannot be undone.`,
+      `Delete "${proj.name}" and all its versions? This cannot be undone.`,
       'Delete project',
       () => _deleteProject(proj.id),
       true
@@ -2076,7 +2095,7 @@ function _deleteProject(projectId) {
   state.projects = state.projects.filter(p => p.id !== projectId);
   // Load the first remaining project
   const newProj = state.projects[0];
-  loadProjectAndSubmission(newProj.id, null);
+  loadProjectAndVersion(newProj.id, null);
   closeConfirmModal();
   renderDashboard();
 }

@@ -1018,9 +1018,9 @@ function renderProjectBar() {
   // Update selector button titles
   const selTitle = document.getElementById('projectSelectorTitle');
   if (selTitle) selTitle.textContent = gameTitle;
-  const subTitle = document.getElementById('submissionSelectorTitle');
-  const activeSub = proj?.submissions.find(s => s.id === state.activeSubmissionId);
-  if (subTitle) subTitle.textContent = activeSub?.name || 'Submission 1.0';
+  const verTitle = document.getElementById('versionSelectorTitle');
+  const activeVer = proj?.versions.find(v => v.id === state.activeVersionId);
+  if (verTitle) verTitle.textContent = 'v' + (activeVer?.versionNumber || '1.0');
 
   // Render project dropdown items
   const projDD = document.getElementById('projectDropdown');
@@ -1039,16 +1039,16 @@ function renderProjectBar() {
       </div>`;
   }
 
-  // Render submission dropdown items
-  const subDD = document.getElementById('submissionDropdown');
-  if (subDD && proj) {
-    subDD.innerHTML = proj.submissions.map(s => `
-      <div class="project-item ${s.id === state.activeSubmissionId ? 'active' : ''}"
-           onclick="switchSubmission('${s.id}')">
-        ${s.name}
+  // Render version dropdown items
+  const verDD = document.getElementById('versionDropdown');
+  if (verDD && proj) {
+    verDD.innerHTML = proj.versions.map(v => `
+      <div class="project-item ${v.id === state.activeVersionId ? 'active' : ''}"
+           onclick="switchVersion('${v.id}')">
+        v${v.versionNumber}
       </div>`).join('') + `
-      <div class="project-item new-project" onclick="createNewSubmission()">
-        <span>New submission</span><span class="plus">+</span>
+      <div class="project-item new-project" onclick="createNewVersion()">
+        <span>New version</span><span class="plus">+</span>
       </div>`;
   }
 
@@ -1309,6 +1309,41 @@ function renderDashboard() {
   });
 }
 
+// Track selector + drift-visibility status pills for platforms that support
+// pre-release tracks (iOS/Android/Steam — the platforms actually submittable
+// today). The dropdown defaults to whatever track this platform last shipped
+// to; nothing here is required input, just a visible, overridable default.
+// Console platforms don't have an entry in PLATFORM_TRACKS yet, so this
+// returns '' for them — the data model already supports it when they're ready.
+function buildTrackControls(pid) {
+  const tracks = PLATFORM_TRACKS[pid];
+  if (!tracks) return '';
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  if (!proj) return '';
+
+  const defaultTrack = getLastUsedTrack(proj, pid);
+  const options = tracks.map(t =>
+    `<option value="${t.id}" ${t.id === defaultTrack ? 'selected' : ''}>${escHtml(t.label)}</option>`
+  ).join('');
+
+  const summary = getPlatformReleaseSummary(proj, pid);
+  const pills = [];
+  if (summary.production) {
+    pills.push(`<span class="release-pill is-prod">Production: v${escHtml(summary.production.versionNumber)}</span>`);
+  }
+  if (summary.latest && summary.latest.track !== 'production') {
+    pills.push(`<span class="release-pill is-pre">${escHtml(platformTrackLabel(pid, summary.latest.track))}: v${escHtml(summary.latest.versionNumber)}</span>`);
+  }
+
+  return `
+    <div class="card-track-row">
+      <select class="card-track-select" id="track-select-${pid}" title="Which track this submission targets" onclick="event.stopPropagation()">
+        ${options}
+      </select>
+    </div>
+    ${pills.length ? `<div class="card-release-status">${pills.join('')}</div>` : ''}`;
+}
+
 function buildActiveCard(pid) {
   if (pid === 'ios')     return buildIOSActiveCard(pid);
   if (pid === 'android') return buildAndroidActiveCard(pid);
@@ -1390,6 +1425,7 @@ function buildIOSActiveCard(pid) {
           </div>
         </div>
       </div>
+      ${buildTrackControls(pid)}
       <div class="card-bar-wrap">
         <div class="card-bar">
           <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
@@ -1439,6 +1475,7 @@ function buildAndroidActiveCard(pid) {
           </div>
         </div>
       </div>
+      ${buildTrackControls(pid)}
       <div class="card-bar-wrap">
         <div class="card-bar">
           <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
@@ -1668,7 +1705,9 @@ function buildStorePreviewSection() {
   const priceText = (fd.price && fd.price !== '0') ? `$${fd.price}` : 'Free';
   const iapNote   = (a.hasIAP === 'yes') ? 'In-App Purchases' : '';
   const langCode  = (fd.primaryLanguage || 'EN').toUpperCase().slice(0, 2);
-  const version   = escHtml(fd.appVersion || '1.0');
+  const activeProj = state.projects.find(p => p.id === state.activeProjectId);
+  const activeVer  = activeProj?.versions.find(v => v.id === state.activeVersionId);
+  const version    = escHtml(activeVer?.versionNumber || fd.appVersion || '1.0');
 
   // Subtitle = first sentence of description or placeholder
   const descRaw   = fd.description || '';
@@ -3211,6 +3250,7 @@ function buildSteamActiveCard(pid) {
           </div>
         </div>
       </div>
+      ${buildTrackControls(pid)}
       <div class="card-bar-wrap">
         <div class="card-bar"><div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div></div>
         <button class="card-submit-btn ${locked ? 'is-locked' : ''}"

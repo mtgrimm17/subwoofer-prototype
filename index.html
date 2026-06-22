@@ -148,28 +148,28 @@
         </button>
       </div>
       <div class="bar-right">
-        <div class="submission-selector-wrap" id="submissionSelectorWrap">
-          <button class="submission-selector" id="submissionSelector" onclick="toggleSubmissionDropdown(event)">
-            <span class="title" id="submissionSelectorTitle">Submission 1.0</span>
+        <div class="version-selector-wrap" id="versionSelectorWrap">
+          <button class="version-selector" id="versionSelector" onclick="toggleVersionDropdown(event)">
+            <span class="title" id="versionSelectorTitle">v1.0</span>
             <span class="chev">⌄</span>
           </button>
-          <div class="submission-dropdown" id="submissionDropdown">
+          <div class="version-dropdown" id="versionDropdown">
             <!-- Rendered by renderProjectBar() -->
           </div>
         </div>
-        <div class="submission-menu-wrap" id="submissionMenuWrap">
-          <button class="icon-btn" onclick="toggleSubmissionMenu(event)" aria-label="Submission options" title="Submission options">
+        <div class="version-menu-wrap" id="versionMenuWrap">
+          <button class="icon-btn" onclick="toggleVersionMenu(event)" aria-label="Version options" title="Version options">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
             </svg>
           </button>
-          <div class="submission-menu" id="submissionMenu">
-            <button class="submission-menu-item danger" onclick="deleteCurrentSubmission()">
+          <div class="version-menu" id="versionMenu">
+            <button class="version-menu-item danger" onclick="deleteCurrentVersion()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                 <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
               </svg>
-              <span>Delete submission</span>
+              <span>Delete version</span>
             </button>
           </div>
         </div>
@@ -188,7 +188,7 @@
   <div id="g-tip" class="g-tip"></div>
 
   <!-- Version badge -->
-  <div class="build-badge">v1.47</div>
+  <div class="build-badge">v1.48</div>
 
   <script src="state.js"></script>
   <script>

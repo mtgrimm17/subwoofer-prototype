@@ -1843,12 +1843,12 @@ body {
 
 /* ── Submission selector ─────────────────────────────── */
 
-.submission-selector-wrap {
+.version-selector-wrap {
   position: relative;
   flex-shrink: 0;
 }
 
-.submission-selector {
+.version-selector {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -1865,25 +1865,25 @@ body {
   text-align: left;
 }
 
-.submission-selector:hover,
-.submission-selector-wrap.open .submission-selector {
+.version-selector:hover,
+.version-selector-wrap.open .version-selector {
   border-color: var(--border);
   background: var(--panel-2);
 }
 
-.submission-selector .title {
+.version-selector .title {
   flex: 1;
   font-weight: 400;
   font-size: 14px;
 }
 
-.submission-selector .chev {
+.version-selector .chev {
   color: var(--text-dim);
   font-size: 14px;
   transition: transform 0.2s;
 }
 
-.submission-selector-wrap.open .submission-selector .chev { transform: rotate(180deg); }
+.version-selector-wrap.open .version-selector .chev { transform: rotate(180deg); }
 
 /* ── Shared dropdown panel ───────────────────────────── */
 
@@ -1893,7 +1893,7 @@ body {
 }
 
 .project-dropdown,
-.submission-dropdown {
+.version-dropdown {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -1910,10 +1910,10 @@ body {
   animation: fadeDown 0.15s ease;
 }
 
-.submission-dropdown { left: auto; right: 0; }
+.version-dropdown { left: auto; right: 0; }
 
 .project-selector-wrap.open .project-dropdown,
-.submission-selector-wrap.open .submission-dropdown { display: flex; }
+.version-selector-wrap.open .version-dropdown { display: flex; }
 
 .project-item {
   display: flex;
@@ -1936,9 +1936,9 @@ body {
 
 /* ── Submission ··· menu ─────────────────────────────── */
 
-.submission-menu-wrap { position: relative; }
+.version-menu-wrap { position: relative; }
 
-.submission-menu {
+.version-menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -1955,9 +1955,9 @@ body {
   animation: fadeDown 0.15s ease;
 }
 
-.submission-menu.open { display: flex; }
+.version-menu.open { display: flex; }
 
-.submission-menu-item {
+.version-menu-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1974,9 +1974,9 @@ body {
   width: 100%;
 }
 
-.submission-menu-item:hover { background: var(--panel-2); }
-.submission-menu-item.danger { color: var(--magenta); }
-.submission-menu-item.danger:hover { background: var(--magenta-soft); }
+.version-menu-item:hover { background: var(--panel-2); }
+.version-menu-item.danger { color: var(--magenta); }
+.version-menu-item.danger:hover { background: var(--magenta-soft); }
 
 
 /* ============================================================
@@ -2117,6 +2117,57 @@ body {
 }
 
 .platform-toggle:hover { opacity: 0.85; }
+
+/* Track selector — which release lane this platform's next submit targets */
+.card-track-row {
+  padding: 0 16px 8px;
+}
+
+.card-track-select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.card-track-select:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+/* Release status pills — drift visibility, production vs. pre-release track */
+.card-release-status {
+  padding: 0 16px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.release-pill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.release-pill.is-prod {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.release-pill.is-pre {
+  color: var(--blue);
+  background: var(--blue-soft);
+}
 
 /* Progress bar + submit button */
 .card-bar-wrap {

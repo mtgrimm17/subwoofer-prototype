@@ -1516,10 +1516,114 @@ function computeSubmitRisk() {
   return results;
 }
 
-/* ── Project / Submission helpers ────────────────────── */
+/* ── Project / Version helpers ───────────────────────── */
 
 function generateId(prefix) {
   return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+/* ── Versioning & release tracks ──────────────────────
+   A "Version" is the developer's own release intent (e.g. "1.3").
+   A "track" is the destination within a platform (production vs a
+   pre-release lane like TestFlight / closed testing / a beta branch).
+   Build numbers / versionCodes are minted from project-level counters
+   that only ever increase — never typed by the user. ───────────── */
+
+// Tracks offered for the platforms that are actually submittable today.
+// Console platforms (xbox/psn/nintendo) and EGS are still gated behind
+// "Coming Soon" elsewhere in the app, so their track UI is stubbed for now —
+// the data shape (platformReleases) already supports them.
+const PLATFORM_TRACKS = {
+  ios: [
+    { id: 'testflight_internal', label: 'TestFlight — Internal' },
+    { id: 'testflight_external', label: 'TestFlight — External' },
+    { id: 'production',          label: 'App Store' },
+  ],
+  android: [
+    { id: 'internal',   label: 'Internal testing' },
+    { id: 'closed',     label: 'Closed testing' },
+    { id: 'open',       label: 'Open testing' },
+    { id: 'production', label: 'Production' },
+  ],
+  steam: [
+    { id: 'beta',       label: 'Beta branch' },
+    { id: 'production', label: 'Default branch' },
+  ],
+};
+
+function platformTrackLabel(platformId, trackId) {
+  const t = (PLATFORM_TRACKS[platformId] || []).find(t => t.id === trackId);
+  return t ? t.label : (trackId === 'production' ? 'Production' : trackId);
+}
+
+function makeBuildCounters() {
+  return { ios: 0, android: 0, xbox: 0, psn: 0, nintendo: 0 };
+}
+
+// Build numbers / versionCodes are global, monotonic, project-lifetime counters —
+// never reused, never typed by the user.
+function mintBuildNumber(proj, platformId) {
+  if (!proj.buildCounters) proj.buildCounters = makeBuildCounters();
+  proj.buildCounters[platformId] = (proj.buildCounters[platformId] || 0) + 1;
+  return proj.buildCounters[platformId];
+}
+
+// Most platforms use the project's version number as-is. Xbox requires a
+// 4-part package version, so we silently pad it — the user never formats this.
+function derivePlatformVersionString(platformId, versionNumber) {
+  if (platformId === 'xbox') {
+    const parts = String(versionNumber || '1.0').split('.');
+    while (parts.length < 4) parts.push('0');
+    return parts.slice(0, 4).join('.');
+  }
+  return versionNumber;
+}
+
+// Suggests the next version number by bumping the minor digit (1.3 → 1.4).
+// Always editable afterward — this is just a default, never a prompt.
+function bumpMinorVersion(versionStr) {
+  const parts = String(versionStr || '1.0').split('.');
+  let major = parseInt(parts[0], 10); if (isNaN(major)) major = 1;
+  let minor = parseInt(parts[1], 10); if (isNaN(minor)) minor = 0;
+  return `${major}.${minor + 1}`;
+}
+
+function makeReleaseRecord(proj, platformId, trackId, versionNumber) {
+  return {
+    id:                     generateId('rel'),
+    track:                  trackId,
+    platformVersionString:  derivePlatformVersionString(platformId, versionNumber),
+    platformBuildNumber:    mintBuildNumber(proj, platformId),
+    status:                 'submitted', // submitted → live | rejected
+    submittedAt:            Date.now(),
+  };
+}
+
+// Smart default for the track selector: whatever this platform last shipped
+// to, anywhere in the project's version history. Falls back to Production.
+function getLastUsedTrack(proj, platformId) {
+  for (let i = proj.versions.length - 1; i >= 0; i--) {
+    const releases = proj.versions[i].platformReleases?.[platformId];
+    if (releases && releases.length) return releases[releases.length - 1].track;
+  }
+  return 'production';
+}
+
+// Drift visibility: what's the latest version live in production vs. the
+// latest version this platform has shipped to ANY track (e.g. a beta).
+// Purely informational — nothing here blocks anything.
+function getPlatformReleaseSummary(proj, platformId) {
+  let production = null;
+  let latest = null;
+  for (const ver of proj.versions) {
+    const releases = ver.platformReleases?.[platformId] || [];
+    for (const rel of releases) {
+      const entry = { versionNumber: ver.versionNumber, track: rel.track, status: rel.status, submittedAt: rel.submittedAt };
+      if (!latest || rel.submittedAt >= latest.submittedAt) latest = entry;
+      if (rel.track === 'production' && (!production || rel.submittedAt >= production.submittedAt)) production = entry;
+    }
+  }
+  return { production, latest };
 }
 
 function makeBlankFormData() {
@@ -1562,16 +1666,17 @@ function makeBlankInferred() {
   return { violence: false, sexualContent: false, strongLanguage: false, dataCollection: false, inAppPurchases: false };
 }
 
-function makeEmptySubmission(name) {
+function makeEmptyVersion(versionNumber, carryPlatforms = []) {
   return {
-    id:                  generateId('sub'),
-    name,
-    activePlatforms:     [],            // serialized as array (converted to Set in flat state)
+    id:                  generateId('ver'),
+    versionNumber,                       // e.g. "1.0" — display label is "v" + versionNumber
+    activePlatforms:     [...carryPlatforms], // serialized as array (converted to Set in flat state)
     platformStepStatus:  makeEmptyPlatformSteps(),
+    platformReleases:    {},             // { [platformId]: ReleaseRecord[] }
   };
 }
 
-// Save the current flat state back into the active project/submission record
+// Save the current flat state back into the active project/version record
 function saveCurrentToProject() {
   const proj = state.projects.find(p => p.id === state.activeProjectId);
   if (!proj) return;
@@ -1580,14 +1685,14 @@ function saveCurrentToProject() {
   proj.uploads          = JSON.parse(JSON.stringify(state.uploads));
   proj.questionAnswers  = JSON.parse(JSON.stringify(state.questionAnswers));
   proj.questionInferred = JSON.parse(JSON.stringify(state.questionInferred));
-  const sub = proj.submissions.find(s => s.id === state.activeSubmissionId);
-  if (!sub) return;
-  sub.activePlatforms    = [...state.activePlatforms];
-  sub.platformStepStatus = JSON.parse(JSON.stringify(state.platformStepStatus));
+  const ver = proj.versions.find(v => v.id === state.activeVersionId);
+  if (!ver) return;
+  ver.activePlatforms    = [...state.activePlatforms];
+  ver.platformStepStatus = JSON.parse(JSON.stringify(state.platformStepStatus));
 }
 
-// Load a project + optional submission into flat state (saves current first)
-function loadProjectAndSubmission(projectId, submissionId) {
+// Load a project + optional version into flat state (saves current first)
+function loadProjectAndVersion(projectId, versionId) {
   saveCurrentToProject();
   const proj = state.projects.find(p => p.id === projectId);
   if (!proj) return;
@@ -1596,13 +1701,13 @@ function loadProjectAndSubmission(projectId, submissionId) {
   state.uploads           = JSON.parse(JSON.stringify(proj.uploads));
   state.questionAnswers   = JSON.parse(JSON.stringify(proj.questionAnswers));
   state.questionInferred  = JSON.parse(JSON.stringify(proj.questionInferred));
-  const sub = submissionId
-    ? proj.submissions.find(s => s.id === submissionId) || proj.submissions[0]
-    : proj.submissions[0];
-  if (!sub) return;
-  state.activeSubmissionId   = sub.id;
-  state.activePlatforms      = new Set(sub.activePlatforms);
-  state.platformStepStatus   = JSON.parse(JSON.stringify(sub.platformStepStatus));
+  const ver = versionId
+    ? proj.versions.find(v => v.id === versionId) || proj.versions[0]
+    : proj.versions[0];
+  if (!ver) return;
+  state.activeVersionId      = ver.id;
+  state.activePlatforms      = new Set(ver.activePlatforms);
+  state.platformStepStatus   = JSON.parse(JSON.stringify(ver.platformStepStatus));
 }
 
 
@@ -1634,8 +1739,8 @@ const state = {
 
   // Projects list — each entry mirrors a saved snapshot
   projects: [],
-  activeProjectId:    null,
-  activeSubmissionId: null,
+  activeProjectId: null,
+  activeVersionId: null,
 
   // Legacy generic submit modal (non-iOS platforms)
   submitModal: {
