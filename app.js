@@ -838,15 +838,35 @@ function confirmAndSubmit(platformId) {
   renderDashboard();
 }
 
-// Reads the selected track from the card's track dropdown (if one exists for
-// this platform) and mints a ReleaseRecord under the active version. Build
-// numbers / version strings are always derived automatically — never typed.
-function finalSubmit(platformId) {
+// Opens the track-selection submit modal for platforms that have defined tracks
+// (ios / android / steam). For platforms without tracks, submits directly.
+function openTrackSubmitModal(platformId) {
+  const tracks = PLATFORM_TRACKS[platformId];
+  if (!tracks || !tracks.length) {
+    // No tracks defined — submit straight to production
+    _doFinalSubmit(platformId, 'production');
+    return;
+  }
+  renderTrackSubmitModal(platformId);
+  document.getElementById('submit-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+// Called by the "Submit →" button inside the track-selection modal.
+function _confirmTrackSubmit(platformId) {
+  const radios = document.querySelectorAll(`input[name="track-sel-${platformId}"]`);
+  let trackId = 'production';
+  radios.forEach(r => { if (r.checked) trackId = r.value; });
+  closeSubmitModal();
+  _doFinalSubmit(platformId, trackId);
+}
+
+// Mints a ReleaseRecord and marks the submit step complete.
+// Build numbers / version strings are always derived automatically — never typed.
+function _doFinalSubmit(platformId, trackId) {
   const proj = state.projects.find(p => p.id === state.activeProjectId);
   const ver  = proj?.versions.find(v => v.id === state.activeVersionId);
   if (proj && ver) {
-    const trackSelect = document.getElementById('track-select-' + platformId);
-    const trackId = trackSelect ? trackSelect.value : 'production';
     if (!ver.platformReleases) ver.platformReleases = {};
     if (!ver.platformReleases[platformId]) ver.platformReleases[platformId] = [];
     const rel = makeReleaseRecord(proj, platformId, trackId, ver.versionNumber);
@@ -854,6 +874,11 @@ function finalSubmit(platformId) {
   }
   state.platformStepStatus[platformId]['submit'] = 'complete';
   renderDashboard();
+}
+
+// Legacy alias kept for any paths that still call finalSubmit directly.
+function finalSubmit(platformId) {
+  openTrackSubmitModal(platformId);
 }
 
 
@@ -1883,23 +1908,87 @@ function createNewProject() {
   openOnboarding(0);
 }
 
-// Creating a new version is a single click — no form. The version number
-// auto-bumps the minor digit, and active platforms carry forward from the
-// current version (most updates touch the same platforms). Both are
-// editable afterward, neither is ever a required prompt.
-function createNewVersion() {
+// Opens the New Release modal, pre-filling the suggested version number.
+function openNewReleaseModal() {
+  closeAllDropdowns();
+  const proj = state.projects.find(p => p.id === state.activeProjectId);
+  const currentVer = proj?.versions.find(v => v.id === state.activeVersionId);
+  const suggested  = bumpMinorVersion(currentVer?.versionNumber || '1.0');
+
+  const overlay = document.getElementById('release-modal-overlay');
+  const modal   = document.getElementById('release-modal');
+  if (!modal || !overlay) return;
+
+  modal.innerHTML = `
+    <div class="release-modal-header">
+      <div class="release-modal-title">New release</div>
+      <div class="release-modal-subtitle">Group your next push to stores</div>
+    </div>
+    <div class="release-modal-body">
+      <div class="release-modal-field">
+        <label class="release-modal-label" for="rm-version">VERSION</label>
+        <input class="form-input" id="rm-version" type="text" value="${escHtml(suggested)}"
+               placeholder="e.g. 1.4" autocomplete="off">
+      </div>
+      <div class="release-modal-field">
+        <label class="release-modal-label" for="rm-name">NAME <span class="release-modal-optional">(optional)</span></label>
+        <input class="form-input" id="rm-name" type="text" placeholder="e.g. Holiday Update"
+               autocomplete="off">
+      </div>
+      <div class="release-modal-field">
+        <label class="release-modal-label" for="rm-changelog">CHANGELOG <span class="release-modal-optional">(optional)</span></label>
+        <textarea class="form-input release-modal-textarea" id="rm-changelog"
+                  placeholder="What's new in this release?" rows="4"></textarea>
+      </div>
+    </div>
+    <div class="release-modal-footer">
+      <button class="btn btn-ghost" onclick="closeNewReleaseModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmCreateRelease()">Create release →</button>
+    </div>`;
+
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  // Focus version field and select all so user can type immediately
+  requestAnimationFrame(() => {
+    const inp = document.getElementById('rm-version');
+    if (inp) { inp.focus(); inp.select(); }
+  });
+}
+
+function closeNewReleaseModal() {
+  document.getElementById('release-modal-overlay')?.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function releaseModalOverlayClick(e) {
+  if (e.target === document.getElementById('release-modal-overlay')) closeNewReleaseModal();
+}
+
+function confirmCreateRelease() {
+  const versionInput = document.getElementById('rm-version');
+  const nameInput    = document.getElementById('rm-name');
+  const clInput      = document.getElementById('rm-changelog');
+
+  const versionNumber = (versionInput?.value || '').trim() || '1.0';
+  const name          = (nameInput?.value  || '').trim();
+  const changelog     = (clInput?.value    || '').trim();
+
   saveCurrentToProject();
   const proj = state.projects.find(p => p.id === state.activeProjectId);
-  if (!proj) return;
-  const currentVer  = proj.versions.find(v => v.id === state.activeVersionId);
-  const nextNumber  = bumpMinorVersion(currentVer ? currentVer.versionNumber : '1.0');
-  const carryPlats  = currentVer ? currentVer.activePlatforms : [];
-  const ver = makeEmptyVersion(nextNumber, carryPlats);
+  if (!proj) { closeNewReleaseModal(); return; }
+
+  const currentVer = proj.versions.find(v => v.id === state.activeVersionId);
+  const carryPlats = currentVer ? currentVer.activePlatforms : [];
+  const ver = makeEmptyVersion(versionNumber, carryPlats);
+  ver.name      = name;
+  ver.changelog = changelog;
+
   proj.versions.push(ver);
-  state.activeVersionId      = ver.id;
-  state.activePlatforms      = new Set(ver.activePlatforms);
-  state.platformStepStatus   = makeEmptyPlatformSteps();
-  closeAllDropdowns();
+  state.activeVersionId    = ver.id;
+  state.activePlatforms    = new Set(ver.activePlatforms);
+  state.platformStepStatus = makeEmptyPlatformSteps();
+
+  closeNewReleaseModal();
   renderDashboard();
 }
 
@@ -2000,11 +2089,11 @@ function deleteCurrentVersion() {
   const proj = state.projects.find(p => p.id === state.activeProjectId);
   if (!proj) return;
 
-  // Case 1: Only one version — can't delete
+  // Case 1: Only one release — can't delete
   if (proj.versions.length === 1) {
     openInfoModal(
-      'Can\'t delete this version',
-      'This is the only version for this project. Create a new version first, then delete this one.'
+      'Can\'t delete this release',
+      'This is the only release for this project. Create a new release first, then delete this one.'
     );
     return;
   }
@@ -2017,9 +2106,9 @@ function deleteCurrentVersion() {
   const label = 'v' + ver.versionNumber;
 
   if (hasSubmitted) {
-    // Case 2: Version has release records (submitted to at least one track)
+    // Case 2: Release has release records (submitted to at least one track)
     openConfirmModal(
-      'Delete submitted version?',
+      'Delete submitted release?',
       `"${label}" has been submitted to one or more stores. Deleting it removes all release records — this won't unpublish anything already live.`,
       'Delete anyway',
       () => _deleteVersion(proj, ver.id),
@@ -2028,8 +2117,8 @@ function deleteCurrentVersion() {
   } else if (hasActivePlatforms) {
     // Case 3: Active platforms but nothing submitted yet
     openConfirmModal(
-      'Delete version?',
-      `Delete "${label}"? Any progress on this version will be lost.`,
+      'Delete release?',
+      `Delete "${label}"? Any progress on this release will be lost.`,
       'Delete',
       () => _deleteVersion(proj, ver.id),
       true

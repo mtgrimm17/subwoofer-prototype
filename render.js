@@ -1039,16 +1039,19 @@ function renderProjectBar() {
       </div>`;
   }
 
-  // Render version dropdown items
+  // Render release dropdown items
   const verDD = document.getElementById('versionDropdown');
   if (verDD && proj) {
-    verDD.innerHTML = proj.versions.map(v => `
-      <div class="project-item ${v.id === state.activeVersionId ? 'active' : ''}"
-           onclick="switchVersion('${v.id}')">
-        v${v.versionNumber}
-      </div>`).join('') + `
-      <div class="project-item new-project" onclick="createNewVersion()">
-        <span>New version</span><span class="plus">+</span>
+    verDD.innerHTML = proj.versions.map(v => {
+      const label = v.name ? `v${v.versionNumber} <span class="ver-drop-name">${escHtml(v.name)}</span>` : `v${v.versionNumber}`;
+      return `
+        <div class="project-item ${v.id === state.activeVersionId ? 'active' : ''}"
+             onclick="switchVersion('${v.id}')">
+          ${label}
+        </div>`;
+    }).join('') + `
+      <div class="project-item new-project" onclick="openNewReleaseModal()">
+        <span>New release</span><span class="plus">+</span>
       </div>`;
   }
 
@@ -1315,33 +1318,21 @@ function renderDashboard() {
 // to; nothing here is required input, just a visible, overridable default.
 // Console platforms don't have an entry in PLATFORM_TRACKS yet, so this
 // returns '' for them — the data model already supports it when they're ready.
-function buildTrackControls(pid) {
-  const tracks = PLATFORM_TRACKS[pid];
-  if (!tracks) return '';
+// Drift pills shown on the platform card — most recent production build + most recent
+// pre-release build (if it's ahead of production). Capped at two pills.
+// The track selector itself lives in the submit modal, not on the card.
+function buildReleasePills(pid) {
   const proj = state.projects.find(p => p.id === state.activeProjectId);
   if (!proj) return '';
-
-  const defaultTrack = getLastUsedTrack(proj, pid);
-  const options = tracks.map(t =>
-    `<option value="${t.id}" ${t.id === defaultTrack ? 'selected' : ''}>${escHtml(t.label)}</option>`
-  ).join('');
-
   const summary = getPlatformReleaseSummary(proj, pid);
   const pills = [];
   if (summary.production) {
-    pills.push(`<span class="release-pill is-prod">Production: v${escHtml(summary.production.versionNumber)}</span>`);
+    pills.push(`<span class="release-pill is-prod">Prod: v${escHtml(summary.production.versionNumber)}</span>`);
   }
   if (summary.latest && summary.latest.track !== 'production') {
     pills.push(`<span class="release-pill is-pre">${escHtml(platformTrackLabel(pid, summary.latest.track))}: v${escHtml(summary.latest.versionNumber)}</span>`);
   }
-
-  return `
-    <div class="card-track-row">
-      <select class="card-track-select" id="track-select-${pid}" title="Which track this submission targets" onclick="event.stopPropagation()">
-        ${options}
-      </select>
-    </div>
-    ${pills.length ? `<div class="card-release-status">${pills.join('')}</div>` : ''}`;
+  return pills.length ? `<div class="card-release-status">${pills.join('')}</div>` : '';
 }
 
 function buildActiveCard(pid) {
@@ -1381,7 +1372,7 @@ function buildActiveCard(pid) {
         </div>
         <button class="card-submit-btn ${submitDone ? 'is-done' : locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
-                onclick="${submitDone || locked ? '' : `finalSubmit('${pid}')`}"
+                onclick="${submitDone || locked ? '' : `openTrackSubmitModal('${pid}')`}"
                 title="${locked ? 'Complete all steps first' : submitDone ? 'Submitted' : 'Submit for review'}"
                 ${locked && !submitDone ? 'disabled' : ''}>
           ${submitDone ? '✓' : 'Submit'}
@@ -1425,14 +1416,14 @@ function buildIOSActiveCard(pid) {
           </div>
         </div>
       </div>
-      ${buildTrackControls(pid)}
+      ${buildReleasePills(pid)}
       <div class="card-bar-wrap">
         <div class="card-bar">
           <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
         </div>
         <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
-                onclick="${locked ? '' : `finalSubmit('${pid}')`}"
+                onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
                 title="${locked ? 'Complete all steps first' : 'Submit to App Store'}"
                 ${locked ? 'disabled' : ''}>
           Submit
@@ -1475,14 +1466,14 @@ function buildAndroidActiveCard(pid) {
           </div>
         </div>
       </div>
-      ${buildTrackControls(pid)}
+      ${buildReleasePills(pid)}
       <div class="card-bar-wrap">
         <div class="card-bar">
           <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
         </div>
         <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
-                onclick="${locked ? '' : `finalSubmit('${pid}')`}"
+                onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
                 title="${locked ? 'Complete all steps first' : 'Submit to Google Play'}"
                 ${locked ? 'disabled' : ''}>
           Submit
@@ -1971,6 +1962,56 @@ function renderGenericSubmitModal(modal) {
     </div>`;
 }
 
+
+/* ── Track selection modal (shown before final submit for ios/android/steam) ── */
+// Renders into the existing submit-overlay / submit-modal so we don't need a new overlay.
+function renderTrackSubmitModal(pid) {
+  const modal = document.getElementById('submit-modal');
+  if (!modal) return;
+  const p        = PLATFORMS[pid];
+  const tracks   = PLATFORM_TRACKS[pid] || [];
+  const proj     = state.projects.find(pr => pr.id === state.activeProjectId);
+  const activeVer = proj?.versions.find(v => v.id === state.activeVersionId);
+  const versionNum  = activeVer?.versionNumber || '1.0';
+  const releaseName = activeVer?.name ? ` — ${escHtml(activeVer.name)}` : '';
+  const defaultTrack = proj ? getLastUsedTrack(proj, pid) : (tracks[0]?.id || 'production');
+
+  const trackRows = tracks.map(t => {
+    const liveVer = proj ? getTrackLiveVersion(proj, pid, t.id) : null;
+    const liveLabel = liveVer ? `Live: v${escHtml(liveVer)}` : 'No live build';
+    return `
+      <label class="track-opt-row">
+        <input type="radio" class="track-opt-radio" name="track-sel-${pid}" value="${escHtml(t.id)}"
+               ${t.id === defaultTrack ? 'checked' : ''}>
+        <div class="track-opt-info">
+          <span class="track-opt-label">${escHtml(t.label)}</span>
+          <span class="track-opt-live">${liveLabel}</span>
+        </div>
+      </label>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="submit-modal-header" style="border-top-color:${p.color};">
+      <div class="submit-modal-title-row">
+        <div class="submit-modal-hicon" style="color:${p.color};">${platformIcon(pid, 22)}</div>
+        <div>
+          <div class="submit-modal-title">Submit to ${escHtml(p.label)}</div>
+          <div class="submit-modal-subtitle">v${escHtml(versionNum)}${releaseName}</div>
+        </div>
+      </div>
+      <button class="task-modal-close" onclick="closeSubmitModal()">×</button>
+    </div>
+    <div class="submit-modal-scroll track-submit-body">
+      <div class="track-submit-prompt">Where should this build go?</div>
+      <div class="track-opts">
+        ${trackRows}
+      </div>
+    </div>
+    <div class="submit-modal-footer">
+      <button class="btn btn-ghost" onclick="closeSubmitModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="_confirmTrackSubmit('${pid}')">Submit →</button>
+    </div>`;
+}
 
 /* ── AI inference badge helper ───────────────────────── */
 function aiInferenceClass(fieldId, value) {
@@ -3250,12 +3291,12 @@ function buildSteamActiveCard(pid) {
           </div>
         </div>
       </div>
-      ${buildTrackControls(pid)}
+      ${buildReleasePills(pid)}
       <div class="card-bar-wrap">
         <div class="card-bar"><div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div></div>
         <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
-                onclick="${locked ? '' : `finalSubmit('${pid}')`}"
+                onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
                 title="${locked ? 'Complete all steps first' : 'Submit to Steam'}"
                 ${locked ? 'disabled' : ''}>Submit</button>
       </div>

@@ -2169,6 +2169,149 @@ body {
   background: var(--blue-soft);
 }
 
+/* ── New Release Modal ────────────────────────────────── */
+.release-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 460px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.release-modal-header {
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.release-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.release-modal-subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.release-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.release-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.release-modal-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.release-modal-optional {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.65;
+}
+
+.release-modal-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.release-modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Release name in version dropdown */
+.ver-drop-name {
+  color: var(--text-dim);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* ── Track selector in submit modal ──────────────────── */
+.track-submit-body {
+  padding: 20px 24px;
+}
+
+.track-submit-prompt {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.track-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.track-opt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.track-opt-row:hover {
+  border-color: var(--border-hover);
+  background: var(--panel-2);
+}
+
+.track-opt-row:has(.track-opt-radio:checked) {
+  border-color: var(--sel-border);
+  background: var(--sel-bg);
+}
+
+.track-opt-radio {
+  accent-color: var(--blue);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.track-opt-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-opt-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+}
+
+.track-opt-live {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  display: block;
+}
+
 /* Progress bar + submit button */
 .card-bar-wrap {
   padding: 0 16px 12px;

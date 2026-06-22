@@ -1670,10 +1670,29 @@ function makeEmptyVersion(versionNumber, carryPlatforms = []) {
   return {
     id:                  generateId('ver'),
     versionNumber,                       // e.g. "1.0" — display label is "v" + versionNumber
+    name:                '',             // optional human label, e.g. "Holiday Update"
+    changelog:           '',             // optional release notes
     activePlatforms:     [...carryPlatforms], // serialized as array (converted to Set in flat state)
     platformStepStatus:  makeEmptyPlatformSteps(),
     platformReleases:    {},             // { [platformId]: ReleaseRecord[] }
   };
+}
+
+// Returns the most-recently-submitted version string for a given platform+track,
+// or null if nothing has ever been submitted to that track.
+function getTrackLiveVersion(proj, platformId, trackId) {
+  let latest = null;
+  for (const ver of (proj?.versions || [])) {
+    const releases = ver.platformReleases?.[platformId] || [];
+    for (const rel of releases) {
+      if (rel.track === trackId) {
+        if (!latest || rel.submittedAt >= latest.submittedAt) {
+          latest = { versionNumber: ver.versionNumber, submittedAt: rel.submittedAt };
+        }
+      }
+    }
+  }
+  return latest ? latest.versionNumber : null;
 }
 
 // Save the current flat state back into the active project/version record
