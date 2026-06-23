@@ -1666,14 +1666,36 @@ function makeBlankInferred() {
   return { violence: false, sexualContent: false, strongLanguage: false, dataCollection: false, inAppPurchases: false };
 }
 
-function makeEmptyVersion(versionNumber, carryPlatforms = []) {
+// Steps that must always be re-done when creating a new release.
+// Everything else carries forward as complete from the previous release.
+const STEPS_RESET_ON_NEW_RELEASE = new Set([
+  'storePreview',      // What's New text + re-review the live-looking store page
+  'reviewSubmission',  // final checklist re-read before each submission
+  'submit',            // the actual submission action — always new
+]);
+
+// Returns a step-status object seeded from a previous release's status,
+// with the per-release mandatory steps reset to 'not_started'.
+function inheritPlatformSteps(prevStatus) {
+  const out = makeEmptyPlatformSteps();
+  for (const [pid, steps] of Object.entries(prevStatus || {})) {
+    if (!out[pid]) continue;
+    for (const [stepId, status] of Object.entries(steps)) {
+      if (STEPS_RESET_ON_NEW_RELEASE.has(stepId)) continue; // always reset
+      out[pid][stepId] = status;                             // carry forward
+    }
+  }
+  return out;
+}
+
+function makeEmptyVersion(versionNumber, carryPlatforms = [], prevStepStatus = null) {
   return {
     id:                  generateId('ver'),
     versionNumber,                       // e.g. "1.0" — display label is "v" + versionNumber
     name:                '',             // optional human label, e.g. "Holiday Update"
     changelog:           '',             // optional release notes
     activePlatforms:     [...carryPlatforms], // serialized as array (converted to Set in flat state)
-    platformStepStatus:  makeEmptyPlatformSteps(),
+    platformStepStatus:  prevStepStatus ? inheritPlatformSteps(prevStepStatus) : makeEmptyPlatformSteps(),
     platformReleases:    {},             // { [platformId]: ReleaseRecord[] }
   };
 }

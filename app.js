@@ -1979,14 +1979,24 @@ function confirmCreateRelease() {
 
   const currentVer = proj.versions.find(v => v.id === state.activeVersionId);
   const carryPlats = currentVer ? currentVer.activePlatforms : [];
-  const ver = makeEmptyVersion(versionNumber, carryPlats);
+
+  // Carry forward completed steps from the previous release, resetting only the
+  // per-release mandatory ones (storePreview, reviewSubmission, submit).
+  const ver = makeEmptyVersion(versionNumber, carryPlats, currentVer?.platformStepStatus);
   ver.name      = name;
   ver.changelog = changelog;
 
   proj.versions.push(ver);
   state.activeVersionId    = ver.id;
   state.activePlatforms    = new Set(ver.activePlatforms);
-  state.platformStepStatus = makeEmptyPlatformSteps();
+  state.platformStepStatus = JSON.parse(JSON.stringify(ver.platformStepStatus));
+
+  // iOS / Android / Steam use computed completion (not platformStepStatus).
+  // Their storePreview step is driven by a "seen" flag — reset it so the
+  // Store Page Preview step correctly shows as incomplete on the new release.
+  state.iosStorePreviewSeen                        = false;
+  state.androidSubmitAnswers.storePreviewSeen      = false;
+  state.steamSubmitAnswers.storePreviewSeen        = false;
 
   closeNewReleaseModal();
   renderDashboard();
