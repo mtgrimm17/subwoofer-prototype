@@ -7,6 +7,36 @@ function escHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* ── i18n render helpers ─────────────────────────────── */
+// These thin wrappers let render.js call PLATFORMS labels
+// through the locale system without hard coupling to locale.js.
+
+/** Platform display label — locale-aware */
+function platLabel(pid) {
+  if (typeof tPlat === 'function') return tPlat(pid);
+  return PLATFORMS[pid]?.label || pid;
+}
+
+/** Step display label — locale-aware with PLATFORMS fallback */
+function stepLabel(pid, step) {
+  if (typeof tStep === 'function') return tStep(pid, step.id, step.label);
+  return step.label;
+}
+
+/* ── Language menu ───────────────────────────────────── */
+function renderLangMenu() {
+  const el = document.getElementById('langMenu');
+  if (!el || typeof getSupportedLanguages !== 'function') return;
+  const current = typeof getCurrentLang === 'function' ? getCurrentLang() : 'en';
+  el.innerHTML = getSupportedLanguages().map(l => `
+    <button class="lang-menu-item ${l.code === current ? 'is-active' : ''}"
+            onclick="switchLanguage('${l.code}')">
+      <span class="lang-flag">${l.flag}</span>
+      <span class="lang-name">${escHtml(l.label)}</span>
+      ${l.code === current ? '<span class="lang-check">✓</span>' : ''}
+    </button>`).join('');
+}
+
 /* ── Shared: platform icon SVG ───────────────────────── */
 
 // Icons that use multi-subpath "cutout" designs need evenodd winding rule.
@@ -54,10 +84,10 @@ function platformIcon(id, size = 20, variant = 'color') {
 
 /* ── Tab icons: dot-grid SVGs (5×5, cell=3px, gap=1.5px, step=4.5) ── */
 const OB_TAB_DEFS = [
-  { label: 'About',        icon: () => `<img src="Assets/Icon_About.png"        class="ob-tab-img" alt="">` },
-  { label: 'Distribution', icon: () => `<img src="Assets/Icon_Distribution.png" class="ob-tab-img" alt="">` },
-  { label: 'Assets',       icon: () => `<img src="Assets/Icon_Assets.png"       class="ob-tab-img" alt="">` },
-  { label: 'Compliance',   icon: () => `<img src="Assets/Icon_Compliance.png"   class="ob-tab-img" alt="">` },
+  { labelKey: 'ob.tab.about',        icon: () => `<img src="Assets/Icon_About.png"        class="ob-tab-img" alt="">` },
+  { labelKey: 'ob.tab.distribution', icon: () => `<img src="Assets/Icon_Distribution.png" class="ob-tab-img" alt="">` },
+  { labelKey: 'ob.tab.assets',       icon: () => `<img src="Assets/Icon_Assets.png"       class="ob-tab-img" alt="">` },
+  { labelKey: 'ob.tab.compliance',   icon: () => `<img src="Assets/Icon_Compliance.png"   class="ob-tab-img" alt="">` },
 ];
 
 
@@ -76,9 +106,15 @@ function getTabProgress(tabIdx) {
 }
 
 function renderOnboarding() {
+  // Update static header text from locale
+  const headline = document.querySelector('.ob-headline');
+  const subline  = document.querySelector('.ob-subline');
+  if (headline && typeof t === 'function') headline.textContent = t('ob.headline');
+  if (subline  && typeof t === 'function') subline.textContent  = t('ob.subline');
   renderOnboardingTabs();
   renderOnboardingBody();
   renderOnboardingFooter();
+  renderLangMenu();
 }
 
 function renderOnboardingTabs() {
@@ -87,13 +123,14 @@ function renderOnboardingTabs() {
   tabsEl.innerHTML = OB_TAB_DEFS.map((def, i) => {
     const isActive = i === state.onboardingTab;
     const progress = getTabProgress(i);
+    const label    = (typeof t === 'function') ? t(def.labelKey) : def.labelKey;
     return `
       <button class="ob-tab${isActive ? ' is-active' : ''}"
               style="--tab-progress:${progress.toFixed(3)}"
               onclick="setOnboardingTab(${i})"
               aria-selected="${isActive}">
         <span class="ob-tab-icon">${def.icon()}</span>
-        <span>${def.label}</span>
+        <span>${label}</span>
       </button>`;
   }).join('');
 }
@@ -123,12 +160,12 @@ function renderOnboardingFooter() {
   const hasPlat = state.activePlatforms.size > 0;
   el.innerHTML = `
     <div class="ob-footer-inner">
-      <button class="btn btn-ghost" onclick="prevOnboardingTab()" ${isFirst ? 'style="visibility:hidden"' : ''}>← Back</button>
+      <button class="btn btn-ghost" onclick="prevOnboardingTab()" ${isFirst ? 'style="visibility:hidden"' : ''}>${t('ob.footer.back')}</button>
       <div class="ob-step-dots">
         ${[0,1,2,3].map(i => `<span class="ob-dot ${i === state.onboardingTab ? 'is-active' : (i < state.onboardingTab ? 'is-done' : '')}"></span>`).join('')}
       </div>
       <button class="btn btn-primary" onclick="${isLast ? 'completeOnboarding()' : 'nextOnboardingTab()'}">
-        ${isLast ? 'Launch Dashboard →' : 'Next →'}
+        ${isLast ? t('ob.footer.launch') : t('ob.footer.next')}
       </button>
     </div>`;
 }
@@ -1028,14 +1065,14 @@ function renderProjectBar() {
     projDD.innerHTML = state.projects.map(p => `
       <div class="project-item ${p.id === state.activeProjectId ? 'active' : ''}"
            onclick="switchProject('${p.id}')">
-        ${p.name || 'Untitled Game'}
+        ${p.name || t('bar.untitled_game')}
       </div>`).join('') + `
       <div class="project-dropdown-divider"></div>
       <div class="project-item new-project" onclick="createNewProject()">
-        <span>New project</span><span class="plus">+</span>
+        <span>${t('bar.new_project')}</span><span class="plus">+</span>
       </div>
       <div class="project-item danger" onclick="deleteCurrentProject()">
-        <span>Delete project</span>
+        <span>${t('bar.delete_project')}</span>
       </div>`;
   }
 
@@ -1051,13 +1088,14 @@ function renderProjectBar() {
         </div>`;
     }).join('') + `
       <div class="project-item new-project" onclick="openNewReleaseModal()">
-        <span>New release</span><span class="plus">+</span>
+        <span>${t('bar.new_release')}</span><span class="plus">+</span>
       </div>`;
   }
 
   // Update profile name display
   const profName = document.getElementById('profile-name');
-  if (profName) profName.textContent = 'Developer';
+  if (profName) profName.textContent = t('bar.developer');
+  renderLangMenu();
 }
 
 
@@ -1081,9 +1119,9 @@ function buildDashboardTimeline() {
 
   /* ── Mode chips + optional date input ── */
   const modes = [
-    { v: 'manual',        label: 'Manual'        },
-    { v: 'as_approved',   label: 'When approved' },
-    { v: 'specific_date', label: 'On a date'     },
+    { v: 'manual',        label: t('tl.manual')        },
+    { v: 'as_approved',   label: t('tl.when_approved') },
+    { v: 'specific_date', label: t('tl.on_a_date')     },
   ];
   const modeChips = modes.map(m =>
     `<button class="dash-tl-chip${rt === m.v ? ' is-on' : ''}" onclick="dashPickTiming('${m.v}')">${m.label}</button>`
@@ -1104,7 +1142,7 @@ function buildDashboardTimeline() {
       counterHtml = `
         <div class="dash-tl-counter">
           <span class="dash-tl-days-num">${days}</span>
-          <span class="dash-tl-days-lbl">DAYS</span>
+          <span class="dash-tl-days-lbl">${t('tl.days')}</span>
         </div>`;
     }
   }
@@ -1127,9 +1165,9 @@ function buildDashboardTimeline() {
         <div class="dash-tl-col-hdrs">
           <div class="dash-tl-plat-spacer"></div>
           <div class="dash-tl-track-hdrs">
-            <span class="dash-tl-col-hdr" style="left:${hdrRec}%">REC</span>
-            <span class="dash-tl-col-hdr" style="left:${hdrSub}%">SUBMIT BY</span>
-            <span class="dash-tl-col-hdr dash-tl-col-hdr--live" style="left:100%">LIVE</span>
+            <span class="dash-tl-col-hdr" style="left:${hdrRec}%">${t('tl.rec')}</span>
+            <span class="dash-tl-col-hdr" style="left:${hdrSub}%">${t('tl.submit_by')}</span>
+            <span class="dash-tl-col-hdr dash-tl-col-hdr--live" style="left:100%">${t('tl.live')}</span>
           </div>
         </div>`;
 
@@ -1278,8 +1316,8 @@ function renderDashboard() {
   if (active.length === 0) {
     h += `
       <div class="dash-empty">
-        <div class="dash-empty-title">No platforms activated yet</div>
-        <div class="dash-empty-desc">Activate a platform below to start your submission checklist.</div>
+        <div class="dash-empty-title">${t('dash.empty.title')}</div>
+        <div class="dash-empty-desc">${t('dash.empty.desc')}</div>
       </div>`;
   } else {
     h += `<div class="active-cards-grid">`;
@@ -1292,7 +1330,7 @@ function renderDashboard() {
   if (inactive.length > 0) {
     h += `
       <div class="inactive-section">
-        <div class="inactive-section-label">${active.length > 0 ? 'More platforms' : 'Available platforms'}</div>
+        <div class="inactive-section-label">${active.length > 0 ? t('dash.more_platforms') : t('dash.available_platforms')}</div>
         <div class="inactive-cards-grid">
           ${inactive.map(pid => buildInactiveCard(pid)).join('')}
         </div>
@@ -1327,10 +1365,10 @@ function buildReleasePills(pid) {
   const summary = getPlatformReleaseSummary(proj, pid);
   const pills = [];
   if (summary.production) {
-    pills.push(`<span class="release-pill is-prod">Prod: v${escHtml(summary.production.versionNumber)}</span>`);
+    pills.push(`<span class="release-pill is-prod">${t('pill.prod')} v${escHtml(summary.production.versionNumber)}</span>`);
   }
   if (summary.latest && summary.latest.track !== 'production') {
-    pills.push(`<span class="release-pill is-pre">${escHtml(platformTrackLabel(pid, summary.latest.track))}: v${escHtml(summary.latest.versionNumber)}</span>`);
+    pills.push(`<span class="release-pill is-pre">${escHtml(tTrack(pid, summary.latest.track))}: v${escHtml(summary.latest.versionNumber)}</span>`);
   }
   return pills.length ? `<div class="card-release-status">${pills.join('')}</div>` : '';
 }
@@ -1350,7 +1388,7 @@ function buildActiveCard(pid) {
     return `
       <div class="card-task ${done ? 'is-done' : ''}" onclick="openTaskModal('${pid}','${step.id}')">
         <div class="task-dot ${done ? 'is-complete' : ''}" id="dot-${pid}-${step.id}"></div>
-        <span class="task-label">${step.label}</span>
+        <span class="task-label">${stepLabel(pid, step)}</span>
         <span class="task-arrow">›</span>
       </div>`;
   }).join('');
@@ -1361,8 +1399,8 @@ function buildActiveCard(pid) {
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
-            <div class="active-card-name">${p.label}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
+            <div class="active-card-name">${platLabel(pid)}</div>
+            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>
@@ -1373,9 +1411,9 @@ function buildActiveCard(pid) {
         <button class="card-submit-btn ${submitDone ? 'is-done' : locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
                 onclick="${submitDone || locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? 'Complete all steps first' : submitDone ? 'Submitted' : 'Submit for review'}"
+                title="${locked ? t('btn.locked_title') : submitDone ? t('btn.submitted_title') : t('track.submit.title', {platform: platLabel(pid)})}"
                 ${locked && !submitDone ? 'disabled' : ''}>
-          ${submitDone ? '✓' : 'Submit'}
+          ${submitDone ? '✓' : t('btn.submit')}
         </button>
       </div>
       <div class="card-tasks">${steps}</div>
@@ -1399,7 +1437,7 @@ function buildIOSActiveCard(pid) {
            onclick="openStepModal('${pid}','${step.id}')">
         <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
-          <div class="ios-step-name">${step.label}</div>
+          <div class="ios-step-name">${stepLabel(pid, step)}</div>
         </div>
         <span class="ios-step-arrow">›</span>
       </div>`;
@@ -1411,8 +1449,8 @@ function buildIOSActiveCard(pid) {
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
-            <div class="active-card-name">${p.label}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
+            <div class="active-card-name">${platLabel(pid)}</div>
+            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>
@@ -1424,9 +1462,9 @@ function buildIOSActiveCard(pid) {
         <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
                 onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? 'Complete all steps first' : 'Submit to App Store'}"
+                title="${locked ? t('btn.locked_title') : t('btn.submit_to_appstore')}"
                 ${locked ? 'disabled' : ''}>
-          Submit
+          ${t('btn.submit')}
         </button>
       </div>
       <div class="ios-step-cards">${stepCards}</div>
@@ -1449,7 +1487,7 @@ function buildAndroidActiveCard(pid) {
            onclick="openStepModal('${pid}','${step.id}')">
         <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
-          <div class="ios-step-name">${step.label}</div>
+          <div class="ios-step-name">${stepLabel(pid, step)}</div>
         </div>
         <span class="ios-step-arrow">›</span>
       </div>`;
@@ -1461,8 +1499,8 @@ function buildAndroidActiveCard(pid) {
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
-            <div class="active-card-name">${p.label}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
+            <div class="active-card-name">${platLabel(pid)}</div>
+            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>
@@ -1474,9 +1512,9 @@ function buildAndroidActiveCard(pid) {
         <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
                 onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? 'Complete all steps first' : 'Submit to Google Play'}"
+                title="${locked ? t('btn.locked_title') : t('track.submit.title', {platform: platLabel(pid)})}"
                 ${locked ? 'disabled' : ''}>
-          Submit
+          ${t('btn.submit')}
         </button>
       </div>
       <div class="ios-step-cards">${stepCards}</div>
@@ -1489,17 +1527,17 @@ function buildInactiveCard(pid) {
   const p          = PLATFORMS[pid];
   const counts     = platformStepCount(pid);
   const pct        = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
-  const label      = counts.complete > 0 ? `${counts.complete} / ${counts.total} steps` : 'Inactive';
+  const label      = counts.complete > 0 ? t('dash.steps_count', {complete: counts.complete, total: counts.total}) : 'Inactive';
   const isCS       = COMING_SOON_PLATFORMS.has(pid);
   const clickAttr  = isCS
-    ? `onclick="blinkComingSoon('${pid}')" title="${p.label} — coming soon"`
-    : `onclick="activatePlatform('${pid}')" role="button" tabindex="0" title="Click to activate ${p.label}"`;
+    ? `onclick="blinkComingSoon('${pid}')" title="${platLabel(pid)} — coming soon"`
+    : `onclick="activatePlatform('${pid}')" role="button" tabindex="0" title="Click to activate ${platLabel(pid)}"`;
   return `
     <div class="inactive-card ${isCS ? 'is-coming-soon' : ''}" ${clickAttr} style="cursor:${isCS ? 'default' : 'pointer'};">
       <div class="inactive-card-head">
         <div class="inactive-card-platform">
           <div class="inactive-card-icon">${platformIcon(pid, 20, 'white')}</div>
-          <span class="inactive-card-name">${p.label}</span>
+          <span class="inactive-card-name">${platLabel(pid)}</span>
         </div>
         ${isCS ? `<span class="coming-soon-badge" id="cs-badge-${pid}">Coming Soon</span>` : ''}
       </div>
@@ -1531,9 +1569,9 @@ function renderTaskModal() {
         <div class="task-modal-platform-icon" style="color:${p.color};">
           ${platformIcon(platformId, 16)}
         </div>
-        <span class="task-modal-platform-name">${p.label}</span>
+        <span class="task-modal-platform-name">${platLabel(platformId)}</span>
         <span class="task-modal-sep">›</span>
-        <span class="task-modal-step-name">${step.label}</span>
+        <span class="task-modal-step-name">${stepLabel(platformId, step)}</span>
       </div>
       <button class="task-modal-close" onclick="closeTaskModal()">×</button>
     </div>
@@ -1976,15 +2014,15 @@ function renderTrackSubmitModal(pid) {
   const releaseName = activeVer?.name ? ` — ${escHtml(activeVer.name)}` : '';
   const defaultTrack = proj ? getLastUsedTrack(proj, pid) : (tracks[0]?.id || 'production');
 
-  const trackRows = tracks.map(t => {
-    const liveVer = proj ? getTrackLiveVersion(proj, pid, t.id) : null;
-    const liveLabel = liveVer ? `Live: v${escHtml(liveVer)}` : 'No live build';
+  const trackRows = tracks.map(tr => {
+    const liveVer = proj ? getTrackLiveVersion(proj, pid, tr.id) : null;
+    const liveLabel = liveVer ? t('track.submit.live', {ver: liveVer}) : t('track.submit.no_live');
     return `
       <label class="track-opt-row">
-        <input type="radio" class="track-opt-radio" name="track-sel-${pid}" value="${escHtml(t.id)}"
-               ${t.id === defaultTrack ? 'checked' : ''}>
+        <input type="radio" class="track-opt-radio" name="track-sel-${pid}" value="${escHtml(tr.id)}"
+               ${tr.id === defaultTrack ? 'checked' : ''}>
         <div class="track-opt-info">
-          <span class="track-opt-label">${escHtml(t.label)}</span>
+          <span class="track-opt-label">${escHtml(tTrack(pid, tr.id))}</span>
           <span class="track-opt-live">${liveLabel}</span>
         </div>
       </label>`;
@@ -1995,21 +2033,21 @@ function renderTrackSubmitModal(pid) {
       <div class="submit-modal-title-row">
         <div class="submit-modal-hicon" style="color:${p.color};">${platformIcon(pid, 22)}</div>
         <div>
-          <div class="submit-modal-title">Submit to ${escHtml(p.label)}</div>
+          <div class="submit-modal-title">${t('track.submit.title', {platform: platLabel(pid)})}</div>
           <div class="submit-modal-subtitle">v${escHtml(versionNum)}${releaseName}</div>
         </div>
       </div>
       <button class="task-modal-close" onclick="closeSubmitModal()">×</button>
     </div>
     <div class="submit-modal-scroll track-submit-body">
-      <div class="track-submit-prompt">Where should this build go?</div>
+      <div class="track-submit-prompt">${t('track.submit.prompt')}</div>
       <div class="track-opts">
         ${trackRows}
       </div>
     </div>
     <div class="submit-modal-footer">
-      <button class="btn btn-ghost" onclick="closeSubmitModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="_confirmTrackSubmit('${pid}')">Submit →</button>
+      <button class="btn btn-ghost" onclick="closeSubmitModal()">${t('btn.cancel')}</button>
+      <button class="btn btn-primary" onclick="_confirmTrackSubmit('${pid}')">${t('track.submit.btn')}</button>
     </div>`;
 }
 
@@ -3274,7 +3312,7 @@ function buildSteamActiveCard(pid) {
            onclick="openStepModal('${pid}','${step.id}')">
         <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
-          <div class="ios-step-name">${step.label}</div>
+          <div class="ios-step-name">${stepLabel(pid, step)}</div>
         </div>
         <span class="ios-step-arrow">›</span>
       </div>`;
@@ -3286,8 +3324,8 @@ function buildSteamActiveCard(pid) {
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
-            <div class="active-card-name">${p.label}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${counts.complete} / ${counts.total} steps</div>
+            <div class="active-card-name">${platLabel(pid)}</div>
+            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>
@@ -3297,8 +3335,8 @@ function buildSteamActiveCard(pid) {
         <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
                 id="submit-btn-${pid}"
                 onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? 'Complete all steps first' : 'Submit to Steam'}"
-                ${locked ? 'disabled' : ''}>Submit</button>
+                title="${locked ? t('btn.locked_title') : t('track.submit.title', {platform: platLabel(pid)})}"
+                ${locked ? 'disabled' : ''}>${t('btn.submit')}</button>
       </div>
       <div class="ios-step-cards">${stepCards}</div>
     </div>`;

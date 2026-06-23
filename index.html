@@ -120,6 +120,20 @@
         <span>Subwoofer</span>
       </span>
     </div>
+    <div class="topbar-right">
+      <div class="lang-picker-wrap" id="langPickerWrap">
+        <button class="icon-btn lang-picker-btn" onclick="toggleLangMenu(event)" aria-label="Change language" title="Change language">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </button>
+        <div class="lang-menu hidden" id="langMenu">
+          <!-- populated by renderLangMenu() -->
+        </div>
+      </div>
     <div class="profile-wrap" id="profileWrap">
       <button class="profile-block" onclick="toggleProfileMenu(event)" aria-label="Profile menu">
         <div class="profile-avatar"></div>
@@ -131,7 +145,8 @@
         <button class="profile-menu-item" onclick="closeAllDropdowns()">Profile settings</button>
         <button class="profile-menu-item danger" onclick="closeAllDropdowns()">Sign out</button>
       </div>
-    </div>
+    </div><!-- /.profile-wrap -->
+    </div><!-- /.topbar-right -->
   </header>
 
   <!-- ═══════════════════════════════════════════════════
@@ -197,8 +212,9 @@
   <div id="g-tip" class="g-tip"></div>
 
   <!-- Version badge -->
-  <div class="build-badge">v1.50</div>
+  <div class="build-badge">v1.51</div>
 
+  <script src="locale.js"></script>
   <script src="state.js"></script>
   <script>
     const CONFIG = {

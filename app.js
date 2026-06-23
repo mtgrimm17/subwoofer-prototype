@@ -4,7 +4,11 @@
 
 /* ── Init ────────────────────────────────────────────── */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load locale before first render so t() is ready
+  if (typeof loadLocale === 'function') {
+    await loadLocale();
+  }
   if (state.onboardingComplete) {
     showMainApp();
   } else {
@@ -1864,6 +1868,22 @@ function closeAllDropdowns() {
   document.querySelectorAll('.sw-select-wrap').forEach(el => el.classList.remove('is-open'));
   // Close language type-ahead search if open
   document.getElementById('lang-search-wrap')?.classList.add('hidden');
+  // Close language picker
+  document.getElementById('langMenu')?.classList.add('hidden');
+}
+
+/* ── Language picker ─────────────────────────────────── */
+
+function toggleLangMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('langMenu');
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  closeAllDropdowns();
+  if (isHidden) {
+    if (typeof renderLangMenu === 'function') renderLangMenu();
+    menu.classList.remove('hidden');
+  }
 }
 
 /* ── swSelect — reusable styled dropdown ─────────────── */
@@ -1921,29 +1941,29 @@ function openNewReleaseModal() {
 
   modal.innerHTML = `
     <div class="release-modal-header">
-      <div class="release-modal-title">New release</div>
-      <div class="release-modal-subtitle">Group your next push to stores</div>
+      <div class="release-modal-title">${t('release.modal.title')}</div>
+      <div class="release-modal-subtitle">${t('release.modal.subtitle')}</div>
     </div>
     <div class="release-modal-body">
       <div class="release-modal-field">
-        <label class="release-modal-label" for="rm-version">VERSION</label>
+        <label class="release-modal-label" for="rm-version">${t('release.modal.version_lbl')}</label>
         <input class="form-input" id="rm-version" type="text" value="${escHtml(suggested)}"
-               placeholder="e.g. 1.4" autocomplete="off">
+               placeholder="${t('release.modal.version_ph')}" autocomplete="off">
       </div>
       <div class="release-modal-field">
-        <label class="release-modal-label" for="rm-name">NAME <span class="release-modal-optional">(optional)</span></label>
-        <input class="form-input" id="rm-name" type="text" placeholder="e.g. Holiday Update"
+        <label class="release-modal-label" for="rm-name">${t('release.modal.name_lbl')} <span class="release-modal-optional">${t('release.modal.optional')}</span></label>
+        <input class="form-input" id="rm-name" type="text" placeholder="${t('release.modal.name_ph')}"
                autocomplete="off">
       </div>
       <div class="release-modal-field">
-        <label class="release-modal-label" for="rm-changelog">CHANGELOG <span class="release-modal-optional">(optional)</span></label>
+        <label class="release-modal-label" for="rm-changelog">${t('release.modal.changelog_lbl')} <span class="release-modal-optional">${t('release.modal.optional')}</span></label>
         <textarea class="form-input release-modal-textarea" id="rm-changelog"
-                  placeholder="What's new in this release?" rows="4"></textarea>
+                  placeholder="${t('release.modal.changelog_ph')}" rows="4"></textarea>
       </div>
     </div>
     <div class="release-modal-footer">
-      <button class="btn btn-ghost" onclick="closeNewReleaseModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmCreateRelease()">Create release →</button>
+      <button class="btn btn-ghost" onclick="closeNewReleaseModal()">${t('btn.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmCreateRelease()">${t('release.modal.create_btn')}</button>
     </div>`;
 
   overlay.classList.remove('hidden');
@@ -2102,8 +2122,8 @@ function deleteCurrentVersion() {
   // Case 1: Only one release — can't delete
   if (proj.versions.length === 1) {
     openInfoModal(
-      'Can\'t delete this release',
-      'This is the only release for this project. Create a new release first, then delete this one.'
+      t('delete.release.cant_title'),
+      t('delete.release.cant_body')
     );
     return;
   }
@@ -2111,25 +2131,25 @@ function deleteCurrentVersion() {
   const ver = proj.versions.find(v => v.id === state.activeVersionId);
   if (!ver) return;
 
-  const hasSubmitted      = _versionHasReleases(ver);
+  const hasSubmitted       = _versionHasReleases(ver);
   const hasActivePlatforms = ver.activePlatforms && ver.activePlatforms.length > 0;
   const label = 'v' + ver.versionNumber;
 
   if (hasSubmitted) {
     // Case 2: Release has release records (submitted to at least one track)
     openConfirmModal(
-      'Delete submitted release?',
-      `"${label}" has been submitted to one or more stores. Deleting it removes all release records — this won't unpublish anything already live.`,
-      'Delete anyway',
+      t('delete.release.submitted_title'),
+      t('delete.release.submitted_body', { label }),
+      t('btn.delete_anyway'),
       () => _deleteVersion(proj, ver.id),
       true
     );
   } else if (hasActivePlatforms) {
     // Case 3: Active platforms but nothing submitted yet
     openConfirmModal(
-      'Delete release?',
-      `Delete "${label}"? Any progress on this release will be lost.`,
-      'Delete',
+      t('delete.release.active_title'),
+      t('delete.release.active_body', { label }),
+      t('btn.delete'),
       () => _deleteVersion(proj, ver.id),
       true
     );

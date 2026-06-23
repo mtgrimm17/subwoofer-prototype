@@ -1695,6 +1695,69 @@ body {
 
 /* ── Profile dropdown menu ───────────────────────────── */
 
+/* ── Topbar right group ──────────────────────────────── */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Language picker ─────────────────────────────────── */
+
+.lang-picker-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lang-picker-btn {
+  color: var(--text-faint);
+  transition: color 0.15s;
+}
+.lang-picker-btn:hover { color: var(--text); }
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 60;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: fadeDown 0.15s ease;
+}
+
+.lang-menu.hidden { display: none; }
+
+.lang-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--text);
+  transition: background 0.12s;
+  width: 100%;
+}
+.lang-menu-item:hover { background: var(--hover); }
+.lang-menu-item.is-active { background: var(--hover); font-weight: 600; }
+
+.lang-flag { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.lang-name { flex: 1; }
+.lang-check { color: var(--accent); font-size: 12px; flex-shrink: 0; }
+
 .profile-wrap { position: relative; }
 
 .profile-menu {
