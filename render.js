@@ -30,7 +30,7 @@ function renderLangMenu() {
   const current = typeof getCurrentLang === 'function' ? getCurrentLang() : 'en';
   el.innerHTML = getSupportedLanguages().map(l => {
     const isActive    = l.code === current;
-    const isAvailable = l.code === 'en';
+    const isAvailable = l.code === 'en' || l.code === 'zh-CN';
     return `
     <button class="lang-menu-item${isActive ? ' is-active' : ''}${!isAvailable ? ' is-unavailable' : ''}"
             ${isAvailable ? `onclick="switchLanguage('${l.code}')"` : 'disabled'}
