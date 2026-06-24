@@ -28,13 +28,19 @@ function renderLangMenu() {
   const el = document.getElementById('langMenu');
   if (!el || typeof getSupportedLanguages !== 'function') return;
   const current = typeof getCurrentLang === 'function' ? getCurrentLang() : 'en';
-  el.innerHTML = getSupportedLanguages().map(l => `
-    <button class="lang-menu-item ${l.code === current ? 'is-active' : ''}"
-            onclick="switchLanguage('${l.code}')">
+  el.innerHTML = getSupportedLanguages().map(l => {
+    const isActive    = l.code === current;
+    const isAvailable = l.code === 'en';
+    return `
+    <button class="lang-menu-item${isActive ? ' is-active' : ''}${!isAvailable ? ' is-unavailable' : ''}"
+            ${isAvailable ? `onclick="switchLanguage('${l.code}')"` : 'disabled'}
+            ${!isAvailable ? 'title="Coming soon"' : ''}>
       <span class="lang-flag">${l.flag}</span>
       <span class="lang-name">${escHtml(l.label)}</span>
-      ${l.code === current ? '<span class="lang-check">✓</span>' : ''}
-    </button>`).join('');
+      ${isActive ? '<span class="lang-check">✓</span>' : ''}
+      ${!isAvailable ? '<span class="lang-soon">Soon</span>' : ''}
+    </button>`;
+  }).join('');
 }
 
 /* ── Shared: platform icon SVG ───────────────────────── */
@@ -180,11 +186,11 @@ function buildAboutTab() {
       <div class="ob-section" id="ob-sec-about">
         
         <div class="ob-q" id="ob-q-title" data-answered="${fd.title?.trim() ? '1' : '0'}">
-          <label class="form-label" for="ob-title">Game Title</label>
+          <label class="form-label" for="ob-title">${t('ob.field.title.label') || 'Game Title'}</label>
           <div class="title-search-wrap">
             <div class="form-group">
               <input class="form-input" id="ob-title" type="text" maxlength="50" required
-                     placeholder="e.g. Go Ape Ship!"
+                     placeholder="${t('ob.field.title.placeholder') || 'e.g. Go Ape Ship!'}"
                      autocomplete="off"
                      oninput="syncField('title', this.value); charCount('ob-title-count', this.value, 30); _onTitleInputScenario(this.value)"
                      onfocus="_onTitleFocus(this.value)"
@@ -200,10 +206,10 @@ function buildAboutTab() {
         </div>
 
         <div class="ob-q" id="ob-q-desc" data-answered="${fd.description?.trim() ? '1' : '0'}">
-          <label class="form-label" for="ob-desc">Description</label>
+          <label class="form-label" for="ob-desc">${t('ob.field.desc.label') || 'Description'}</label>
           <div class="form-group">
             <textarea class="form-input" id="ob-desc" rows="5" required
-                      placeholder="Tell players what makes your game worth their time..."
+                      placeholder="${t('ob.field.desc.placeholder') || 'Tell players what makes your game worth their time...'}"
                       oninput="syncField('description', this.value); charCount('ob-desc-count', this.value, 4000)"></textarea>
             <div class="char-count" id="ob-desc-count">0 / 4000</div>
           </div>
@@ -214,7 +220,7 @@ function buildAboutTab() {
 
       <!-- ── Platforms ── -->
       <div class="ob-section" id="ob-sec-platforms">
-        <div class="ob-section-hdr">Target Platforms</div>
+        <div class="ob-section-hdr">${t('ob.section.about.platforms') || 'Target Platforms'}</div>
         <div class="ob-q" id="ob-q-platforms" data-answered="${state.activePlatforms.size > 0 ? '1' : '0'}">
           <div id="ob-plat-grid-wrap" class="ob-req-group ${state.activePlatforms.size === 0 ? 'is-req-empty' : ''}">${buildObPlatTilesHTML()}</div>
         </div>
@@ -230,10 +236,10 @@ function buildDistributionTab() {
   const dPreset = knownPresets.includes(fd.distributionPreset) ? fd.distributionPreset : null;
 
   const distPresets = [
-    { id:'everywhere',          label:'Everywhere' },
-    { id:'english_only',        label:'English only' },
-    { id:'minimize_regulation', label:'Minimize regulation' },
-    { id:'custom',              label:'Custom' },
+    { id:'everywhere',          label: t('ob.dist.preset.everywhere') || 'Everywhere' },
+    { id:'english_only',        label: t('ob.dist.preset.english_only') || 'English only' },
+    { id:'minimize_regulation', label: t('ob.dist.preset.minimize_reg') || 'Minimize regulation' },
+    { id:'custom',              label: t('ob.dist.preset.custom') || 'Custom' },
   ];
 
   return `
@@ -241,12 +247,12 @@ function buildDistributionTab() {
 
       <!-- ── Distribution ── -->
       <div class="ob-section" id="ob-sec-distribution">
-        <div class="ob-section-hdr">Distribution</div>
+        <div class="ob-section-hdr">${t('ob.section.distribution') || 'Distribution'}</div>
 
         <div id="ob-dist-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
 
         <div class="ob-q" id="ob-q-distribution" data-answered="${dPreset ? '1' : '0'}">
-          <span class="ob-dist-question">Where do you intend to make the game available?</span>
+          <span class="ob-dist-question">${t('ob.dist.question') || 'Where do you intend to make the game available?'}</span>
 
           <div id="ob-dist-preset-group" class="ob-req-group ${!dPreset ? 'is-req-empty' : ''}" style="margin-bottom:10px;">
             <div class="ob-preset-pills">
@@ -260,7 +266,7 @@ function buildDistributionTab() {
 
         <div class="sw-tip-box" style="margin-bottom:10px;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
+          <span class="sw-tip-text">${t('tip.distribution.regions') || 'Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.'}</span>
         </div>
 
         <div id="ob-country-list-wrap">${buildObCountryChips()}</div>
@@ -270,11 +276,11 @@ function buildDistributionTab() {
 
       <!-- ── Localization ── -->
       <div class="ob-section" id="ob-sec-localization">
-        <div class="ob-section-hdr">Localization</div>
+        <div class="ob-section-hdr">${t('ob.section.localization') || 'Localization'}</div>
 
         <div class="sw-tip-box" style="margin-bottom:12px;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Native language support is a great way to increase traction and conversion in secondary markets.</span>
+          <span class="sw-tip-text">${t('tip.distribution.languages') || 'Native language support is a great way to increase traction and conversion in secondary markets.'}</span>
         </div>
 
         <div id="ob-lang-list-wrap">${buildObLangList()}</div>
@@ -478,6 +484,11 @@ const OB_REG_TIPS = {
   ZA: 'Film and Publication Board (FPB) classification required. Unclassified games may not be sold commercially.',
 };
 
+/** Regulatory tip: prefers locale key, falls back to OB_REG_TIPS const */
+function regTip(code) {
+  return (typeof t === 'function' ? t(`reg.tip.${code.toLowerCase()}`) : null) || OB_REG_TIPS[code] || '';
+}
+
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 const _chevUp   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
@@ -570,7 +581,7 @@ function buildScenarioWidget() {
 
   // Not found — quiet note
   if (ls && ls.status === 'done' && !ls.found) {
-    return `<div class="ob-live-not-found">Couldn&rsquo;t find &ldquo;${escHtml(state.formData.title || 'your game')}&rdquo; in stores — fill in the description below.</div>`;
+    return `<div class="ob-live-not-found">${t('ob.scenario.not_found') || 'Couldn’t find your game in stores — fill in the description below.'}</div>`;
   }
 
   // No result yet (null) or error — show nothing
@@ -658,15 +669,16 @@ function buildObCountryChips() {
   const buildRow = (c, i) => {
     const isOn   = selected.has(c.code);
     const barPct = Math.round((c.iosGamers / maxGamers) * 100);
-    const regTip = OB_REG_TIPS[c.code]
-      ? `<span class="tooltip-anchor" data-tip="${OB_REG_TIPS[c.code]}" onclick="event.stopPropagation()"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
+    const regTipText = regTip(c.code);
+    const regTipHtml = regTipText
+      ? `<span class="tooltip-anchor" data-tip="${regTipText}" onclick="event.stopPropagation()"><span class="tooltip-icon${isOn ? ' is-warned' : ''}">?</span></span>`
       : '';
     return `
       <div class="ob-dist-row${isOn ? ' is-on' : ''}"
            data-code="${c.code}"
            onclick="toggleObCountry('${c.code}')">
         <div class="ob-dist-row-chip${isOn ? ' is-on' : ''}" id="ob-dist-chip-${c.code}">
-          ${c.name}${regTip}
+          ${c.name}${regTipHtml}
         </div>
         <div class="ob-dist-row-bar-wrap">
           <div class="ob-dist-row-bar-fill" style="width:${barPct}%"></div>
@@ -714,7 +726,7 @@ function buildObPlatTilesHTML() {
   const chips = PLATFORMS_OB.map(({ id, label, comingSoon }) => {
     if (comingSoon) {
       return `<button class="ob-plat-chip ob-plat-chip-cs" disabled title="${label} — coming soon">
-        ${label}<span class="ob-cs-badge">Soon</span>
+        ${label}<span class="ob-cs-badge">${t('ob.plat.coming_soon') || 'Coming Soon'}</span>
       </button>`;
     }
     const isOn = state.activePlatforms.has(id);
@@ -793,7 +805,7 @@ function buildObLangList() {
     const isOn = selected.has(lang);
     const isTipVisible = lang === tipLang && !isOn && tipTotal > 0;
     const tipBadge = isTipVisible
-      ? `<span class="sw-tip-chip-badge tooltip-anchor" data-tip="Subwoofer Tip: adding ${OB_LANG_NAMES[lang]} support could reach ~${tipTotal}M gamers in their native language across your selected countries." onclick="event.stopPropagation()">!</span>`
+      ? `<span class="sw-tip-chip-badge tooltip-anchor" data-tip="${t('tip.lang.reach', { lang: OB_LANG_NAMES[lang], total: tipTotal }) || ('Subwoofer Tip: adding ' + OB_LANG_NAMES[lang] + ' support could reach ~' + tipTotal + 'M gamers in their native language across your selected countries.')}" onclick="event.stopPropagation()">!</span>`
       : '';
     return `
       <button class="loc-chip${isOn ? ' is-on' : ''}${isTipVisible ? ' has-sw-tip' : ''}"
@@ -857,7 +869,7 @@ function buildAssetsTab() {
 
       <!-- ── Screenshots ── -->
       <div class="ob-section" id="ob-sec-screenshots">
-        <div class="ob-section-hdr">Screenshots</div>
+        <div class="ob-section-hdr">${t('ob.section.screenshots') || 'Screenshots'}</div>
         <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
         <div class="ob-q ob-q--rail-only" id="ob-q-screenshots" data-answered="${state.uploads.screenshots.length > 0 ? '1' : '0'}">
           <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
@@ -881,7 +893,7 @@ function buildAssetsTab() {
 
       <!-- ── Trailer (optional) ── -->
       <div class="ob-section" id="ob-sec-trailer">
-        <div class="ob-section-hdr">Trailer <span class="form-optional-tag">Optional</span></div>
+        <div class="ob-section-hdr">${t('ob.section.trailer') || 'Trailer'} <span class="form-optional-tag">${t('ob.field.optional_tag') || 'Optional'}</span></div>
         <div class="asset-guidance">A short gameplay trailer (60–90 seconds) shown on your store pages. Upload a video file or link a YouTube video below.</div>
         <div class="asset-dropzone asset-dropzone-sm" id="ob-trailer-dropzone"
              onclick="document.getElementById('ob-trailer-input').click()"
@@ -896,8 +908,8 @@ function buildAssetsTab() {
         </div>
         <div id="ob-trailer-file-info" style="display:none;"></div>
         <div class="asset-url-row">
-          <label class="form-label" style="margin-bottom:6px;">Or paste a YouTube URL</label>
-          <input class="form-input" id="ob-trailer-url" type="url" placeholder="https://youtube.com/watch?v=..."
+          <label class="form-label" style="margin-bottom:6px;">${t('ob.field.trailer_url.label') || 'Or paste a YouTube URL'}</label>
+          <input class="form-input" id="ob-trailer-url" type="url" placeholder="${t('ob.field.trailer_url.placeholder') || 'https://youtube.com/watch?v=…'}"
                  oninput="syncField('trailerUrl', this.value)">
         </div>
       </div>
@@ -912,12 +924,12 @@ function buildComplianceTab() {
 
       <!-- ── Links ── -->
       <div class="ob-section" id="ob-sec-privacy_url">
-        <div class="ob-section-hdr">Links</div>
+        <div class="ob-section-hdr">${t('ob.section.links') || 'Links'}</div>
 
         <div class="ob-q" id="ob-q-privacy_url" data-answered="${state.formData.privacyUrl?.trim() ? '1' : '0'}">
-          <label class="form-label" for="ob-privacy">Privacy Policy URL</label>
+          <label class="form-label" for="ob-privacy">${t('ob.field.privacy_url.label') || 'Privacy Policy URL'}</label>
           <div class="form-group">
-            <input class="form-input" id="ob-privacy" type="url" required placeholder="https://yourgame.com/privacy"
+            <input class="form-input" id="ob-privacy" type="url" required placeholder="${t('ob.field.privacy_url.placeholder') || 'https://yourgame.com/privacy'}"
                    oninput="syncField('privacyUrl', this.value)">
           </div>
         </div>
@@ -927,7 +939,7 @@ function buildComplianceTab() {
 
       <!-- ── Compliance Questions ── -->
       <div class="ob-section" id="ob-sec-compliance">
-        <div class="ob-section-hdr">Compliance Questions</div>
+        <div class="ob-section-hdr">${t('ob.section.compliance') || 'Compliance Questions'}</div>
         <div class="asset-guidance">
           Answer once — Subwoofer uses your responses to pre-fill content declarations, age rating questionnaires, and privacy disclosures across every platform you submit to.
         </div>
@@ -1024,12 +1036,15 @@ function renderComplianceQuestions() {
   let h = '';
   for (const q of QUESTIONS) {
     const answer = state.questionAnswers[q.id];
-    const tipText = escHtml(q.label + (q.desc ? ' ' + q.desc : ''));
+    const qLabel = t(`q.${q.id}.label`) || q.label;
+    const qDesc  = t(`q.${q.id}.desc`)  || q.desc;
+    const qTitle = t(`q.${q.id}.title`) || q.title;
+    const tipText = escHtml(qLabel + (qDesc ? ' ' + qDesc : ''));
     const ttHTML = `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${tipText}</span></span>`;
     h += `
       <div class="ios-q-row" data-answered="${answer !== null ? '1' : '0'}">
         <div class="ios-q-left">
-          <div class="ios-q-label">${escHtml(q.title)}${ttHTML}</div>
+          <div class="ios-q-label">${escHtml(qTitle)}${ttHTML}</div>
         </div>
         <div class="question-yn">
           <button class="yn-btn yn-yes ${answer === 'yes' ? 'is-selected' : ''}"
@@ -1657,7 +1672,7 @@ function renderStepModal() {
         <div class="sw-tip-box sw-tip-box-inference">
           <div class="sw-tip-box-row">
             <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer pre-populated</strong> answers based on your game info and answers from other platforms.</span>
+            <span class="sw-tip-text">${t('tip.ios.prepopulated') || 'Subwoofer pre-populated answers based on your game info and answers from other platforms.'}</span>
           </div>
         </div>`;
     } else if (inferenceStatus === 'error') {
@@ -2196,11 +2211,11 @@ function buildPrivacySection() {
       : '';
     collectBlock = `
       <div class="prv-nlp-wrap">
-        <label class="form-label">Describe your data collection
-          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects and why. Subwoofer will translate this into the required Apple privacy label selections.</span></span>
+        <label class="form-label">${t('ios.privacy.desc.label') || 'Describe your data collection'}
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${t('ios.privacy.desc.tooltip') || 'Describe every data type your app collects and why. Subwoofer will translate this into the required Apple privacy label selections.'}</span></span>
         </label>
         <textarea class="form-input prv-nlp-textarea"
-                  placeholder="e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network."
+                  placeholder="${t('ios.privacy.desc.placeholder') || 'e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network.'}"
                   onblur="updatePrivacyDescription(this.value)">${descVal}</textarea>
         ${statusHtml}
         ${buildPrivacyMatrix(a)}
@@ -2209,32 +2224,32 @@ function buildPrivacySection() {
 
   return `
     <div class="form-group">
-      <label class="form-label">Privacy Policy URL
+      <label class="form-label">${t('ios.privacy.url.label') || 'Privacy Policy URL'}
         <span class="tooltip-anchor">
           <span class="tooltip-icon">?</span>
-          <span class="tooltip-body">Apple requires a live, reachable URL. A missing or broken link is an automatic rejection reason.</span>
+          <span class="tooltip-body">${t('ios.privacy.url.tooltip') || 'Apple requires a live, reachable URL. A missing or broken link is an automatic rejection reason.'}</span>
         </span>
       </label>
       <input class="form-input" type="url" value="${a.privacyPolicyUrl}"
-             placeholder="https://yourgame.com/privacy"
+             placeholder="${t('ob.field.privacy_url.placeholder') || 'https://yourgame.com/privacy'}"
              oninput="updateIOSTextField('privacyPolicyUrl', this.value)"
              onblur="reRenderStepModal()">
       ${noUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL is an automatic App Review rejection.</div>' : ''}
     </div>
-    ${iosYNRow('Does your app collect any data from users?', 'collectsData',
-      'Includes analytics SDKs, crash reporters, accounts, device IDs, or any third-party SDK that collects data.')}
+    ${iosYNRow(t('ios.privacy.collects.label') || 'Does your app collect any data from users?', 'collectsData',
+      t('ios.privacy.collects.tooltip') || 'Includes analytics SDKs, crash reporters, accounts, device IDs, or any third-party SDK that collects data.')}
     ${collectBlock}`;
 }
 
 function buildPrivacyMatrix(a) {
   const cols = IOS_PURPOSES;
   const META_COLS = [
-    { id: 'linked_identity', label: 'Linked to Identity' },
-    { id: 'used_tracking',   label: 'Used for Tracking' },
+    { id: 'linked_identity', label: t('ios.privacy.linked.label') || 'Linked to Identity' },
+    { id: 'used_tracking',   label: t('ios.privacy.tracking.label') || 'Used for Tracking' },
   ];
   const META_COL_TIPS = {
-    linked_identity: "Data directly linked to the user's identity — such as their account, name, or email address.",
-    used_tracking:   "Data used to track the user across third-party apps or websites for advertising or analytics.",
+    linked_identity: t('ios.privacy.linked.tooltip') || "Data directly linked to the user's identity — such as their account, name, or email address.",
+    used_tracking:   t('ios.privacy.tracking.tooltip') || "Data used to track the user across third-party apps or websites for advertising or analytics.",
   };
 
   const expanded        = state.privacyMatrixExpanded;
@@ -2242,8 +2257,11 @@ function buildPrivacyMatrix(a) {
   const selectedCount   = Object.keys(a.dataPerType).length;
 
   // Header row with inline tooltips
-  const purposeHeaders = cols.map(c =>
-    `<th class="prv-col-hd"><span class="tooltip-anchor" data-tip="${c.desc}">${c.label} <span class="tooltip-icon">?</span><span class="tooltip-body">${c.desc}</span></span></th>`).join('');
+  const purposeHeaders = cols.map(c => {
+    const cLabel = t(`ios.purpose.${c.id}.label`) || c.label;
+    const cDesc  = t(`ios.purpose.${c.id}.desc`)  || c.desc;
+    return `<th class="prv-col-hd"><span class="tooltip-anchor" data-tip="${cDesc}">${cLabel} <span class="tooltip-icon">?</span><span class="tooltip-body">${cDesc}</span></span></th>`;
+  }).join('');
   const metaHeaders = META_COLS.map(c =>
     `<th class="prv-col-hd prv-meta-col"><span class="tooltip-anchor" data-tip="${META_COL_TIPS[c.id]}">${c.label} <span class="tooltip-icon">?</span><span class="tooltip-body">${META_COL_TIPS[c.id]}</span></span></th>`).join('');
 
@@ -2324,8 +2342,8 @@ function buildContentRatingSection() {
   const a = state.iosSubmitAnswers;
 
   // Quick lookups
-  const iq = id => IOS_INTENSITY_QUESTIONS.find(q => q.id === id);
-  const yq = id => IOS_CONTENT_YN_QUESTIONS.find(q => q.id === id);
+  const iq = id => { const q = IOS_INTENSITY_QUESTIONS.find(q => q.id === id); return { ...q, label: t(`iosint.${q.id}.label`) || q.label, tooltip: t(`iosint.${q.id}.tooltip`) || q.tooltip }; };
+  const yq = id => { const q = IOS_CONTENT_YN_QUESTIONS.find(q => q.id === id); return { ...q, label: t(`iosyn.${q.id}.label`) || q.label, tooltip: t(`iosyn.${q.id}.tooltip`) || q.tooltip }; };
 
   // Progress
   const totalQ    = IOS_INTENSITY_QUESTIONS.length + IOS_CONTENT_YN_QUESTIONS.length + 1; // +1 for ageCategory
@@ -2407,25 +2425,25 @@ function buildContentRatingSection() {
     <div class="ios-content-step-label">Additional Information</div>
     <div class="ios-q-row" style="align-items:center;gap:12px;">
       <div class="ios-q-left">
-        <div class="ios-q-label">Age Category
-          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Override the calculated rating for apps targeting a specific age group or with EULA age requirements.</span></span>
+        <div class="ios-q-label">${t('ios.age.category.label') || 'Age Category'}
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${t('ios.age.category.tooltip') || 'Override the calculated rating for apps targeting a specific age group or with EULA age requirements.'}</span></span>
         </div>
       </div>
       <select class="form-input" style="width:auto;min-width:220px;font-size:12px;" onchange="answerIOSField('ageCategory',this.value)">
         <option value="">Select…</option>
-        <option value="not_applicable"  ${a.ageCategory==='not_applicable' ?'selected':''}>Not Applicable</option>
-        <option value="made_for_kids"   ${a.ageCategory==='made_for_kids'  ?'selected':''}>Made for Kids</option>
-        <option value="override_higher" ${a.ageCategory==='override_higher'?'selected':''}>Override to Higher Rating</option>
+        <option value="not_applicable"  ${a.ageCategory==='not_applicable' ?'selected':''}>${t('ios.age.category.not_applicable') || 'Not Applicable'}</option>
+        <option value="made_for_kids"   ${a.ageCategory==='made_for_kids'  ?'selected':''}>${t('ios.age.category.made_for_kids') || 'Made for Kids'}</option>
+        <option value="override_higher" ${a.ageCategory==='override_higher'?'selected':''}>${t('ios.age.category.override_higher') || 'Override to Higher Rating'}</option>
       </select>
     </div>
     ${kidsFollowUp}
     ${overrideFollowUp}
     <div class="form-group" style="margin-top:14px;">
-      <label class="form-label">Age Suitability URL <span class="form-section-note">Optional</span>
-        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">A URL with additional age suitability information for Apple reviewers.</span></span>
+      <label class="form-label">${t('ios.age.suitability.label') || 'Age Suitability URL'} <span class="form-section-note">${t('ob.field.optional_tag') || 'Optional'}</span>
+        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${t('ios.age.suitability.tooltip') || 'A URL with additional age suitability information for Apple reviewers.'}</span></span>
       </label>
       <input class="form-input" type="url" value="${a.ageSuitabilityUrl}"
-             placeholder="https://yourgame.com/age-suitability"
+             placeholder="${t('ios.age.suitability.placeholder') || 'https://yourgame.com/age-suitability'}"
              oninput="updateIOSTextField('ageSuitabilityUrl', this.value)"
              onblur="reRenderStepModal()">
     </div>`;
@@ -2469,8 +2487,8 @@ function buildExportComplianceSection() {
           ${iosYNRow('Do you have an Encryption Registration Number (ERN) from the US Bureau of Industry and Security?', 'hasERN', '')}
           ${a.hasERN === 'yes' ? `
             <div class="form-group" style="margin-top:8px;">
-              <label class="form-label">ERN Number</label>
-              <input class="form-input" type="text" value="${a.ernNumber}" placeholder="ENC-XXXXXXXX"
+              <label class="form-label">${t('ios.export.ern.label') || 'ERN Number'}</label>
+              <input class="form-input" type="text" value="${a.ernNumber}" placeholder="${t('ios.export.ern.placeholder') || 'ENC-XXXXXXXX'}"
                      oninput="updateIOSTextField('ernNumber', this.value)"
                      onblur="reRenderStepModal()">
             </div>` : ''}
@@ -2587,16 +2605,16 @@ function buildDistributionSection() {
 
   return `
     <div id="distribution-map-container" class="world-map-container" style="margin-bottom:14px;"></div>
-    <div class="ios-q-label" style="margin-bottom:8px;">Where do you intend to make the game available?</div>
+    <div class="ios-q-label" style="margin-bottom:8px;">${t('ob.dist.question') || 'Where do you intend to make the game available?'}</div>
     <div class="dist-preset-row">
-      <button class="dist-preset-btn ${preset === 'everywhere' ? 'is-active' : ''}" onclick="setDistPreset('everywhere')">Everywhere</button>
+      <button class="dist-preset-btn ${preset === 'everywhere' ? 'is-active' : ''}" onclick="setDistPreset('everywhere')">${t('ob.dist.preset.everywhere') || 'Everywhere'}</button>
       <button class="dist-preset-btn ${preset === 'everywhere_except_cn' ? 'is-active' : ''}" onclick="setDistPreset('everywhere_except_cn')">Everywhere except China</button>
-      <button class="dist-preset-btn ${preset === 'english_only' ? 'is-active' : ''}" onclick="setDistPreset('english_only')">English only</button>
-      <button class="dist-preset-btn ${preset === 'custom' ? 'is-active' : ''}" onclick="setDistPreset('custom')">Custom</button>
+      <button class="dist-preset-btn ${preset === 'english_only' ? 'is-active' : ''}" onclick="setDistPreset('english_only')">${t('ob.dist.preset.english_only') || 'English only'}</button>
+      <button class="dist-preset-btn ${preset === 'custom' ? 'is-active' : ''}" onclick="setDistPreset('custom')">${t('ob.dist.preset.custom') || 'Custom'}</button>
     </div>
     <div class="dist-tip-box">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span><strong>Subwoofer Tip:</strong> Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.</span>
+      <span>${t('tip.distribution.regions') || 'Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.'}</span>
     </div>
     <div class="dist-list-header">
       <span class="dist-list-col-country">Market</span>
@@ -2685,7 +2703,7 @@ function buildCQQuestion(q) {
       (q.options || []).map((opt, i) => `
         <button class="cq-single-btn ${answer === opt ? 'is-active' : ''} ${isAIHigh && answer === opt ? 'is-ai-confirmed' : ''}"
                 data-qid="${q.id}" data-oidx="${i}"
-                onclick="setCQSingle('${q.id}',${i})">${opt}</button>`
+                onclick="setCQSingle('${q.id}',${i})">${t(`${q.id}.opt.${i}`) || opt}</button>`
       ).join('') +
       `</div>`;
 
@@ -2697,15 +2715,16 @@ function buildCQQuestion(q) {
           <input type="checkbox" ${arr.includes(opt) ? 'checked' : ''}
                  data-qid="${q.id}" data-oidx="${i}"
                  onchange="handleCQMulti(this)">
-          <span>${opt}</span>
+          <span>${t(`${q.id}.opt.${i}`) || opt}</span>
         </label>`
       ).join('') +
       `</div>`;
 
   } else if (q.type === 'text') {
     const val = typeof answer === 'string' ? answer : '';
+    const placeholderText = t(`${q.id}.placeholder`) || (q.placeholder || '');
     inputHTML = `<textarea class="cq-textarea" rows="3"
-                  placeholder="${(q.placeholder || '').replace(/"/g,'&quot;')}"
+                  placeholder="${placeholderText.replace(/"/g,'&quot;')}"
                   onblur="setCQAnswer('${q.id}',this.value)">${val}</textarea>`;
   }
 
@@ -2713,7 +2732,7 @@ function buildCQQuestion(q) {
     <div class="cq-question ${dimClass}" style="${indentStyle}">
       <div class="cq-question-top">
         <div class="cq-plat-badges">${badges}</div>
-        <div class="cq-q-text">${q.text}</div>
+        <div class="cq-q-text">${t(`${q.id}.text`) || q.text}</div>
         ${aiBadge}
       </div>
       ${inputHTML}
@@ -3182,7 +3201,7 @@ function buildAndroidDataSafetySection() {
     <div class="sw-tip-box" style="margin-top:6px;margin-bottom:4px;">
       <div class="sw-tip-box-row">
         <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer tip:</strong> Many developers select this by mistake — choose Yes only if children under 13 are your <em>primary intended audience</em>.</span>
+        <span class="sw-tip-text">${t('tip.ios.kids_audience') || 'Many developers select this by mistake — choose Yes only if children under 13 are your primary intended audience.'}</span>
       </div>
     </div>
     ${familiesWarning}

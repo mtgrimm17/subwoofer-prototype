@@ -1757,6 +1757,8 @@ body {
 .lang-flag { font-size: 16px; line-height: 1; flex-shrink: 0; }
 .lang-name { flex: 1; }
 .lang-check { color: var(--accent); font-size: 12px; flex-shrink: 0; }
+.lang-menu-item.is-unavailable { opacity: 0.38; cursor: default; }
+.lang-soon { font-size: 10px; color: var(--text-muted); flex-shrink: 0; letter-spacing: 0.02em; }
 
 .profile-wrap { position: relative; }
 
