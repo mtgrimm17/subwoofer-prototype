@@ -1213,6 +1213,8 @@ const ANDROID_ACCOUNT_METHODS = [
 
 function makeBlankAndroidAnswers() {
   return {
+    // Business
+    privacyPolicyUrl:         '',
     // Data Safety — Section 1: Collection & Security
     collectsOrSharesData:     null,  // 'yes' / 'no'
     encryptedInTransit:       null,  // 'yes' / 'no'
@@ -1264,7 +1266,8 @@ function isAndroidSectionComplete(sectionId) {
     return total > 0 && answered === total;
   }
   if (sectionId === 'business') {
-    return !!(state.formData.title?.trim() && state.formData.description?.trim());
+    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    return !!(state.formData.title?.trim() && state.formData.description?.trim() && privUrl);
   }
   if (sectionId === 'storePreview') {
     return !!a.storePreviewSeen;
@@ -1291,6 +1294,8 @@ function computeAndroidSectionRisk(sectionId) {
   }
   if (sectionId === 'business') {
     if (!state.formData.title?.trim() || !state.formData.description?.trim()) return 'HIGH';
+    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    if (!privUrl) return 'HIGH';
     return 'LOW';
   }
   return 'LOW';

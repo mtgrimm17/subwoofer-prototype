@@ -1443,15 +1443,16 @@ function buildIOSActiveCard(pid) {
   const stepCards = p.steps.map((step, i) => {
     const done = isIOSSectionComplete(step.id);
     const risk = computeIOSSectionRisk(step.id);
-
-    // Circle state: green check (done), red border (high risk flag), orange border (needs attention)
+    const numClass = 'ios-step-num' + (done ? ' is-done' : risk === 'HIGH' ? ' is-risk-high' : risk === 'MEDIUM' ? ' is-risk-warn' : '');
+    const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="ios-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
-        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
+        <div class="${numClass}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
           <div class="ios-step-name">${stepLabel(pid, step)}</div>
         </div>
+        ${riskDot}
         <span class="ios-step-arrow">›</span>
       </div>`;
   }).join('');
@@ -1494,14 +1495,16 @@ function buildAndroidActiveCard(pid) {
   const stepCards = p.steps.map((step, i) => {
     const done = isAndroidSectionComplete(step.id);
     const risk = computeAndroidSectionRisk(step.id);
-
+    const numClass = 'ios-step-num' + (done ? ' is-done' : risk === 'HIGH' ? ' is-risk-high' : risk === 'MEDIUM' ? ' is-risk-warn' : '');
+    const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="android-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
-        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
+        <div class="${numClass}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
           <div class="ios-step-name">${stepLabel(pid, step)}</div>
         </div>
+        ${riskDot}
         <span class="ios-step-arrow">›</span>
       </div>`;
   }).join('');
@@ -2230,7 +2233,7 @@ function buildPrivacySection() {
       </label>
       <input class="form-input" type="url" value="${a.privacyPolicyUrl}"
              placeholder="${t('ob.field.privacy_url.placeholder') || 'https://yourgame.com/privacy'}"
-             oninput="updateIOSTextField('privacyPolicyUrl', this.value)"
+             oninput="setPrivacyUrl(this.value)"
              onblur="reRenderStepModal()">
       ${noUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL is an automatic App Review rejection.</div>' : ''}
     </div>
@@ -3055,9 +3058,11 @@ function buildAndroidStubSection(title, note) {
 
 /* Android Store Listing — review metadata */
 function buildAndroidBusinessSection() {
-  const fd = state.formData;
+  const fd      = state.formData;
+  const a       = state.androidSubmitAnswers;
   const titleOk = !!(fd.title?.trim());
   const descOk  = !!(fd.description?.trim());
+  const privUrl = (a.privacyPolicyUrl || fd.privacyUrl || '').trim();
   return `
     <div class="ios-section-head">Business</div>
     <p class="ios-section-desc">Review the metadata that will appear on your Google Play store listing. Additional business details (pricing, in-app purchases) are configured directly in the Google Play Console. Edit via <strong>Game Details</strong> if anything needs to change.</p>
@@ -3074,6 +3079,19 @@ function buildAndroidBusinessSection() {
       <label class="form-label">Full description</label>
       <div class="form-input is-complete" style="background:var(--bg-2);cursor:default;color:var(--text);min-height:72px;white-space:pre-wrap;">${escHtml(fd.description || '')}</div>
       ${!descOk ? '<div class="ios-risk-note risk-HIGH">Description is required — add it in Game Details.</div>' : ''}
+    </div>
+    <div class="form-group" style="margin-top:18px;">
+      <label class="form-label">Privacy Policy URL
+        <span class="tooltip-anchor">
+          <span class="tooltip-icon">?</span>
+          <span class="tooltip-body">Google Play requires a valid, publicly accessible privacy policy URL for all apps. Setting it here syncs it across all platforms.</span>
+        </span>
+      </label>
+      <input class="form-input" type="url" id="android-privacy-url"
+             value="${escHtml(privUrl)}"
+             placeholder="https://yourgame.com/privacy"
+             oninput="setPrivacyUrl(this.value)">
+      ${!privUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL will block your submission.</div>' : ''}
     </div>`;
 }
 
@@ -3324,13 +3342,17 @@ function buildSteamActiveCard(pid) {
 
   const stepCards = p.steps.map((step, i) => {
     const done = isSteamSectionComplete(step.id);
+    const risk = computeSteamSectionRisk(step.id);
+    const numClass = 'ios-step-num' + (done ? ' is-done' : risk === 'HIGH' ? ' is-risk-high' : risk === 'MEDIUM' ? ' is-risk-warn' : '');
+    const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="steam-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
-        <div class="ios-step-num ${done ? 'is-done' : ''}">${done ? checkSVG : i + 1}</div>
+        <div class="${numClass}">${done ? checkSVG : i + 1}</div>
         <div class="ios-step-info">
           <div class="ios-step-name">${stepLabel(pid, step)}</div>
         </div>
+        ${riskDot}
         <span class="ios-step-arrow">›</span>
       </div>`;
   }).join('');

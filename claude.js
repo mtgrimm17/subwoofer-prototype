@@ -433,7 +433,7 @@ async function igdbSearch(title) {
   // "Monument Valley". Sort by popularity so the most relevant games
   // surface first even without relevance ranking.
   const body  = [
-    `fields name, cover.url, platforms, summary, websites.url, websites.category;`,
+    `fields name, cover.url, screenshots.url, platforms, summary, websites.url, websites.category;`,
     `where name ~ *"${safe}"* & version_parent = null;`,
     `sort aggregated_rating_count desc;`,
     `limit 5;`,
@@ -463,8 +463,12 @@ async function igdbSearch(title) {
     coverUrl:  g.cover?.url
                  ? 'https:' + g.cover.url.replace('t_thumb', 't_cover_small')
                  : null,
-    platforms: _igdbPlatforms(g.platforms, g.websites),
-    summary:   g.summary || '',
+    platforms:   _igdbPlatforms(g.platforms, g.websites),
+    summary:     g.summary || '',
+    // Up to 6 screenshots, upgraded from t_thumb to t_screenshot_big (889×500)
+    screenshots: (g.screenshots || []).slice(0, 6).map(s =>
+      'https:' + s.url.replace('/t_thumb/', '/t_screenshot_big/')
+    ),
   }));
 }
 

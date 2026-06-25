@@ -585,6 +585,24 @@ function updateIOSTextField(field, value) {
   state.iosSubmitAnswers[field] = value;
 }
 
+/**
+ * Set privacy policy URL across ALL platforms and the global formData at once.
+ * Called from any platform's privacy URL input so they stay in sync.
+ */
+function setPrivacyUrl(url) {
+  state.formData.privacyUrl                    = url;
+  state.iosSubmitAnswers.privacyPolicyUrl      = url;
+  state.androidSubmitAnswers.privacyPolicyUrl  = url;
+  // Sync onboarding privacy field if it's visible
+  const obEl = document.getElementById('ob-privacy');
+  if (obEl && obEl.value !== url) { obEl.value = url; _setInputComplete('ob-privacy', !!url.trim()); }
+  // Re-render the open step modal so the field/risk note updates live
+  if (state.stepModal) reRenderStepModal();
+  updateObSectionStates();
+  updateAndroidCard();
+  updateIOSCard();
+}
+
 /* ── Privacy matrix handlers ─────────────────────────── */
 
 function togglePrivacyMatrix() {
@@ -1008,6 +1026,11 @@ function updateObSectionStates() {
 
 function syncField(field, value) {
   state.formData[field] = value;
+  // Keep platform privacy URLs in sync when the global field is updated
+  if (field === 'privacyUrl') {
+    state.iosSubmitAnswers.privacyPolicyUrl     = value;
+    state.androidSubmitAnswers.privacyPolicyUrl = value;
+  }
   if (field === 'title') {
     // Keep selector title in sync while the user types
     const selEl = document.getElementById('projectSelectorTitle');
@@ -1678,6 +1701,19 @@ function selectPicklistItem(igdbId) {
     renderOnboardingFooter();
   }
 
+  // Auto-populate screenshots from IGDB (only if none uploaded yet)
+  if (item.screenshots && item.screenshots.length > 0 && state.uploads.screenshots.length === 0) {
+    item.screenshots.forEach((url, i) => {
+      state.uploads.screenshots.push({
+        id:   'igdb-' + i + '-' + Date.now(),
+        name: `screenshot-${i + 1}.jpg`,
+        url,
+      });
+    });
+    const grid = document.getElementById('ob-screenshot-grid');
+    if (grid) renderScreenshotGridInto(grid);
+  }
+
   // Show confirmed state in the scenario widget
   state.liveSearch = {
     status:    'done',
@@ -1782,9 +1818,9 @@ function renderScreenshotGridInto(grid) {
   }
   grid.innerHTML = state.uploads.screenshots.map(s => `
     <div class="asset-thumb">
-      <img src="${s.dataUrl}" alt="${s.name}">
+      <img src="${s.url || s.dataUrl}" alt="${escHtml(s.name)}">
       <button class="asset-remove" onclick="removeScreenshot('${s.id}')" title="Remove">×</button>
-      <div class="asset-name">${s.name}</div>
+      <div class="asset-name">${escHtml(s.name)}</div>
     </div>
   `).join('');
 }
