@@ -824,7 +824,7 @@ function buildObLangList() {
     <div class="loc-picker">
       <div class="loc-row">
         <div class="loc-label-col">
-          <div class="loc-label">PRIMARY</div>
+          <div class="loc-label">${t('ob.loc.primary')}</div>
         </div>
         <div class="loc-control-col">
           <div class="loc-primary-wrap" id="loc-primary-wrap">
@@ -841,7 +841,7 @@ function buildObLangList() {
 
       <div class="loc-row">
         <div class="loc-label-col">
-          <div class="loc-label">SUPPORTED</div>
+          <div class="loc-label">${t('ob.loc.supported')}</div>
         </div>
         <div class="loc-control-col">
           <div class="loc-chips" id="loc-chips">
@@ -851,7 +851,7 @@ function buildObLangList() {
           </div>
           <div class="lang-search-wrap hidden" id="lang-search-wrap">
             <input class="lang-search-input" id="lang-search-input" type="text"
-                   placeholder="Search languages…"
+                   placeholder="${t('ob.field.lang_search.placeholder')}"
                    oninput="filterLangSearch(this.value)"
                    onclick="event.stopPropagation()">
             <div class="lang-search-list" id="lang-search-list"></div>
@@ -870,7 +870,7 @@ function buildAssetsTab() {
       <!-- ── Screenshots ── -->
       <div class="ob-section" id="ob-sec-screenshots">
         <div class="ob-section-hdr">${t('ob.section.screenshots') || 'Screenshots'}</div>
-        <div class="asset-guidance">Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.</div>
+        <div class="asset-guidance">${t('ob.screenshots.guidance')}</div>
         <div class="ob-q ob-q--rail-only" id="ob-q-screenshots" data-answered="${state.uploads.screenshots.length > 0 ? '1' : '0'}">
           <div id="ob-screenshot-req-wrap" class="ob-req-group ${state.uploads.screenshots.length === 0 ? 'is-req-empty' : ''}">
             <div class="asset-dropzone" id="ob-screenshot-dropzone"
@@ -879,8 +879,8 @@ function buildAssetsTab() {
                  ondragleave="this.classList.remove('is-over')"
                  ondrop="handleScreenshotDrop(event); this.classList.remove('is-over')">
               <div class="asset-dropzone-icon">↑</div>
-              <div class="asset-dropzone-label">Drop screenshots here, or click to browse</div>
-              <div class="asset-dropzone-hint">PNG or JPG · Multiple files accepted</div>
+              <div class="asset-dropzone-label">${t('ob.screenshots.drop_label')}</div>
+              <div class="asset-dropzone-hint">${t('ob.screenshots.drop_hint')}</div>
               <input type="file" id="ob-screenshot-input" multiple accept="image/*" style="display:none"
                      onchange="handleScreenshotFiles(this.files); this.value=''">
             </div>
@@ -894,15 +894,15 @@ function buildAssetsTab() {
       <!-- ── Trailer (optional) ── -->
       <div class="ob-section" id="ob-sec-trailer">
         <div class="ob-section-hdr">${t('ob.section.trailer') || 'Trailer'} <span class="form-optional-tag">${t('ob.field.optional_tag') || 'Optional'}</span></div>
-        <div class="asset-guidance">A short gameplay trailer (60–90 seconds) shown on your store pages. Upload a video file or link a YouTube video below.</div>
+        <div class="asset-guidance">${t('ob.trailer.guidance')}</div>
         <div class="asset-dropzone asset-dropzone-sm" id="ob-trailer-dropzone"
              onclick="document.getElementById('ob-trailer-input').click()"
              ondragover="event.preventDefault(); this.classList.add('is-over')"
              ondragleave="this.classList.remove('is-over')"
              ondrop="handleTrailerDrop(event); this.classList.remove('is-over')">
           <div class="asset-dropzone-icon">↑</div>
-          <div class="asset-dropzone-label">Drop video file here, or click to browse</div>
-          <div class="asset-dropzone-hint">MP4 · Max 500 MB</div>
+          <div class="asset-dropzone-label">${t('ob.trailer.drop_label')}</div>
+          <div class="asset-dropzone-hint">${t('ob.trailer.drop_hint')}</div>
           <input type="file" id="ob-trailer-input" accept="video/*" style="display:none"
                  onchange="handleTrailerFiles(this.files); this.value=''">
         </div>
@@ -940,9 +940,7 @@ function buildComplianceTab() {
       <!-- ── Compliance Questions ── -->
       <div class="ob-section" id="ob-sec-compliance">
         <div class="ob-section-hdr">${t('ob.section.compliance') || 'Compliance Questions'}</div>
-        <div class="asset-guidance">
-          Answer once — Subwoofer uses your responses to pre-fill content declarations, age rating questionnaires, and privacy disclosures across every platform you submit to.
-        </div>
+        <div class="asset-guidance">${t('ob.compliance.guidance')}</div>
         <div id="ob-questions-list"></div>
       </div>
 
@@ -2586,7 +2584,7 @@ function buildDistributionSection() {
     const expandBtn = i === VISIBLE ? `
       <div class="dist-expand-row" id="dist-expand-btn" onclick="toggleDistExpand()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        Show ${extraCount} more markets
+        ${t('ob.dist.show_more', { count: extraCount })}
       </div>` : '';
 
     return `${expandBtn}
@@ -2608,7 +2606,7 @@ function buildDistributionSection() {
     <div class="ios-q-label" style="margin-bottom:8px;">${t('ob.dist.question') || 'Where do you intend to make the game available?'}</div>
     <div class="dist-preset-row">
       <button class="dist-preset-btn ${preset === 'everywhere' ? 'is-active' : ''}" onclick="setDistPreset('everywhere')">${t('ob.dist.preset.everywhere') || 'Everywhere'}</button>
-      <button class="dist-preset-btn ${preset === 'everywhere_except_cn' ? 'is-active' : ''}" onclick="setDistPreset('everywhere_except_cn')">Everywhere except China</button>
+      <button class="dist-preset-btn ${preset === 'everywhere_except_cn' ? 'is-active' : ''}" onclick="setDistPreset('everywhere_except_cn')">${t('ob.dist.preset.everywhere_except_cn')}</button>
       <button class="dist-preset-btn ${preset === 'english_only' ? 'is-active' : ''}" onclick="setDistPreset('english_only')">${t('ob.dist.preset.english_only') || 'English only'}</button>
       <button class="dist-preset-btn ${preset === 'custom' ? 'is-active' : ''}" onclick="setDistPreset('custom')">${t('ob.dist.preset.custom') || 'Custom'}</button>
     </div>

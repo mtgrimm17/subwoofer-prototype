@@ -460,5 +460,16 @@
   "iosyn.realMoneyGambling.label": "Gambling",
   "iosyn.realMoneyGambling.tooltip": "Wagering using real money or currency exchangeable for real money. Includes casino games, sports betting, lotteries, and raffles.",
   "iosyn.lootBoxes.label": "Loot Boxes",
-  "iosyn.lootBoxes.tooltip": "Randomized virtual item containers available for purchase. Includes randomized functional cards or cosmetic items."
+  "iosyn.lootBoxes.tooltip": "Randomized virtual item containers available for purchase. Includes randomized functional cards or cosmetic items.",
+  "ob.loc.primary": "PRIMARY",
+  "ob.loc.supported": "SUPPORTED",
+  "ob.screenshots.guidance": "Upload your raw screenshots. Subwoofer automatically reformats, resizes, and localizes them for every store's exact spec — so you upload once and every platform gets exactly what it needs.",
+  "ob.screenshots.drop_label": "Drop screenshots here, or click to browse",
+  "ob.screenshots.drop_hint": "PNG or JPG · Multiple files accepted",
+  "ob.trailer.guidance": "A short gameplay trailer (60–90 seconds) shown on your store pages. Upload a video file or link a YouTube video below.",
+  "ob.trailer.drop_label": "Drop video file here, or click to browse",
+  "ob.trailer.drop_hint": "MP4 · Max 500 MB",
+  "ob.compliance.guidance": "Answer once — Subwoofer uses your responses to pre-fill content declarations, age rating questionnaires, and privacy disclosures across every platform you submit to.",
+  "ob.dist.show_more": "Show {count} more markets",
+  "ob.dist.preset.everywhere_except_cn": "Everywhere except China"
 }

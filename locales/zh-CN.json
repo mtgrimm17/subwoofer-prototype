@@ -460,5 +460,16 @@
   "iosyn.realMoneyGambling.label": "赌博",
   "iosyn.realMoneyGambling.tooltip": "使用真实货币或可兑换真实货币进行的赌博。包括赌场游戏、体育博彩、彩票和抽奖。",
   "iosyn.lootBoxes.label": "战利品箱",
-  "iosyn.lootBoxes.tooltip": "可购买的随机虚拟物品容器。包括随机功能性卡片或外观物品。"
+  "iosyn.lootBoxes.tooltip": "可购买的随机虚拟物品容器。包括随机功能性卡片或外观物品。",
+  "ob.loc.primary": "主要语言",
+  "ob.loc.supported": "支持语言",
+  "ob.screenshots.guidance": "上传您的原始截图。Subwoofer 会自动为每个商店的精确规格进行重新格式化、调整大小和本地化处理——只需上传一次，每个平台都能获得所需内容。",
+  "ob.screenshots.drop_label": "拖放截图到此处，或点击浏览",
+  "ob.screenshots.drop_hint": "PNG 或 JPG · 支持多文件",
+  "ob.trailer.guidance": "一段简短的游戏预告片（60–90 秒），将显示在您的商店页面上。请上传视频文件或在下方粘贴 YouTube 链接。",
+  "ob.trailer.drop_label": "拖放视频文件到此处，或点击浏览",
+  "ob.trailer.drop_hint": "MP4 · 最大 500 MB",
+  "ob.compliance.guidance": "只需回答一次——Subwoofer 会使用您的回答为您提交的每个平台预填写内容声明、年龄分级问卷和隐私披露。",
+  "ob.dist.show_more": "显示更多 {count} 个市场",
+  "ob.dist.preset.everywhere_except_cn": "除中国大陆外全球"
 }
