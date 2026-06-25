@@ -69,6 +69,7 @@ async function loadLocale(lang) {
     _locale = _fallback;
     _activeLang = 'en';
     _applyLang('en');
+    localStorage.setItem('sw_lang', 'en'); // persist explicit English choice
     return;
   }
 
