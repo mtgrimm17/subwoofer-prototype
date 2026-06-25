@@ -29,6 +29,10 @@ const SUPPORTED_LANGUAGES = [
   { code: 'pl',    label: 'Polski',            flag: '🇵🇱' },
 ];
 
+// Languages with actual locale files deployed.
+// Update this list whenever a new locale JSON is added or removed.
+const AVAILABLE_LANGUAGES = ['en', 'zh-CN'];
+
 let _locale   = {};   // active language strings
 let _fallback = {};   // English strings (always loaded as base)
 let _activeLang = 'en';
@@ -38,15 +42,20 @@ let _activeLang = 'en';
 async function loadLocale(lang) {
   // Resolve lang: stored preference → browser default → 'en'
   if (!lang) {
-    lang = localStorage.getItem('sw_lang') ||
-           navigator.language?.split('-')[0] ||
-           'en';
+    const stored  = localStorage.getItem('sw_lang');
+    const browser = navigator.language || 'en';
+    // Normalise browser tag before testing (zh-CN stays zh-CN, es-MX → es, etc.)
+    const browserNorm = browser === 'zh-CN' || browser === 'zh-TW' ? browser
+                      : browser.split('-')[0];
+    lang = stored || browserNorm;
   }
   // Normalise: zh → zh-CN
   if (lang === 'zh') lang = 'zh-CN';
   // Restrict to supported codes
   const supported = SUPPORTED_LANGUAGES.map(l => l.code);
   if (!supported.includes(lang)) lang = 'en';
+  // Restrict further to locales that are actually deployed
+  if (!AVAILABLE_LANGUAGES.includes(lang)) lang = 'en';
 
   // Always load English as fallback layer first
   if (!Object.keys(_fallback).length) {
@@ -77,6 +86,7 @@ async function loadLocale(lang) {
     _locale = _fallback;
     _activeLang = 'en';
     _applyLang('en');
+    localStorage.removeItem('sw_lang'); // clear stale preference so next load uses default
   }
 }
 
@@ -146,15 +156,16 @@ function getCurrentLang()        { return _activeLang; }
 function getSupportedLanguages() { return SUPPORTED_LANGUAGES; }
 
 async function switchLanguage(lang) {
+  // Only switch to languages that actually have locale files
+  if (!AVAILABLE_LANGUAGES.includes(lang)) return;
   await loadLocale(lang);
   // Re-render whatever is currently visible
-  if (typeof renderDashboard === 'function' &&
-      typeof state !== 'undefined' && state.onboardingComplete) {
-    renderDashboard();
-  }
-  if (typeof renderOnboarding === 'function' &&
-      typeof state !== 'undefined' && !state.onboardingComplete) {
-    renderOnboarding();
+  if (typeof state !== 'undefined') {
+    if (state.onboardingComplete) {
+      if (typeof renderDashboard === 'function')  renderDashboard();
+    } else {
+      if (typeof renderOnboarding === 'function') renderOnboarding();
+    }
   }
   // Refresh lang menu highlight
   if (typeof renderLangMenu === 'function') renderLangMenu();
