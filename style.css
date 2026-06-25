@@ -5727,3 +5727,194 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   border: 1px solid rgba(251, 146, 60, 0.3);
   vertical-align: middle;
 }
+
+
+/* ============================================================
+   SPLASH SCREEN
+   ============================================================ */
+
+.splash-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: calc(100vh - 53px); /* 53px = topbar height */
+  overflow-y: auto;
+  padding: 40px 24px 48px;
+  background: var(--bg);
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 900px;
+  text-align: center;
+}
+
+/* ── Badge ── */
+.splash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--green);
+  text-transform: uppercase;
+}
+
+.splash-badge-dot {
+  font-size: 9px;
+  animation: splashPulse 2s ease-in-out infinite;
+}
+
+@keyframes splashPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Headline ── */
+.splash-headline {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.splash-accent {
+  color: var(--green);
+}
+
+/* ── Subtitle ── */
+.splash-sub {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  max-width: 560px;
+}
+
+/* ── Feature cards ── */
+.splash-cards {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.splash-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 28px 28px 32px;
+  background: var(--panel);
+  text-align: left;
+}
+
+.splash-card-divider {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.splash-card-step {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.splash-card-icon {
+  margin: 4px 0 2px;
+  opacity: 0.9;
+}
+
+.splash-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.splash-card-desc {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
+/* ── CTA ── */
+.splash-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.splash-get-started {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #0a0a0a;
+  background: var(--green);
+  border: none;
+  border-radius: 8px;
+  padding: 14px 40px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+}
+
+.splash-get-started:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.splash-get-started:active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.splash-platforms {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+
+/* ── Topbar Sign In button (splash only) ── */
+.splash-signin-btn {
+  display: none; /* hidden by default */
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.splash-signin-btn:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+/* Show Sign In / hide profile during splash */
+body.is-splash .splash-signin-btn  { display: flex; align-items: center; }
+body.is-splash .profile-wrap        { display: none; }

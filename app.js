@@ -9,12 +9,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof loadLocale === 'function') {
     await loadLocale();
   }
+  // Always start at the splash screen
+  showSplash();
+});
+
+/* ── Splash screen ───────────────────────────────────── */
+
+function showSplash() {
+  document.getElementById('splash-screen').classList.remove('hidden');
+  document.getElementById('onboarding-overlay').classList.add('hidden');
+  document.getElementById('main-app').classList.add('hidden');
+  document.body.classList.add('is-splash');
+  renderLangMenu();
+}
+
+function hideSplash() {
+  document.getElementById('splash-screen').classList.add('hidden');
+  document.body.classList.remove('is-splash');
+}
+
+/** "Get Started" button — always goes to onboarding for new users */
+function startFromSplash() {
+  hideSplash();
+  showOnboarding();
+}
+
+/** "Sign In" button — returning users jump straight to their dashboard */
+function signInFromSplash() {
+  hideSplash();
   if (state.onboardingComplete) {
     showMainApp();
   } else {
     showOnboarding();
   }
-});
+}
 
 function showMainApp() {
   document.getElementById('onboarding-overlay').classList.add('hidden');
