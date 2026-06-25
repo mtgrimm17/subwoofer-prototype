@@ -5918,3 +5918,11 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
 /* Show Sign In / hide profile during splash */
 body.is-splash .splash-signin-btn  { display: flex; align-items: center; }
 body.is-splash .profile-wrap        { display: none; }
+
+/* Step images in splash cards */
+.splash-step-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+}

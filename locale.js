@@ -40,14 +40,12 @@ let _activeLang = 'en';
 /* ── Load ─────────────────────────────────────────────── */
 
 async function loadLocale(lang) {
-  // Resolve lang: stored preference → browser default → 'en'
+  // Resolve lang: explicit arg → stored user preference → English default
+  // We intentionally do NOT fall back to navigator.language — the user's explicit
+  // choice (stored in sw_lang) is the only override; new visitors always get English.
   if (!lang) {
-    const stored  = localStorage.getItem('sw_lang');
-    const browser = navigator.language || 'en';
-    // Normalise browser tag before testing (zh-CN stays zh-CN, es-MX → es, etc.)
-    const browserNorm = browser === 'zh-CN' || browser === 'zh-TW' ? browser
-                      : browser.split('-')[0];
-    lang = stored || browserNorm;
+    const stored = localStorage.getItem('sw_lang');
+    lang = stored || 'en';
   }
   // Normalise: zh → zh-CN
   if (lang === 'zh') lang = 'zh-CN';
