@@ -922,21 +922,6 @@ function buildComplianceTab() {
   return `
     <div class="ob-form">
 
-      <!-- ── Links ── -->
-      <div class="ob-section" id="ob-sec-privacy_url">
-        <div class="ob-section-hdr">${t('ob.section.links') || 'Links'}</div>
-
-        <div class="ob-q" id="ob-q-privacy_url" data-answered="${state.formData.privacyUrl?.trim() ? '1' : '0'}">
-          <label class="form-label" for="ob-privacy">${t('ob.field.privacy_url.label') || 'Privacy Policy URL'}</label>
-          <div class="form-group">
-            <input class="form-input" id="ob-privacy" type="url" required placeholder="${t('ob.field.privacy_url.placeholder') || 'https://yourgame.com/privacy'}"
-                   oninput="syncField('privacyUrl', this.value)">
-          </div>
-        </div>
-      </div>
-
-      <div class="ob-sec-divider"></div>
-
       <!-- ── Compliance Questions ── -->
       <div class="ob-section" id="ob-sec-compliance">
         <div class="ob-section-hdr">${t('ob.section.compliance') || 'Compliance Questions'}</div>
@@ -1443,7 +1428,7 @@ function buildIOSActiveCard(pid) {
   const stepCards = p.steps.map((step, i) => {
     const done = isIOSSectionComplete(step.id);
     const risk = computeIOSSectionRisk(step.id);
-    const numClass = 'ios-step-num' + (done ? ' is-done' : risk === 'HIGH' ? ' is-risk-high' : risk === 'MEDIUM' ? ' is-risk-warn' : '');
+    const numClass = 'ios-step-num' + (done ? ' is-done' : '');
     const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="ios-step-card-${step.id}"
@@ -1495,7 +1480,7 @@ function buildAndroidActiveCard(pid) {
   const stepCards = p.steps.map((step, i) => {
     const done = isAndroidSectionComplete(step.id);
     const risk = computeAndroidSectionRisk(step.id);
-    const numClass = 'ios-step-num' + (done ? ' is-done' : risk === 'HIGH' ? ' is-risk-high' : risk === 'MEDIUM' ? ' is-risk-warn' : '');
+    const numClass = 'ios-step-num' + (done ? ' is-done' : '');
     const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="android-step-card-${step.id}"
@@ -3062,7 +3047,6 @@ function buildAndroidBusinessSection() {
   const a       = state.androidSubmitAnswers;
   const titleOk = !!(fd.title?.trim());
   const descOk  = !!(fd.description?.trim());
-  const privUrl = (a.privacyPolicyUrl || fd.privacyUrl || '').trim();
   return `
     <div class="ios-section-head">Business</div>
     <p class="ios-section-desc">Review the metadata that will appear on your Google Play store listing. Additional business details (pricing, in-app purchases) are configured directly in the Google Play Console. Edit via <strong>Game Details</strong> if anything needs to change.</p>
@@ -3079,19 +3063,6 @@ function buildAndroidBusinessSection() {
       <label class="form-label">Full description</label>
       <div class="form-input is-complete" style="background:var(--bg-2);cursor:default;color:var(--text);min-height:72px;white-space:pre-wrap;">${escHtml(fd.description || '')}</div>
       ${!descOk ? '<div class="ios-risk-note risk-HIGH">Description is required — add it in Game Details.</div>' : ''}
-    </div>
-    <div class="form-group" style="margin-top:18px;">
-      <label class="form-label">Privacy Policy URL
-        <span class="tooltip-anchor">
-          <span class="tooltip-icon">?</span>
-          <span class="tooltip-body">Google Play requires a valid, publicly accessible privacy policy URL for all apps. Setting it here syncs it across all platforms.</span>
-        </span>
-      </label>
-      <input class="form-input" type="url" id="android-privacy-url"
-             value="${escHtml(privUrl)}"
-             placeholder="https://yourgame.com/privacy"
-             oninput="setPrivacyUrl(this.value)">
-      ${!privUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL will block your submission.</div>' : ''}
     </div>`;
 }
 
@@ -3232,7 +3203,22 @@ function buildAndroidDataSafetySection() {
       ${buildAndroidDataMatrix(a)}
     </div>` : '';
 
+  const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+
   return `
+    <div class="form-group" style="margin-bottom:18px;">
+      <label class="form-label">Privacy Policy URL
+        <span class="tooltip-anchor">
+          <span class="tooltip-icon">?</span>
+          <span class="tooltip-body">Google Play requires a valid, publicly accessible privacy policy URL. Setting it here syncs across all platforms.</span>
+        </span>
+      </label>
+      <input class="form-input" type="url" id="android-privacy-url"
+             value="${escHtml(privUrl)}"
+             placeholder="https://yourgame.com/privacy"
+             oninput="setPrivacyUrl(this.value)">
+      ${!privUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL will block your submission.</div>' : ''}
+    </div>
     ${androidYNRow('Collects or shares user data', 'collectsOrSharesData',
       'Includes location, personal info, financial info, health data, messages, files, contacts, app activity, identifiers, and similar required disclosures.')}
     ${detailsBlock}`;
@@ -3343,7 +3329,7 @@ function buildSteamActiveCard(pid) {
   const stepCards = p.steps.map((step, i) => {
     const done = isSteamSectionComplete(step.id);
     const risk = computeSteamSectionRisk(step.id);
-    const numClass = 'ios-step-num' + (done ? ' is-done' : risk === 'HIGH' ? ' is-risk-high' : risk === 'MEDIUM' ? ' is-risk-warn' : '');
+    const numClass = 'ios-step-num' + (done ? ' is-done' : '');
     const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="steam-step-card-${step.id}"
@@ -3696,12 +3682,27 @@ function buildSteamStorePreviewSection() {
     : `<div style="width:108px;height:50px;border-radius:4px;background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:9px;">Capsule</div>`;
 
   const screenshotStrip = shots.length
-    ? `<div style="display:flex;gap:4px;overflow-x:auto;margin-top:10px;">${shots.slice(0,5).map(s => `<img src="${s.dataUrl}" style="height:90px;border-radius:4px;flex-shrink:0;">`).join('')}</div>`
+    ? `<div style="display:flex;gap:4px;overflow-x:auto;margin-top:10px;">${shots.slice(0,5).map(s => `<img src="${s.url || s.dataUrl}" style="height:90px;border-radius:4px;flex-shrink:0;">`).join('')}</div>`
     : `<div style="height:60px;background:var(--bg-2);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:12px;margin-top:10px;">No screenshots uploaded</div>`;
 
   state.steamSubmitAnswers.storePreviewSeen = true;
 
+  const privUrl = (state.steamSubmitAnswers.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+
   return `
+    <div class="form-group" style="margin-bottom:18px;">
+      <label class="form-label">Privacy Policy URL
+        <span class="tooltip-anchor">
+          <span class="tooltip-icon">?</span>
+          <span class="tooltip-body">Steam requires a privacy policy URL in your store page settings. Setting it here syncs across all platforms.</span>
+        </span>
+      </label>
+      <input class="form-input" type="url" id="steam-privacy-url"
+             value="${escHtml(privUrl)}"
+             placeholder="https://yourgame.com/privacy"
+             oninput="setPrivacyUrl(this.value)">
+      ${!privUrl ? '<div class="ios-risk-note risk-HIGH">Required. Add your privacy policy URL before submitting to Steam.</div>' : ''}
+    </div>
     <p style="font-size:12px;color:var(--text-faint);margin:0 0 14px;">Approximate Steam store listing appearance.</p>
     <div style="background:#1b2838;border-radius:6px;padding:14px;font-family:inherit;">
       <div style="display:flex;gap:12px;align-items:flex-start;">

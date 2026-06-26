@@ -1249,6 +1249,8 @@ function androidCqProgress() {
 function isAndroidSectionComplete(sectionId) {
   const a = state.androidSubmitAnswers;
   if (sectionId === 'dataSafety') {
+    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    if (!privUrl) return false;
     if (a.collectsOrSharesData === null) return false;
     if (a.collectsOrSharesData === 'yes') {
       if (a.encryptedInTransit === null) return false;
@@ -1266,8 +1268,7 @@ function isAndroidSectionComplete(sectionId) {
     return total > 0 && answered === total;
   }
   if (sectionId === 'business') {
-    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
-    return !!(state.formData.title?.trim() && state.formData.description?.trim() && privUrl);
+    return !!(state.formData.title?.trim() && state.formData.description?.trim());
   }
   if (sectionId === 'storePreview') {
     return !!a.storePreviewSeen;
@@ -1278,6 +1279,8 @@ function isAndroidSectionComplete(sectionId) {
 function computeAndroidSectionRisk(sectionId) {
   const a = state.androidSubmitAnswers;
   if (sectionId === 'dataSafety') {
+    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    if (!privUrl) return 'HIGH';
     if (a.collectsOrSharesData === null) return 'HIGH';
     if (a.collectsOrSharesData === 'yes') {
       const types = Object.entries(a.dataPerType);
@@ -1294,8 +1297,6 @@ function computeAndroidSectionRisk(sectionId) {
   }
   if (sectionId === 'business') {
     if (!state.formData.title?.trim() || !state.formData.description?.trim()) return 'HIGH';
-    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
-    if (!privUrl) return 'HIGH';
     return 'LOW';
   }
   return 'LOW';
@@ -2040,6 +2041,7 @@ function makeBlankSteamAnswers() {
     accessibilityFeatures: [],
     // Store Preview
     storePreviewSeen:   false,
+    privacyPolicyUrl:   '',
   };
 }
 
@@ -2058,7 +2060,10 @@ function isSteamSectionComplete(sectionId) {
     if (a.inputSupport !== 'keyboard_only' && a.xboxFullSupport === null) return false;
     return true;
   }
-  if (sectionId === 'storePreview') return !!a.storePreviewSeen;
+  if (sectionId === 'storePreview') {
+    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    return !!a.storePreviewSeen && !!privUrl;
+  }
   return false;
 }
 
@@ -2067,5 +2072,10 @@ function computeSteamSectionRisk(sectionId) {
   if (sectionId === 'contentRating') return a.usesAI === null ? 'HIGH' : 'LOW';
   if (sectionId === 'storeTags')     return a.topGenres.length === 0 ? 'HIGH' : 'LOW';
   if (sectionId === 'technical')     return a.inputSupport === null  ? 'HIGH' : 'LOW';
+  if (sectionId === 'storePreview') {
+    const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
+    if (!privUrl) return 'HIGH';
+    return 'LOW';
+  }
   return 'LOW';
 }

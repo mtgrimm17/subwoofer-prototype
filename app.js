@@ -88,7 +88,7 @@ const OB_TAB_REQUIRED = [
   ['title', 'platforms'],              // Tab 0: About
   ['distribution'],                    // Tab 1: Distribution
   ['screenshots'],                     // Tab 2: Assets
-  ['privacy_url', 'compliance'],       // Tab 3: Compliance
+  ['compliance'],                        // Tab 3: Compliance
 ];
 
 function _setObValidating(on) {
@@ -593,14 +593,18 @@ function setPrivacyUrl(url) {
   state.formData.privacyUrl                    = url;
   state.iosSubmitAnswers.privacyPolicyUrl      = url;
   state.androidSubmitAnswers.privacyPolicyUrl  = url;
-  // Sync onboarding privacy field if it's visible
-  const obEl = document.getElementById('ob-privacy');
-  if (obEl && obEl.value !== url) { obEl.value = url; _setInputComplete('ob-privacy', !!url.trim()); }
+  state.steamSubmitAnswers.privacyPolicyUrl    = url;
+  // Sync sibling platform inputs if currently visible
+  ['android-privacy-url', 'steam-privacy-url'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== url) el.value = url;
+  });
   // Re-render the open step modal so the field/risk note updates live
   if (state.stepModal) reRenderStepModal();
   updateObSectionStates();
   updateAndroidCard();
   updateIOSCard();
+  updateSteamCard?.();
 }
 
 /* ── Privacy matrix handlers ─────────────────────────── */
@@ -978,7 +982,6 @@ const OB_SECTION_ANSWERED = {
   distribution: () => !!state.formData.distributionPreset,
   localization: () => !!state.formData.primaryLanguage,  // defaults to 'en' — always answered
   screenshots:  () => state.uploads.screenshots.length > 0,
-  privacy_url:  () => !!(state.formData.privacyUrl?.trim()),
   compliance:   () => QUESTIONS.every(q => state.questionAnswers[q.id] !== null),
   // Optional sections — never shown as unanswered
   trailer:      () => true,
@@ -991,7 +994,6 @@ const OB_Q_ANSWERED = {
   platforms:    () => state.activePlatforms.size > 0,
   distribution: () => !!state.formData.distributionPreset,
   screenshots:  () => state.uploads.screenshots.length > 0,
-  privacy_url:  () => !!(state.formData.privacyUrl?.trim()),
   compliance:   () => QUESTIONS.every(q => state.questionAnswers[q.id] !== null),
 };
 
@@ -1020,7 +1022,6 @@ function updateObSectionStates() {
   // Sync is-complete on text inputs — correct after any tab render
   _setInputComplete('ob-title',            !!(state.formData.title?.trim()));
   _setInputComplete('ob-desc',             !!(state.formData.description?.trim()));
-  _setInputComplete('ob-privacy',          !!(state.formData.privacyUrl?.trim()));
   _setInputComplete('ob-prv-nlp-textarea', !!(state.iosSubmitAnswers?.privacyDescription?.trim()));
 }
 
@@ -1039,7 +1040,7 @@ function syncField(field, value) {
     if (curEl) curEl.textContent = value || 'My Game';
   }
   // Live is-complete on the typed input — immediate feedback as user types/clears
-  const FIELD_INPUT_MAP = { title: 'ob-title', description: 'ob-desc', privacyUrl: 'ob-privacy' };
+  const FIELD_INPUT_MAP = { title: 'ob-title', description: 'ob-desc' };
   if (FIELD_INPUT_MAP[field]) _setInputComplete(FIELD_INPUT_MAP[field], !!(value?.trim()));
   // Update section rails reactively
   updateObSectionStates();
