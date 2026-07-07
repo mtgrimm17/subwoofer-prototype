@@ -2389,30 +2389,30 @@ function buildContentRatingSection() {
   };
 
   // Whether a question was answered at inference time (determines collapse eligibility)
-  const answered = state.iosAnsweredAtInference; // null = pre-inference, Set = post-inference
-  const expanded = state.iosContentRatingExpanded;
+  const answered     = state.iosAnsweredAtInference; // null = pre-inference, Set = post-inference
+  const showAll      = state.iosContentRatingExpanded; // false = "Unanswered", true = "All"
   const collapseMode = answered !== null;
 
-  // Split each category into visible vs collapsed questions
-  let visibleHtml  = '';
-  let collapsedHtml = '';
-  let collapsedCount = 0;
+  // "Unanswered / All" toggle pill — shown only after AI inference has run
+  const togglePill = collapseMode ? `
+    <div class="cr-toggle-bar">
+      <button class="cr-toggle-btn${!showAll ? ' cr-toggle-active' : ''}"
+              onclick="toggleContentRatingExpanded(false)">Unanswered</button>
+      <button class="cr-toggle-btn${showAll ? ' cr-toggle-active' : ''}"
+              onclick="toggleContentRatingExpanded(true)">All</button>
+    </div>` : '';
 
+  // Build question rows — filter by answered/unanswered when in collapseMode + "Unanswered" view
+  let questionsHtml = '';
   for (const cat of IOS_CR_CATEGORIES) {
-    const visible  = collapseMode ? cat.questions.filter(q => !answered.has(q.id)) : cat.questions;
-    const hidden   = collapseMode ? cat.questions.filter(q =>  answered.has(q.id)) : [];
+    const qsToShow = (collapseMode && !showAll)
+      ? cat.questions.filter(q => !answered.has(q.id))
+      : cat.questions;
 
-    if (visible.length > 0) {
-      visibleHtml += `<div class="ios-q-divider"></div>
+    if (qsToShow.length > 0) {
+      questionsHtml += `<div class="ios-q-divider"></div>
         <div class="ios-content-step-label">${cat.label}</div>
-        ${visible.map(renderQ).join('')}`;
-    }
-
-    if (hidden.length > 0) {
-      collapsedCount += hidden.length;
-      collapsedHtml += `<div class="ios-q-divider"></div>
-        <div class="ios-content-step-label" style="color:var(--text-faint);">${cat.label}</div>
-        ${hidden.map(renderQ).join('')}`;
+        ${qsToShow.map(renderQ).join('')}`;
     }
   }
 
@@ -2469,16 +2469,7 @@ function buildContentRatingSection() {
              onblur="reRenderStepModal()">
     </div>`;
 
-  // "Show N answered" / "Hide answered" chevron
-  const chevron = collapseMode && collapsedCount > 0 ? `
-    <button class="cr-chevron-btn" onclick="toggleContentRatingExpanded()">
-      ${expanded
-        ? `<span class="cr-chevron-icon">▲</span> Hide ${collapsedCount} answered`
-        : `<span class="cr-chevron-icon">▼</span> Show ${collapsedCount} answered`}
-    </button>
-    ${expanded ? collapsedHtml : ''}` : '';
-
-  return visibleHtml + additionalSection + chevron;
+  return togglePill + questionsHtml + additionalSection;
 }
 
 function computeIOSAgeRating() {

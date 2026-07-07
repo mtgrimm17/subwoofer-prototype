@@ -392,34 +392,52 @@ const IGDB_WEBSITE_TO_PID = { 10: 'ios', 11: 'ios', 12: 'android', 13: 'steam', 
 
 // IGDB platform IDs → our platform IDs (IDs are stable; slugs can vary)
 // Source: https://api.igdb.com/v4/platforms
-// NOTE: Console IDs (PS4/5, Xbox, Switch) are intentionally excluded — IGDB platform data
-// for consoles is routinely inaccurate (cancelled ports, pre-release listings that never
-// shipped). Console platforms must be confirmed by website-based detection or added manually.
+// NOTE: Console IDs can be inaccurate in IGDB (cancelled ports, rumoured releases).
+// We mitigate this by cross-referencing release_dates.status — consoles are only
+// included when IGDB records a concrete release (status 4 = Released, 7 = Early Access).
 const IGDB_PLATFORM_ID_TO_PID = {
   6:   'steam',    // PC (Windows)
   14:  'steam',    // Mac
   3:   'steam',    // Linux
   34:  'android',  // Android
   39:  'ios',      // iOS
+  48:  'psn',      // PlayStation 4
+  167: 'psn',      // PlayStation 5
+  49:  'xbox',     // Xbox One
+  169: 'xbox',     // Xbox Series X/S
+  130: 'nintendo', // Nintendo Switch
 };
 
-function _igdbPlatforms(platforms, websites) {
+function _igdbPlatforms(platforms, websites, releaseDates) {
   const pids = new Set();
+
   // Primary: website/storefront-based detection (most accurate — only surfaces real listings)
   for (const w of (websites || [])) {
     const pid = IGDB_WEBSITE_TO_PID[w.category];
     if (pid) pids.add(pid);
   }
-  // Fallback: platform ID mapping — only used when no storefront URLs were found.
-  // IGDB platform IDs often include historical or inaccurate entries (ports that never
-  // shipped, games listed on a platform's wiki before being cancelled, etc.), so we
-  // trust them only as a last resort.
-  if (pids.size === 0) {
-    for (const p of (platforms || [])) {
-      const pid = IGDB_PLATFORM_ID_TO_PID[p];
-      if (pid) pids.add(pid);
+
+  // Build a set of platform IDs confirmed as released per IGDB release_dates.
+  // status 4 = Released, status 7 = Early Access — both confirm the platform shipped.
+  const releasedIds = new Set();
+  const hasRdData   = (releaseDates || []).length > 0;
+  if (hasRdData) {
+    for (const rd of releaseDates) {
+      if ((rd.status === 4 || rd.status === 7) && rd.platform) releasedIds.add(rd.platform);
     }
   }
+
+  // Platform ID mapping — supplements website detection.
+  // Console platforms require a confirmed release status to filter out cancelled/TBD ports.
+  // PC/mobile IDs (steam, ios, android) are trusted as-is.
+  const CONSOLE_PIDS = new Set(['psn', 'xbox', 'nintendo']);
+  for (const p of (platforms || [])) {
+    const pid = IGDB_PLATFORM_ID_TO_PID[p];
+    if (!pid) continue;
+    if (CONSOLE_PIDS.has(pid) && hasRdData && !releasedIds.has(p)) continue;
+    pids.add(pid);
+  }
+
   return [...pids].filter(pid => !!PLATFORMS[pid]);
 }
 
@@ -433,7 +451,7 @@ async function igdbSearch(title) {
   // "Monument Valley". Sort by popularity so the most relevant games
   // surface first even without relevance ranking.
   const body  = [
-    `fields name, cover.url, screenshots.url, platforms, summary, websites.url, websites.category;`,
+    `fields name, cover.url, screenshots.url, platforms, release_dates.platform, release_dates.status, summary, websites.url, websites.category;`,
     `where name ~ *"${safe}"* & version_parent = null;`,
     `sort aggregated_rating_count desc;`,
     `limit 5;`,
@@ -463,7 +481,7 @@ async function igdbSearch(title) {
     coverUrl:  g.cover?.url
                  ? 'https:' + g.cover.url.replace('t_thumb', 't_cover_small')
                  : null,
-    platforms:   _igdbPlatforms(g.platforms, g.websites),
+    platforms:   _igdbPlatforms(g.platforms, g.websites, g.release_dates),
     summary:     g.summary || '',
     // Up to 6 screenshots upgraded from t_thumb to t_screenshot_big (889×500)
     screenshots: (g.screenshots || []).slice(0, 6)

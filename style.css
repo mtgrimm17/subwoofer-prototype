@@ -4475,23 +4475,37 @@ select.form-input {
 
 .ios-q-divider { height: 1px; background: var(--border); margin: 14px 0; }
 
-/* ── Content Rating "Show answered" chevron ─────────── */
-.cr-chevron-btn {
+/* ── Content Rating "Unanswered / All" toggle ───────── */
+.cr-toggle-bar {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 18px auto 4px;
-  padding: 8px 16px;
+  gap: 2px;
   background: var(--bg-2);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+  margin-bottom: 4px;
+}
+
+.cr-toggle-btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
   color: var(--text-dim);
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.12s, color 0.12s;
 }
-.cr-chevron-btn:hover { background: var(--bg-3); color: var(--text); }
-.cr-chevron-icon { font-size: 10px; opacity: 0.7; }
+
+.cr-toggle-btn:hover { color: var(--text); }
+
+.cr-toggle-btn.cr-toggle-active {
+  background: var(--bg-3);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
 
 /* ── Distribution country list ───────────────────────── */
 

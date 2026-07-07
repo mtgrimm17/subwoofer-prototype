@@ -627,8 +627,8 @@ function togglePrivacyMatrix() {
   reRenderStepModal();
 }
 
-function toggleContentRatingExpanded() {
-  state.iosContentRatingExpanded = !state.iosContentRatingExpanded;
+function toggleContentRatingExpanded(value) {
+  state.iosContentRatingExpanded = value;
   reRenderStepModal();
 }
 
