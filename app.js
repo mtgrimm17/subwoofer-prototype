@@ -1704,38 +1704,21 @@ function selectPicklistItem(igdbId) {
     renderOnboardingFooter();
   }
 
-  // Auto-populate screenshots from IGDB (only if none uploaded yet)
-  // IGDB CDN hotlinks don't load in <img> tags, so we fetch via corsproxy and
-  // convert each image to a base64 data URL before storing in state.
+  // Auto-populate screenshots from IGDB (only if none uploaded yet).
+  // IGDB CDN images can't be hotlinked directly from <img> tags (returns 403),
+  // so we route each src through corsproxy.io which fetches from their server.
   if (item.screenshots && item.screenshots.length > 0 && state.uploads.screenshots.length === 0) {
-    const PROXY = 'https://corsproxy.io/?';
-    const toDataUrl = url =>
-      fetch(PROXY + encodeURIComponent(url))
-        .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
-        .then(blob => new Promise((res, rej) => {
-          const reader = new FileReader();
-          reader.onload  = e => res(e.target.result);
-          reader.onerror = rej;
-          reader.readAsDataURL(blob);
-        }));
-
     const ts = Date.now();
-    Promise.allSettled(item.screenshots.map(toDataUrl)).then(results => {
-      results.forEach((r, i) => {
-        if (r.status === 'fulfilled' && r.value) {
-          state.uploads.screenshots.push({
-            id:      'igdb-' + i + '-' + ts,
-            name:    `screenshot-${i + 1}.jpg`,
-            dataUrl: r.value,
-          });
-        }
+    item.screenshots.forEach((url, i) => {
+      state.uploads.screenshots.push({
+        id:   'igdb-' + i + '-' + ts,
+        name: `screenshot-${i + 1}.jpg`,
+        url,  // stored as URL; rendering proxies through corsproxy.io
       });
-      if (state.uploads.screenshots.length > 0) {
-        const grid = document.getElementById('ob-screenshot-grid');
-        if (grid) renderScreenshotGridInto(grid);
-        updateObSectionStates();
-      }
     });
+    const grid = document.getElementById('ob-screenshot-grid');
+    if (grid) renderScreenshotGridInto(grid);
+    updateObSectionStates();
   }
 
   // Show confirmed state in the scenario widget
@@ -1835,6 +1818,15 @@ function handleScreenshotFiles(files) {
   });
 }
 
+const IGDB_CDN = 'https://images.igdb.com/';
+function _screenshotSrc(s) {
+  if (s.dataUrl) return s.dataUrl;
+  if (!s.url) return '';
+  // Route IGDB CDN through corsproxy.io to bypass their hotlink restriction
+  if (s.url.startsWith(IGDB_CDN)) return 'https://corsproxy.io/?' + encodeURIComponent(s.url);
+  return s.url;
+}
+
 function renderScreenshotGridInto(grid) {
   if (!state.uploads.screenshots.length) {
     grid.innerHTML = '';
@@ -1842,7 +1834,7 @@ function renderScreenshotGridInto(grid) {
   }
   grid.innerHTML = state.uploads.screenshots.map(s => `
     <div class="asset-thumb">
-      <img src="${s.url || s.dataUrl}" alt="${escHtml(s.name)}">
+      <img src="${_screenshotSrc(s)}" alt="${escHtml(s.name)}">
       <button class="asset-remove" onclick="removeScreenshot('${s.id}')" title="Remove">×</button>
       <div class="asset-name">${escHtml(s.name)}</div>
     </div>

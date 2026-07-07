@@ -407,19 +407,21 @@ const IGDB_PLATFORM_ID_TO_PID = {
 
 function _igdbPlatforms(platforms, websites) {
   const pids = new Set();
-  // Primary: website-based detection (most accurate for storefronts)
+  // Primary: website/storefront-based detection (most accurate — only surfaces real listings)
   for (const w of (websites || [])) {
     const pid = IGDB_WEBSITE_TO_PID[w.category];
     if (pid) pids.add(pid);
   }
-  // Secondary: platform ID mapping — IGDB returns raw integers when
-  // `platforms` (no subfield) is requested, e.g. [6, 48, 49, 130]
-  for (const p of (platforms || [])) {
-    const pid = IGDB_PLATFORM_ID_TO_PID[p];
-    if (pid) pids.add(pid);
+  // Fallback: platform ID mapping — only used when no storefront URLs were found.
+  // IGDB platform IDs often include historical or inaccurate entries (ports that never
+  // shipped, games listed on a platform's wiki before being cancelled, etc.), so we
+  // trust them only as a last resort.
+  if (pids.size === 0) {
+    for (const p of (platforms || [])) {
+      const pid = IGDB_PLATFORM_ID_TO_PID[p];
+      if (pid) pids.add(pid);
+    }
   }
-  // Keep all recognised platforms — including "coming soon" ones — for display in the picklist.
-  // COMING_SOON_PLATFORMS only gates activation, not informational display.
   return [...pids].filter(pid => !!PLATFORMS[pid]);
 }
 

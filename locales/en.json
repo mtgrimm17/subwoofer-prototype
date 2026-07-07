@@ -124,7 +124,7 @@
   "tip.distribution.regions": "Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.",
   "tip.distribution.languages": "Native language support is a great way to increase traction and conversion in secondary markets.",
   "tip.lang.reach": "Subwoofer Tip: adding {lang} support could reach ~{total}M gamers in their native language across your selected countries.",
-  "tip.ios.prepopulated": "Subwoofer pre-populated answers based on your game info and answers from other platforms.",
+  "tip.ios.prepopulated": "Pre-populated answers based on your game info and answers from other platforms.",
   "tip.ios.kids_audience": "Many developers select this by mistake — choose Yes only if children under 13 are your primary intended audience.",
   "tip.store.found_on": "We found this on {source}. Review the pre-populated description and correct anything that's inaccurate.",
   "reg.tip.cn": "Requires an ISBN game license from China's NPPA and a licensed local publishing partner. Foreign companies cannot self-publish.",

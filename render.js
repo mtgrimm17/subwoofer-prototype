@@ -266,7 +266,7 @@ function buildDistributionTab() {
 
         <div class="sw-tip-box" style="margin-bottom:10px;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-          <span class="sw-tip-text">${t('tip.distribution.regions') || 'Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.'}</span>
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.distribution.regions') || 'Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.'}</span>
         </div>
 
         <div id="ob-country-list-wrap">${buildObCountryChips()}</div>
@@ -280,7 +280,7 @@ function buildDistributionTab() {
 
         <div class="sw-tip-box" style="margin-bottom:12px;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-          <span class="sw-tip-text">${t('tip.distribution.languages') || 'Native language support is a great way to increase traction and conversion in secondary markets.'}</span>
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.distribution.languages') || 'Native language support is a great way to increase traction and conversion in secondary markets.'}</span>
         </div>
 
         <div id="ob-lang-list-wrap">${buildObLangList()}</div>
@@ -986,9 +986,9 @@ function renderOnboardingScreenshotGrid() {
   if (!state.uploads.screenshots.length) { grid.innerHTML = ''; return; }
   grid.innerHTML = state.uploads.screenshots.map(shot => `
     <div class="asset-thumb">
-      <img src="${shot.dataUrl}" alt="${shot.name}">
+      <img src="${_screenshotSrc(shot)}" alt="${escHtml(shot.name)}">
       <button class="asset-remove" onclick="removeScreenshot('${shot.id}')" title="Remove">×</button>
-      <div class="asset-name">${shot.name}</div>
+      <div class="asset-name">${escHtml(shot.name)}</div>
     </div>`).join('');
 }
 
@@ -1616,7 +1616,7 @@ function buildTaskContent(platformId, stepId, done) {
   if (stepId === 'confirmScreenshots' || (stepId === 'confirmMedia' && state.uploads.screenshots.length)) {
     const shots = state.uploads.screenshots;
     const thumbs = shots.length
-      ? `<div class="task-thumb-row">${shots.slice(0, 6).map(s => `<img src="${s.dataUrl}" class="task-thumb" alt="${s.name}">`).join('')}${shots.length > 6 ? `<div class="task-thumb-more">+${shots.length - 6}</div>` : ''}</div>`
+      ? `<div class="task-thumb-row">${shots.slice(0, 6).map(s => `<img src="${_screenshotSrc(s)}" class="task-thumb" alt="${escHtml(s.name)}">`).join('')}${shots.length > 6 ? `<div class="task-thumb-more">+${shots.length - 6}</div>` : ''}</div>`
       : `<p class="task-stub-note">No screenshots uploaded yet. Add them via <strong>Game Details → Upload Assets</strong>.</p>`;
     return `<p style="margin-bottom:14px;color:#555;font-size:13px;">Confirm these screenshots look correct for <strong>${p.label}</strong>.</p>${thumbs}`;
   }
@@ -1658,7 +1658,7 @@ function renderStepModal() {
         <div class="sw-tip-box sw-tip-box-inference">
           <div class="sw-tip-box-row">
             <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-            <span class="sw-tip-text">${t('tip.ios.prepopulated') || 'Subwoofer pre-populated answers based on your game info and answers from other platforms.'}</span>
+            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.ios.prepopulated') || 'Pre-populated answers based on your game info and answers from other platforms.'}</span>
           </div>
         </div>`;
     } else if (inferenceStatus === 'error') {
@@ -1808,7 +1808,7 @@ function buildStorePreviewSection() {
 
   const shotHtml = shots.length > 0
     ? shots.slice(0, 5).map(s =>
-        `<div class="ias-shot-frame"><img src="${s.dataUrl}" class="ias-shot-img" alt="Screenshot"></div>`
+        `<div class="ias-shot-frame"><img src="${_screenshotSrc(s)}" class="ias-shot-img" alt="Screenshot"></div>`
       ).join('')
     : ['Gameplay','Gameplay','Menu'].map(lbl =>
         `<div class="ias-shot-frame ias-shot-empty"><span>${lbl}</span></div>`
@@ -3081,7 +3081,7 @@ function buildAndroidStorePreviewSection() {
     : `<div style="width:60px;height:60px;border-radius:14px;background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:10px;">Icon</div>`;
 
   const screenshotStrip = shots.length
-    ? `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:10px;">${shots.slice(0,5).map(s => `<img src="${s.dataUrl}" style="height:120px;border-radius:8px;flex-shrink:0;">`).join('')}</div>`
+    ? `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:10px;">${shots.slice(0,5).map(s => `<img src="${_screenshotSrc(s)}" style="height:120px;border-radius:8px;flex-shrink:0;">`).join('')}</div>`
     : `<div style="height:80px;background:var(--bg-2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:12px;margin-top:10px;">No screenshots uploaded</div>`;
 
   // Mark as seen
@@ -3188,7 +3188,7 @@ function buildAndroidDataSafetySection() {
     <div class="sw-tip-box" style="margin-top:6px;margin-bottom:4px;">
       <div class="sw-tip-box-row">
         <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-        <span class="sw-tip-text">${t('tip.ios.kids_audience') || 'Many developers select this by mistake — choose Yes only if children under 13 are your primary intended audience.'}</span>
+        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.ios.kids_audience') || 'Many developers select this by mistake — choose Yes only if children under 13 are your primary intended audience.'}</span>
       </div>
     </div>
     ${familiesWarning}
