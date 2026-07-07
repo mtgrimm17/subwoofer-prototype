@@ -594,13 +594,15 @@ function setPrivacyUrl(url) {
   state.iosSubmitAnswers.privacyPolicyUrl      = url;
   state.androidSubmitAnswers.privacyPolicyUrl  = url;
   state.steamSubmitAnswers.privacyPolicyUrl    = url;
-  // Sync sibling platform inputs if currently visible
-  ['android-privacy-url', 'steam-privacy-url'].forEach(id => {
+  // Sync sibling platform inputs that are currently in the DOM
+  // (but don't change the one that's actively focused — it's the source)
+  const active = document.activeElement;
+  ['ios-privacy-url', 'android-privacy-url', 'steam-privacy-url'].forEach(id => {
     const el = document.getElementById(id);
-    if (el && el.value !== url) el.value = url;
+    if (el && el !== active && el.value !== url) el.value = url;
   });
-  // Re-render the open step modal so the field/risk note updates live
-  if (state.stepModal) reRenderStepModal();
+  // Update card progress bars and section states — NO full re-render here
+  // because that would destroy the focused input. Re-render happens on blur (see inputs).
   updateObSectionStates();
   updateAndroidCard();
   updateIOSCard();
@@ -1703,16 +1705,37 @@ function selectPicklistItem(igdbId) {
   }
 
   // Auto-populate screenshots from IGDB (only if none uploaded yet)
+  // IGDB CDN hotlinks don't load in <img> tags, so we fetch via corsproxy and
+  // convert each image to a base64 data URL before storing in state.
   if (item.screenshots && item.screenshots.length > 0 && state.uploads.screenshots.length === 0) {
-    item.screenshots.forEach((url, i) => {
-      state.uploads.screenshots.push({
-        id:   'igdb-' + i + '-' + Date.now(),
-        name: `screenshot-${i + 1}.jpg`,
-        url,
+    const PROXY = 'https://corsproxy.io/?';
+    const toDataUrl = url =>
+      fetch(PROXY + encodeURIComponent(url))
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+        .then(blob => new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload  = e => res(e.target.result);
+          reader.onerror = rej;
+          reader.readAsDataURL(blob);
+        }));
+
+    const ts = Date.now();
+    Promise.allSettled(item.screenshots.map(toDataUrl)).then(results => {
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value) {
+          state.uploads.screenshots.push({
+            id:      'igdb-' + i + '-' + ts,
+            name:    `screenshot-${i + 1}.jpg`,
+            dataUrl: r.value,
+          });
+        }
       });
+      if (state.uploads.screenshots.length > 0) {
+        const grid = document.getElementById('ob-screenshot-grid');
+        if (grid) renderScreenshotGridInto(grid);
+        updateObSectionStates();
+      }
     });
-    const grid = document.getElementById('ob-screenshot-grid');
-    if (grid) renderScreenshotGridInto(grid);
   }
 
   // Show confirmed state in the scenario widget

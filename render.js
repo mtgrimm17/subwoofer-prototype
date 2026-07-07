@@ -1429,7 +1429,7 @@ function buildIOSActiveCard(pid) {
     const done = isIOSSectionComplete(step.id);
     const risk = computeIOSSectionRisk(step.id);
     const numClass = 'ios-step-num' + (done ? ' is-done' : '');
-    const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
+    const riskDot  = (done || risk === 'LOW' || risk === 'NONE') ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="ios-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
@@ -1481,7 +1481,7 @@ function buildAndroidActiveCard(pid) {
     const done = isAndroidSectionComplete(step.id);
     const risk = computeAndroidSectionRisk(step.id);
     const numClass = 'ios-step-num' + (done ? ' is-done' : '');
-    const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
+    const riskDot  = (done || risk === 'LOW' || risk === 'NONE') ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="android-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
@@ -2216,7 +2216,7 @@ function buildPrivacySection() {
           <span class="tooltip-body">${t('ios.privacy.url.tooltip') || 'Apple requires a live, reachable URL. A missing or broken link is an automatic rejection reason.'}</span>
         </span>
       </label>
-      <input class="form-input" type="url" value="${a.privacyPolicyUrl}"
+      <input class="form-input" type="url" id="ios-privacy-url" value="${a.privacyPolicyUrl}"
              placeholder="${t('ob.field.privacy_url.placeholder') || 'https://yourgame.com/privacy'}"
              oninput="setPrivacyUrl(this.value)"
              onblur="reRenderStepModal()">
@@ -3216,7 +3216,8 @@ function buildAndroidDataSafetySection() {
       <input class="form-input" type="url" id="android-privacy-url"
              value="${escHtml(privUrl)}"
              placeholder="https://yourgame.com/privacy"
-             oninput="setPrivacyUrl(this.value)">
+             oninput="setPrivacyUrl(this.value)"
+             onblur="reRenderStepModal()">
       ${!privUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL will block your submission.</div>' : ''}
     </div>
     ${androidYNRow('Collects or shares user data', 'collectsOrSharesData',
@@ -3330,7 +3331,7 @@ function buildSteamActiveCard(pid) {
     const done = isSteamSectionComplete(step.id);
     const risk = computeSteamSectionRisk(step.id);
     const numClass = 'ios-step-num' + (done ? ' is-done' : '');
-    const riskDot  = done ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
+    const riskDot  = (done || risk === 'LOW' || risk === 'NONE') ? '' : `<span class="ios-step-risk ios-step-risk-${risk.toLowerCase()}"></span>`;
     return `
       <div class="ios-step-card ${done ? 'is-complete' : ''}" id="steam-step-card-${step.id}"
            onclick="openStepModal('${pid}','${step.id}')">
@@ -3700,7 +3701,8 @@ function buildSteamStorePreviewSection() {
       <input class="form-input" type="url" id="steam-privacy-url"
              value="${escHtml(privUrl)}"
              placeholder="https://yourgame.com/privacy"
-             oninput="setPrivacyUrl(this.value)">
+             oninput="setPrivacyUrl(this.value)"
+             onblur="reRenderStepModal()">
       ${!privUrl ? '<div class="ios-risk-note risk-HIGH">Required. Add your privacy policy URL before submitting to Steam.</div>' : ''}
     </div>
     <p style="font-size:12px;color:var(--text-faint);margin:0 0 14px;">Approximate Steam store listing appearance.</p>
