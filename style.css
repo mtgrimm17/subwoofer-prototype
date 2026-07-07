@@ -4475,6 +4475,24 @@ select.form-input {
 
 .ios-q-divider { height: 1px; background: var(--border); margin: 14px 0; }
 
+/* ── Content Rating "Show answered" chevron ─────────── */
+.cr-chevron-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 18px auto 4px;
+  padding: 8px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.cr-chevron-btn:hover { background: var(--bg-3); color: var(--text); }
+.cr-chevron-icon { font-size: 10px; opacity: 0.7; }
+
 /* ── Distribution country list ───────────────────────── */
 
 .dist-tip-box {

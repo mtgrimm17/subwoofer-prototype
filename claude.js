@@ -392,17 +392,15 @@ const IGDB_WEBSITE_TO_PID = { 10: 'ios', 11: 'ios', 12: 'android', 13: 'steam', 
 
 // IGDB platform IDs → our platform IDs (IDs are stable; slugs can vary)
 // Source: https://api.igdb.com/v4/platforms
+// NOTE: Console IDs (PS4/5, Xbox, Switch) are intentionally excluded — IGDB platform data
+// for consoles is routinely inaccurate (cancelled ports, pre-release listings that never
+// shipped). Console platforms must be confirmed by website-based detection or added manually.
 const IGDB_PLATFORM_ID_TO_PID = {
   6:   'steam',    // PC (Windows)
   14:  'steam',    // Mac
   3:   'steam',    // Linux
   34:  'android',  // Android
   39:  'ios',      // iOS
-  48:  'psn',      // PlayStation 4
-  167: 'psn',      // PlayStation 5
-  49:  'xbox',     // Xbox One
-  169: 'xbox',     // Xbox Series X|S
-  130: 'nintendo', // Nintendo Switch
 };
 
 function _igdbPlatforms(platforms, websites) {
@@ -435,7 +433,7 @@ async function igdbSearch(title) {
   // "Monument Valley". Sort by popularity so the most relevant games
   // surface first even without relevance ranking.
   const body  = [
-    `fields name, cover.url, screenshots.image_id, platforms, summary, websites.url, websites.category;`,
+    `fields name, cover.url, screenshots.url, platforms, summary, websites.url, websites.category;`,
     `where name ~ *"${safe}"* & version_parent = null;`,
     `sort aggregated_rating_count desc;`,
     `limit 5;`,
@@ -467,10 +465,13 @@ async function igdbSearch(title) {
                  : null,
     platforms:   _igdbPlatforms(g.platforms, g.websites),
     summary:     g.summary || '',
-    // Up to 6 screenshots at t_screenshot_big size (889×500) constructed from image_id
-    screenshots: (g.screenshots || []).slice(0, 6).map(s =>
-      `https://images.igdb.com/igdb/image/upload/t_screenshot_big/${s.image_id}.jpg`
-    ),
+    // Up to 6 screenshots upgraded from t_thumb to t_screenshot_big (889×500)
+    screenshots: (g.screenshots || []).slice(0, 6)
+      .filter(s => s && s.url)
+      .map(s => {
+        const abs = s.url.startsWith('//') ? 'https:' + s.url : s.url;
+        return abs.replace('/t_thumb/', '/t_screenshot_big/');
+      }),
   }));
 }
 

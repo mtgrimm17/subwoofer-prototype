@@ -1832,6 +1832,14 @@ const state = {
   // Whether the privacy matrix is showing all types (default: fully collapsed)
   privacyMatrixExpanded: false,
 
+  // Content Rating question collapse (iOS + future AI-inferred steps)
+  // Set of question IDs that were answered when AI inference last completed.
+  // null = inference has not run yet (show all questions).
+  // Set  = inference ran; IDs in this set are collapsed behind "Show answered" chevron.
+  iosAnsweredAtInference: null,
+  // Whether the user has expanded the "Show answered" section manually.
+  iosContentRatingExpanded: false,
+
   // Privacy NLP AI translation status: null | 'loading' | 'complete' | 'error'
   privacyAIStatus: null,
 

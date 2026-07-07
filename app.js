@@ -391,6 +391,17 @@ async function openStepModal(pid, stepId) {
       state.claudeCache = { result };
       applyClaudeResults(result);
       state.stepModal.inferenceStatus = 'done';
+      // Snapshot which questions are answered right after inference so Content Rating
+      // can collapse those questions behind a "Show answered" chevron.
+      if (stepId === 'contentRating') {
+        const a = state.iosSubmitAnswers;
+        const answered = new Set();
+        IOS_INTENSITY_QUESTIONS.forEach(q => { if (a[q.id] !== null) answered.add(q.id); });
+        IOS_CONTENT_YN_QUESTIONS.forEach(q => { if (a[q.id] !== null) answered.add(q.id); });
+        if (a.ageCategory !== null) answered.add('ageCategory');
+        state.iosAnsweredAtInference = answered;
+        state.iosContentRatingExpanded = false;
+      }
     } catch(err) {
       state.stepModal.inferenceStatus = 'error';
       state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
@@ -613,6 +624,11 @@ function setPrivacyUrl(url) {
 
 function togglePrivacyMatrix() {
   state.privacyMatrixExpanded = !state.privacyMatrixExpanded;
+  reRenderStepModal();
+}
+
+function toggleContentRatingExpanded() {
+  state.iosContentRatingExpanded = !state.iosContentRatingExpanded;
   reRenderStepModal();
 }
 
@@ -1818,12 +1834,16 @@ function handleScreenshotFiles(files) {
   });
 }
 
-const IGDB_CDN = 'https://images.igdb.com/';
 function _screenshotSrc(s) {
   if (s.dataUrl) return s.dataUrl;
   if (!s.url) return '';
-  // Route IGDB CDN through corsproxy.io to bypass their hotlink restriction
-  if (s.url.startsWith(IGDB_CDN)) return 'https://corsproxy.io/?' + encodeURIComponent(s.url);
+  // IGDB CDN images: route through wsrv.nl (images.weserv.nl) which is a dedicated
+  // image proxy/CDN that handles hotlink-protected sources reliably.
+  // Strip protocol so wsrv.nl can handle both http and https origins.
+  if (s.url.includes('images.igdb.com')) {
+    const clean = s.url.replace(/^https?:\/\//, '');
+    return 'https://wsrv.nl/?url=' + encodeURIComponent(clean) + '&output=jpg';
+  }
   return s.url;
 }
 

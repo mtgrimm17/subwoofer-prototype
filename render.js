@@ -2324,6 +2324,55 @@ function buildPrivacyMatrix(a) {
 }
 
 /* ── Content Rating ──────────────────────────────────── */
+// Category structure for iOS Content Rating — used by buildContentRatingSection to
+// render questions and to separate answered vs unanswered after AI inference.
+const IOS_CR_CATEGORIES = [
+  { id: 'features',    label: 'Features', questions: [
+    { type: 'yn',        id: 'parentalControls' },
+    { type: 'yn',        id: 'ageAssurance' },
+    { type: 'yn',        id: 'unrestrictedInternet' },
+    { type: 'yn',        id: 'userGenContent' },
+    { type: 'yn',        id: 'messagingChat' },
+    { type: 'yn',        id: 'advertising' },
+  ]},
+  { id: 'mature',      label: 'Mature Themes', questions: [
+    { type: 'intensity', id: 'profanity' },
+    { type: 'intensity', id: 'horrorFear' },
+    { type: 'intensity', id: 'substancesAlcohol' },
+  ]},
+  { id: 'medical',     label: 'Medical or Wellness', questions: [
+    { type: 'intensity', id: 'medicalTreatment' },
+    { type: 'yn',        id: 'healthWellness' },
+  ]},
+  { id: 'sexuality',   label: 'Sexuality or Nudity', questions: [
+    { type: 'intensity', id: 'matureSuggestive' },
+    { type: 'intensity', id: 'sexualContent' },
+    { type: 'intensity', id: 'graphicSexual' },
+  ]},
+  { id: 'violence',    label: 'Violence', questions: [
+    { type: 'intensity', id: 'cartoonViolence' },
+    { type: 'intensity', id: 'realisticViolence' },
+    { type: 'intensity', id: 'extendedViolence' },
+    { type: 'intensity', id: 'gunsWeapons' },
+  ]},
+  { id: 'gambling',    label: 'Chance-Based Activities', questions: [
+    { type: 'intensity', id: 'simulatedGambling' },
+    { type: 'intensity', id: 'contests' },
+    { type: 'yn',        id: 'realMoneyGambling' },
+    { type: 'yn',        id: 'lootBoxes' },
+  ]},
+];
+
+// Risk notes that follow specific questions wherever they're rendered
+const IOS_CR_RISK_NOTES = {
+  realMoneyGambling: a => a.realMoneyGambling === 'yes'
+    ? '<div class="ios-risk-note risk-HIGH">Real-money gambling requires a special Apple entitlement and proof of licensing in every territory where it is offered. Apple will ask for documentation during review.</div>'
+    : '',
+  lootBoxes: a => a.lootBoxes === 'yes'
+    ? '<div class="ios-risk-note risk-MEDIUM">Apps with loot boxes must clearly disclose the odds of receiving each item type before a player makes a purchase.</div>'
+    : '',
+};
+
 function buildContentRatingSection() {
   const a = state.iosSubmitAnswers;
 
@@ -2331,14 +2380,43 @@ function buildContentRatingSection() {
   const iq = id => { const q = IOS_INTENSITY_QUESTIONS.find(q => q.id === id); return { ...q, label: t(`iosint.${q.id}.label`) || q.label, tooltip: t(`iosint.${q.id}.tooltip`) || q.tooltip }; };
   const yq = id => { const q = IOS_CONTENT_YN_QUESTIONS.find(q => q.id === id); return { ...q, label: t(`iosyn.${q.id}.label`) || q.label, tooltip: t(`iosyn.${q.id}.tooltip`) || q.tooltip }; };
 
-  // Progress
-  const totalQ    = IOS_INTENSITY_QUESTIONS.length + IOS_CONTENT_YN_QUESTIONS.length + 1; // +1 for ageCategory
-  const answeredQ = IOS_INTENSITY_QUESTIONS.filter(q => a[q.id] !== null).length
-                  + IOS_CONTENT_YN_QUESTIONS.filter(q => a[q.id] !== null).length
-                  + (a.ageCategory !== null ? 1 : 0);
-  const rating = computeIOSAgeRating();
+  // Render one question row (intensity or Y/N)
+  const renderQ = q => {
+    const html = q.type === 'intensity'
+      ? (() => { const d = iq(q.id); return iosIntensityRow(d.label, d.id, d.tooltip); })()
+      : (() => { const d = yq(q.id); return iosYNRow(d.label, q.id, '', d.tooltip); })();
+    return html + (IOS_CR_RISK_NOTES[q.id] ? IOS_CR_RISK_NOTES[q.id](a) : '');
+  };
 
-  // Step 7 follow-ups
+  // Whether a question was answered at inference time (determines collapse eligibility)
+  const answered = state.iosAnsweredAtInference; // null = pre-inference, Set = post-inference
+  const expanded = state.iosContentRatingExpanded;
+  const collapseMode = answered !== null;
+
+  // Split each category into visible vs collapsed questions
+  let visibleHtml  = '';
+  let collapsedHtml = '';
+  let collapsedCount = 0;
+
+  for (const cat of IOS_CR_CATEGORIES) {
+    const visible  = collapseMode ? cat.questions.filter(q => !answered.has(q.id)) : cat.questions;
+    const hidden   = collapseMode ? cat.questions.filter(q =>  answered.has(q.id)) : [];
+
+    if (visible.length > 0) {
+      visibleHtml += `<div class="ios-q-divider"></div>
+        <div class="ios-content-step-label">${cat.label}</div>
+        ${visible.map(renderQ).join('')}`;
+    }
+
+    if (hidden.length > 0) {
+      collapsedCount += hidden.length;
+      collapsedHtml += `<div class="ios-q-divider"></div>
+        <div class="ios-content-step-label" style="color:var(--text-faint);">${cat.label}</div>
+        ${hidden.map(renderQ).join('')}`;
+    }
+  }
+
+  // Additional Information section — always visible (it's a categorisation choice, not content Q)
   const kidsFollowUp = a.ageCategory === 'made_for_kids' ? `
     <div class="ios-followup">
       <div class="ios-q-label" style="margin-bottom:8px;">Kids age range</div>
@@ -2363,50 +2441,7 @@ function buildContentRatingSection() {
       </div>
     </div>` : '';
 
-  return `
-    <div class="ios-content-step-label">Features</div>
-    ${iosYNRow(yq('parentalControls').label,    'parentalControls',    '', yq('parentalControls').tooltip)}
-    ${iosYNRow(yq('ageAssurance').label,         'ageAssurance',        '', yq('ageAssurance').tooltip)}
-    ${iosYNRow(yq('unrestrictedInternet').label, 'unrestrictedInternet','', yq('unrestrictedInternet').tooltip)}
-    ${iosYNRow(yq('userGenContent').label,       'userGenContent',      '', yq('userGenContent').tooltip)}
-    ${iosYNRow(yq('messagingChat').label,        'messagingChat',       '', yq('messagingChat').tooltip)}
-    ${iosYNRow(yq('advertising').label,          'advertising',         '', yq('advertising').tooltip)}
-
-    <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Mature Themes</div>
-    <div class="ios-intensity-list">
-      ${['profanity','horrorFear','substancesAlcohol'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
-    </div>
-
-    <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Medical or Wellness</div>
-    <div class="ios-q-block">
-      ${(() => { const q=iq('medicalTreatment'); return iosIntensityRow(q.label,q.id,q.tooltip); })()}
-      ${iosYNRow(yq('healthWellness').label, 'healthWellness', '', yq('healthWellness').tooltip)}
-    </div>
-
-    <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Sexuality or Nudity</div>
-    <div class="ios-intensity-list">
-      ${['matureSuggestive','sexualContent','graphicSexual'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
-    </div>
-
-    <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Violence</div>
-    <div class="ios-intensity-list">
-      ${['cartoonViolence','realisticViolence','extendedViolence','gunsWeapons'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
-    </div>
-
-    <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Chance-Based Activities</div>
-    <div class="ios-q-block">
-      ${['simulatedGambling','contests'].map(id => { const q=iq(id); return iosIntensityRow(q.label,q.id,q.tooltip); }).join('')}
-      ${iosYNRow(yq('realMoneyGambling').label, 'realMoneyGambling', '', yq('realMoneyGambling').tooltip)}
-      ${a.realMoneyGambling === 'yes' ? '<div class="ios-risk-note risk-HIGH">Real-money gambling requires a special Apple entitlement and proof of licensing in every territory where it is offered. Apple will ask for documentation during review.</div>' : ''}
-      ${iosYNRow(yq('lootBoxes').label, 'lootBoxes', '', yq('lootBoxes').tooltip)}
-      ${a.lootBoxes === 'yes' ? '<div class="ios-risk-note risk-MEDIUM">Apps with loot boxes must clearly disclose the odds of receiving each item type before a player makes a purchase.</div>' : ''}
-    </div>
-
+  const additionalSection = `
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Additional Information</div>
     <div class="ios-q-row" style="align-items:center;gap:12px;">
@@ -2433,6 +2468,17 @@ function buildContentRatingSection() {
              oninput="updateIOSTextField('ageSuitabilityUrl', this.value)"
              onblur="reRenderStepModal()">
     </div>`;
+
+  // "Show N answered" / "Hide answered" chevron
+  const chevron = collapseMode && collapsedCount > 0 ? `
+    <button class="cr-chevron-btn" onclick="toggleContentRatingExpanded()">
+      ${expanded
+        ? `<span class="cr-chevron-icon">▲</span> Hide ${collapsedCount} answered`
+        : `<span class="cr-chevron-icon">▼</span> Show ${collapsedCount} answered`}
+    </button>
+    ${expanded ? collapsedHtml : ''}` : '';
+
+  return visibleHtml + additionalSection + chevron;
 }
 
 function computeIOSAgeRating() {
