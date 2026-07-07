@@ -156,19 +156,13 @@
   <div id="splash-screen" class="splash-screen">
     <div class="splash-content">
 
-      <div class="splash-badge">
-        <span class="splash-badge-dot">●</span>
-        ONE WORKFLOW, EVERY STORE
-      </div>
-
       <h1 class="splash-headline">
         Everything you need to<br>
         <span class="splash-accent">ship.</span>
       </h1>
 
       <p class="splash-sub">
-        Three steps stand between your build and every storefront.<br>
-        Subwoofer runs all of them.
+        Your game. Every storefront. Three simple steps.
       </p>
 
       <div class="splash-cards">
@@ -179,8 +173,8 @@
             <img src="Assets/step1.png" alt="Step 1" class="splash-step-img"
                  onerror="this.style.display='none'">
           </div>
-          <div class="splash-card-title">Upload once</div>
-          <div class="splash-card-desc">Add your binary, description and screenshots a single time — no per-store re-entry.</div>
+          <div class="splash-card-title">Upload the essentials</div>
+          <div class="splash-card-desc">Upload your binary, screenshots, and some basic information about your game. Or, simply point to your game's existing store page or in-progress submission and Subwoofer will handle the rest.</div>
         </div>
 
         <div class="splash-card-divider"></div>
@@ -191,8 +185,8 @@
             <img src="Assets/step2.png" alt="Step 2" class="splash-step-img"
                  onerror="this.style.display='none'">
           </div>
-          <div class="splash-card-title">We map every platform</div>
-          <div class="splash-card-desc">Subwoofer fills routine fields and builds a clear checklist for each store you target.</div>
+          <div class="splash-card-title">Submission made simple</div>
+          <div class="splash-card-desc">Subwoofer makes submission easy and accessible by building clear and simple checklists for each target platform, making smart inferences to fill routine fields, and providing guidance every step of the way.</div>
         </div>
 
         <div class="splash-card-divider"></div>
@@ -203,15 +197,31 @@
             <img src="Assets/step3.png" alt="Step 3" class="splash-step-img"
                  onerror="this.style.display='none'">
           </div>
-          <div class="splash-card-title">Ship with confidence</div>
-          <div class="splash-card-desc">Compliance is pre-checked in real time, so you catch issues before the platform does.</div>
+          <div class="splash-card-title">Submit with confidence</div>
+          <div class="splash-card-desc">Subwoofer reviews your binary, metadata, and assets and flags compliance risks, helping you avoid costly rejections and delays.</div>
         </div>
 
       </div><!-- /.splash-cards -->
 
       <div class="splash-cta">
-        <button class="splash-get-started" onclick="startFromSplash()">Get Started →</button>
-        <div class="splash-platforms">Available for iOS, Android &amp; Steam</div>
+        <button class="splash-get-started" onclick="startFromSplash()">Get started →</button>
+
+        <div class="splash-platforms">
+          <span class="splash-plat-label">Available for</span>
+          <img src="Assets/Platform_Icons/Steam_white.png"     alt="Steam"   class="splash-plat-icon">
+          <img src="Assets/Platform_Icons/AppStore_white.png"  alt="iOS"     class="splash-plat-icon">
+          <img src="Assets/Platform_Icons/GooglePlay_white.png" alt="Android" class="splash-plat-icon">
+          <span class="splash-plat-more">More soon.</span>
+        </div>
+
+        <div class="splash-credibility">
+          <a class="splash-cred-link" href="#" title="About us — coming soon" onclick="return false;">
+            <svg class="splash-cred-heart" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 16.5C10 16.5 1 11 1 5.5C1 3.015 3.015 1 5.5 1C7.24 1 8.75 1.96 9.53 3.37C9.68 3.65 9.83 3.96 10 4.3C10.17 3.96 10.32 3.65 10.47 3.37C11.25 1.96 12.76 1 14.5 1C16.985 1 19 3.015 19 5.5C19 11 10 16.5 10 16.5Z" fill="currentColor"/>
+            </svg>
+          </a>
+          <span class="splash-cred-text">Built by indie devs and game industry veterans to empower the indie game community.</span>
+        </div>
       </div>
 
     </div><!-- /.splash-content -->
@@ -280,7 +290,7 @@
   <div id="g-tip" class="g-tip"></div>
 
   <!-- Version badge -->
-  <div class="build-badge">v1.65</div>
+  <div class="build-badge">v1.66</div>
 
   <script src="locale.js?v=1.65"></script>
   <script src="state.js?v=1.65"></script>

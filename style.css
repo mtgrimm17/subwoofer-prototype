@@ -5908,9 +5908,65 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
 }
 
 .splash-platforms {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.splash-plat-label {
   font-size: 11px;
   color: var(--text-faint);
   letter-spacing: 0.04em;
+  margin-right: 2px;
+}
+
+.splash-plat-icon {
+  height: 18px;
+  width: auto;
+  opacity: 0.7;
+  object-fit: contain;
+}
+
+.splash-plat-more {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  margin-left: 2px;
+}
+
+/* ── Credibility line ── */
+.splash-credibility {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.splash-cred-link {
+  display: flex;
+  align-items: center;
+  color: #e05;
+  text-decoration: none;
+  flex-shrink: 0;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.splash-cred-link:hover {
+  opacity: 1;
+}
+
+.splash-cred-heart {
+  width: 14px;
+  height: 14px;
+}
+
+.splash-cred-text {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
 /* ── Topbar Sign In button (splash only) ── */
