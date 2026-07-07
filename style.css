@@ -5939,8 +5939,7 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   height: 16px;
   width: 16px;
   flex-shrink: 0;
-  color: var(--accent, #4ade80);
-  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .splash-plat-more {
@@ -6010,8 +6009,9 @@ body.is-splash .profile-wrap        { display: none; }
 
 /* Step images in splash cards */
 .splash-step-img {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   display: block;
+  color: var(--accent, #5af078); /* SVG pixel art icons inherit this */
 }
