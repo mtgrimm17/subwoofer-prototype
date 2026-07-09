@@ -6015,3 +6015,242 @@ body.is-splash .profile-wrap        { display: none; }
   display: block;
   color: var(--accent, #5af078); /* SVG pixel art icons inherit this */
 }
+
+/* ============================================================
+   INFERENCE LOADING SCREEN  (v1.70)
+   ============================================================ */
+
+.inf-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 40px 24px 32px;
+  min-height: 280px;
+}
+
+/* Rotating rings */
+.inf-rings-wrap {
+  position: relative;
+  width: 80px; height: 80px;
+  display: flex; align-items: center; justify-content: center;
+}
+.inf-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+.inf-ring-1 {
+  border-top-color: var(--accent);
+  border-right-color: var(--accent);
+  opacity: 0.9;
+  animation: infSpin 1.6s linear infinite;
+}
+.inf-ring-2 {
+  inset: 10px;
+  border-bottom-color: var(--accent);
+  border-left-color: var(--accent);
+  opacity: 0.5;
+  animation: infSpin 2.2s linear infinite reverse;
+}
+.inf-ring-3 {
+  inset: 20px;
+  border-top-color: var(--accent);
+  opacity: 0.3;
+  animation: infSpin 3s linear infinite;
+}
+.inf-logo {
+  width: 24px; height: 24px;
+  object-fit: contain;
+  z-index: 1;
+}
+@keyframes infSpin { to { transform: rotate(360deg); } }
+
+.inf-headline {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+/* Step list */
+.inf-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
+}
+.inf-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+  opacity: 0;
+  animation: infStepIn 0.5s ease forwards;
+}
+@keyframes infStepIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.inf-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: infDotPulse 1s ease-in-out infinite;
+}
+/* Only pulse the dot of the last visible step */
+.inf-step:not(:last-child) .inf-dot {
+  animation: none;
+  background: var(--green);
+  opacity: 0.7;
+}
+@keyframes infDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* ============================================================
+   DEMO GAME picklist badge  (v1.70)
+   ============================================================ */
+.picklist-row-local {
+  border-left: 2px solid var(--accent);
+}
+
+/* ============================================================
+   STORE PAGE AI INSIGHTS PANEL  (v1.70)
+   ============================================================ */
+.sp-insights-panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--panel-2);
+}
+.sp-insights-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.sp-ins-logo {
+  width: 14px; height: 14px;
+  object-fit: contain;
+}
+.sp-ins-field-tag {
+  background: var(--panel-3);
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  margin-left: 4px;
+}
+.sp-insights-prompt {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.sp-ins-issue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.sp-ins-suggestion {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin-bottom: 12px;
+}
+.sp-ins-preview {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.sp-ins-preview-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+.sp-ins-preview-text {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.55;
+}
+.sp-ins-footer-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sp-ins-btn { width: 100%; }
+.sp-ins-fix-btn {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s;
+}
+.sp-ins-fix-btn:hover { filter: brightness(1.1); }
+.sp-ins-btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.sp-ins-spinner-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.sp-ins-error-msg {
+  font-size: 12px;
+  color: var(--magenta);
+  margin-bottom: 10px;
+}
+.sp-ins-applied {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--green);
+  margin-bottom: 10px;
+}
+.sp-insights-result { border-color: var(--accent); }
+
+/* ============================================================
+   AI DISCLAIMER FOOTER  (v1.70)
+   ============================================================ */
+.ai-disclaimer {
+  position: fixed;
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-faint);
+  opacity: 0.55;
+  letter-spacing: 0.01em;
+  z-index: 5;
+  pointer-events: none;
+  white-space: nowrap;
+}

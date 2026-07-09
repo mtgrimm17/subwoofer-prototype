@@ -519,7 +519,7 @@ function buildTitlePicklist() {
       ? (item.summary.length > 90 ? item.summary.slice(0, 90) + '…' : item.summary)
       : '';
     return `
-      <div class="picklist-row" onmousedown="_cancelPicklistClose()" onclick="selectPicklistItem(${item.id})">
+      <div class="picklist-row ${item._isLocal ? 'picklist-row-local' : ''}" onmousedown="_cancelPicklistClose()" onclick="selectPicklistItem(${JSON.stringify(String(item.id))})">
         ${thumb}
         <div class="picklist-info">
           <div class="picklist-name">${escHtml(item.name)}</div>
@@ -1627,6 +1627,23 @@ function buildTaskContent(platformId, stepId, done) {
     <p class="task-stub-note">Full task UI coming in the next iteration. Mark complete to continue.</p>`;
 }
 
+/* ── Inference loading messages (per platform + step) ─── */
+function _getInferenceMsgs(platformId, stepId) {
+  if (platformId === 'ios' && stepId === 'contentRating')
+    return ['Scanning description for content signals…','Checking violence, language & mature themes…','Calculating IARC age rating…','Applying App Store content policies…'];
+  if (platformId === 'ios' && stepId === 'privacy')
+    return ['Scanning for data collection signals…','Identifying third-party SDKs & data types…','Mapping to Apple privacy labels…','Generating privacy nutrition labels…'];
+  if (platformId === 'android' && stepId === 'contentRating')
+    return ['Scanning for IARC content signals…','Checking Google Play content policies…','Calculating target audience rating…','Preparing content rating declaration…'];
+  if (platformId === 'android' && stepId === 'dataSafety')
+    return ['Identifying data collection patterns…','Reviewing SDK and API usage…','Mapping to Google Play data types…','Preparing Data Safety section…'];
+  if (stepId === 'business')
+    return ['Reviewing business model and pricing…','Checking IAP & subscription policies…','Verifying billing requirements…','Applying regional policy rules…'];
+  if (stepId === 'distribution')
+    return ['Analyzing market selection options…','Checking regional availability…','Applying distribution strategy…','Finalizing territorial availability…'];
+  return ['Reading your game details…','Cross-referencing platform requirements…','Inferring answers from your submission…','Preparing recommendations…'];
+}
+
 /* ── Step Modal (iOS per-step) ───────────────────────── */
 
 function renderStepModal() {
@@ -1648,11 +1665,7 @@ function renderStepModal() {
     const hasRun      = platformId === 'ios' ? !!state.claudeCache : !!state.platformInferenceCache[cacheKey];
     const retryFn     = platformId === 'ios' ? '_runClaudeAnalysis()' : `_retryInference('${platformId}','${stepId}')`;
     if (inferenceStatus === 'loading') {
-      inferenceBanner = `
-        <div class="ai-banner ai-banner-loading">
-          <span class="ai-spinner"></span>
-          <span>Subwoofer is pre-populating responses based on the information you provided…</span>
-        </div>`;
+      inferenceBanner = ''; // loading screen replaces the banner during loading
     } else if (hasRun && inferenceStatus !== 'error') {
       inferenceBanner = `
         <div class="sw-tip-box sw-tip-box-inference">
@@ -1674,7 +1687,20 @@ function renderStepModal() {
   // Step body
   let body = '';
   if (inferenceStatus === 'loading') {
-    body = `<div class="step-loading-placeholder"><div class="step-loading-shimmer"></div><div class="step-loading-shimmer"></div><div class="step-loading-shimmer short"></div></div>`;
+    const msgs = _getInferenceMsgs(platformId, stepId);
+    body = `
+      <div class="inf-loading-screen">
+        <div class="inf-rings-wrap">
+          <div class="inf-ring inf-ring-1"></div>
+          <div class="inf-ring inf-ring-2"></div>
+          <div class="inf-ring inf-ring-3"></div>
+          <img src="Assets/SubwooferIcon_Orange.png" class="inf-logo" onerror="this.style.display='none'">
+        </div>
+        <div class="inf-headline">Subwoofer is working…</div>
+        <div class="inf-steps">
+          ${msgs.map((m, i) => `<div class="inf-step" style="animation-delay:${i * 1.3}s"><div class="inf-dot"></div><span>${m}</span></div>`).join('')}
+        </div>
+      </div>`;
   } else if (platformId === 'android') {
     if (stepId === 'contentRating')      body = buildAndroidContentRatingSection();
     else if (stepId === 'dataSafety')    body = buildAndroidDataSafetySection();
@@ -1720,6 +1746,87 @@ function renderStepModal() {
 
   // Init distribution map after render if this is the distribution step
   if (stepId === 'distribution') requestAnimationFrame(() => initDistributionMap());
+}
+
+/* ── Store Page AI Insights panel ───────────────────── */
+function buildStoreInsightsPanel() {
+  const ins = state.storePageInsights;
+
+  // No interaction yet → show Analyze button
+  if (!ins) return `
+    <div class="sp-insights-panel sp-insights-idle">
+      <div class="sp-insights-badge">
+        <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
+        <span>Subwoofer AI</span>
+      </div>
+      <p class="sp-insights-prompt">Get an AI-powered evaluation of your store page listing with a one-click fix.</p>
+      <button class="btn btn-primary sp-ins-btn" onclick="runStorePageInsights()">Analyze my listing →</button>
+    </div>`;
+
+  // Loading
+  if (ins.loading) return `
+    <div class="sp-insights-panel sp-insights-loading">
+      <div class="sp-insights-badge">
+        <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
+        <span>Subwoofer AI</span>
+      </div>
+      <div class="sp-ins-spinner-row"><span class="ai-spinner"></span> Evaluating your listing…</div>
+    </div>`;
+
+  // Error
+  if (ins.error) return `
+    <div class="sp-insights-panel sp-insights-error">
+      <div class="sp-insights-badge">
+        <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
+        <span>Subwoofer AI</span>
+      </div>
+      <div class="sp-ins-error-msg">${escHtml(ins.error)}</div>
+      <div class="sp-ins-footer-row">
+        <button class="btn btn-ghost sp-ins-btn-sm" onclick="runStorePageInsights()">Retry</button>
+        <button class="btn btn-ghost sp-ins-btn-sm" onclick="dismissStorePageInsights()">Dismiss</button>
+      </div>
+    </div>`;
+
+  // Applied
+  if (ins.applied) return `
+    <div class="sp-insights-panel sp-insights-done">
+      <div class="sp-insights-badge">
+        <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
+        <span>Subwoofer AI</span>
+      </div>
+      <div class="sp-ins-applied">
+        <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Fix applied! Your ${escHtml(ins.field)} has been updated.
+      </div>
+      <div class="sp-ins-footer-row">
+        <button class="btn btn-ghost sp-ins-btn-sm" onclick="runStorePageInsights()">Analyze again</button>
+        <button class="btn btn-ghost sp-ins-btn-sm" onclick="dismissStorePageInsights()">Dismiss</button>
+      </div>
+    </div>`;
+
+  // Insight ready
+  const fieldLabel = ins.field === 'subtitle' ? 'Subtitle' : ins.field === 'description' ? 'Description' : ins.field;
+  return `
+    <div class="sp-insights-panel sp-insights-result">
+      <div class="sp-insights-badge">
+        <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
+        <span>Subwoofer AI</span>
+        <span class="sp-ins-field-tag">${escHtml(fieldLabel)}</span>
+      </div>
+      <div class="sp-ins-issue">${escHtml(ins.issue || '')}</div>
+      <div class="sp-ins-suggestion">${escHtml(ins.suggestion || '')}</div>
+      ${ins.fixedValue ? `
+        <div class="sp-ins-preview">
+          <div class="sp-ins-preview-label">Suggested fix</div>
+          <div class="sp-ins-preview-text">${escHtml(ins.fixedValue)}</div>
+        </div>
+        <div class="sp-ins-footer-row">
+          <button class="btn btn-primary sp-ins-fix-btn" onclick="applyStorePageFix()">
+            ✦ Fix it
+          </button>
+          <button class="btn btn-ghost sp-ins-btn-sm" onclick="dismissStorePageInsights()">Dismiss</button>
+        </div>` : ''}
+    </div>`;
 }
 
 function buildStorePreviewSection() {
@@ -1774,15 +1881,19 @@ function buildStorePreviewSection() {
           <div class="ias-privacy-clean-sub">The developer does not collect any data from this app.</div>
         </div>`;
     }
-    if (a.collectsData === 'yes' && Array.isArray(a.dataTypes) && a.dataTypes.length) {
-      const trackingTypes = a.dataTypes.filter(d => d.tracking === 'yes').map(d => d.id);
-      const label = trackingTypes.length ? 'Data Used to Track You' : 'Data Linked to You';
+    const dataPerType = a.dataPerType || {};
+    const typeEntries = Object.entries(dataPerType);
+    if (a.collectsData === 'yes' && typeEntries.length > 0) {
+      const hasTracking = typeEntries.some(([, t]) => t.tracking === 'yes');
+      const label = hasTracking ? 'Data Used to Track You' : 'Data Linked to You';
+      const shown = typeEntries.slice(0, 4);
+      const extra = typeEntries.length - 4;
       return `
         <div class="ias-privacy-card ias-privacy-data">
           <div class="ias-privacy-data-label">${label}</div>
-          <div class="ias-privacy-data-types">${a.dataTypes.slice(0, 4).map(d =>
-            `<span class="ias-privacy-tag">${escHtml(d.id.replace(/_/g, ' '))}</span>`
-          ).join('')}${a.dataTypes.length > 4 ? `<span class="ias-privacy-tag ias-privacy-tag-more">+${a.dataTypes.length - 4} more</span>` : ''}</div>
+          <div class="ias-privacy-data-types">${shown.map(([id]) =>
+            `<span class="ias-privacy-tag">${escHtml(id.replace(/_/g, ' '))}</span>`
+          ).join('')}${extra > 0 ? `<span class="ias-privacy-tag ias-privacy-tag-more">+${extra} more</span>` : ''}</div>
         </div>`;
     }
     return `
@@ -1829,6 +1940,7 @@ function buildStorePreviewSection() {
     </div>`).join('');
 
   return `
+    ${buildStoreInsightsPanel()}
     <div class="ias-device-wrap">
       <div class="ias-label-row">
         <span class="ias-label-badge">

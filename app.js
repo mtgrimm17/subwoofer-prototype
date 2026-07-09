@@ -1608,6 +1608,19 @@ function dashSetDate(value) {
   _refreshDashTimeline();
 }
 
+/* ── Demo game: Go Ape Ship! ─────────────────────────────── */
+// Local entry that surfaces first when the demo title is typed, ensuring
+// predictable demo behaviour independent of IGDB availability/latency.
+const DEMO_GAME = {
+  id:        '__gas__',
+  name:      'Go Ape Ship!',
+  coverUrl:  'Assets/icon.png',
+  platforms: ['ios', 'android'],
+  summary:   'Go Ape Ship! is a wild mobile arcade game where you captain a rocket-powered ape on an intergalactic adventure. Blast through asteroid fields, collect space bananas, and unlock a fleet of increasingly ridiculous ships. Simple swipe controls, infinite replayability.',
+  screenshots: [],
+  _isLocal:  true,
+};
+
 /* ── IGDB title picklist ─────────────────────────────────── */
 
 let _titleSearchTimer  = null;
@@ -1660,23 +1673,39 @@ function _onTitleInputScenario(value) {
 }
 
 async function _runTitlePicklist(title) {
-  if (!IGDB_CLIENT_ID) return;   // no key configured — silent no-op
+  // Always check for the local demo game first
+  const lower = title.toLowerCase();
+  const demoMatch = lower.length >= 3 &&
+    ('go ape ship!'.includes(lower) || lower.includes('go ape') || lower.includes('ape ship'));
+
+  if (!IGDB_CLIENT_ID) {
+    // No IGDB key — only surface the demo entry if it matches
+    if ((state.formData.title || '').trim() === title) {
+      state.titlePicklist = demoMatch ? [DEMO_GAME] : [];
+      _renderTitlePicklist();
+    }
+    return;
+  }
+
   try {
     const results = await igdbSearch(title);
-    // Only apply if the title hasn't changed since the search started
     if ((state.formData.title || '').trim() === title) {
-      state.titlePicklist = results;
+      // Prepend demo entry (deduplicate by name)
+      const igdbFiltered = results.filter(r => r.name.toLowerCase() !== DEMO_GAME.name.toLowerCase());
+      state.titlePicklist = demoMatch ? [DEMO_GAME, ...igdbFiltered] : igdbFiltered;
       _renderTitlePicklist();
     }
   } catch (err) {
     console.warn('[Picklist] IGDB search failed:', err.message);
-    state.titlePicklist = [];
-    _renderTitlePicklist();
+    if ((state.formData.title || '').trim() === title) {
+      state.titlePicklist = demoMatch ? [DEMO_GAME] : [];
+      _renderTitlePicklist();
+    }
   }
 }
 
 function selectPicklistItem(igdbId) {
-  const item = (state.titlePicklist || []).find(x => x.id === igdbId);
+  const item = (state.titlePicklist || []).find(x => String(x.id) === String(igdbId));
   if (!item) return;
 
   // Close picklist immediately
@@ -1832,6 +1861,87 @@ function handleScreenshotFiles(files) {
     };
     reader.readAsDataURL(file);
   });
+}
+
+/* ── Store Page AI Insights ("Fix it" button) ──────────────── */
+
+async function runStorePageInsights() {
+  if (!CLAUDE_API_KEY) {
+    state.storePageInsights = { error: 'No API key configured.' };
+    renderStepModal();
+    return;
+  }
+  state.storePageInsights = { loading: true };
+  renderStepModal();
+
+  const fd = state.formData;
+  const title    = fd.title || '(no title)';
+  const subtitle = fd.description
+    ? (fd.description.search(/[.!?]/) > 10
+        ? fd.description.slice(0, fd.description.search(/[.!?]/) + 1)
+        : fd.description.slice(0, 80))
+    : '';
+  const desc = fd.description || '(no description)';
+
+  const prompt = `You are a professional App Store listing consultant reviewing a mobile game's store page.
+
+Game: "${title}"
+Subtitle (auto-derived first sentence): "${subtitle || '(empty)'}"
+Description: "${desc.slice(0, 600)}${desc.length > 600 ? '…' : ''}"
+
+Identify the SINGLE most impactful improvement for this listing. Focus on what would most increase downloads. Target either the subtitle or description.
+
+Respond ONLY with valid JSON in this exact format — no extra text, no markdown:
+{
+  "field": "subtitle",
+  "issue": "One sentence describing the specific problem",
+  "suggestion": "One sentence explaining what makes a great version of this field",
+  "fixedValue": "The improved text (max 30 chars for subtitle, max 4000 for description)"
+}`;
+
+  try {
+    const res = await fetch(CLAUDE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL,
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error('API ' + res.status);
+    const data    = await res.json();
+    const raw     = (data.content?.[0]?.text || '').trim();
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed  = JSON.parse(cleaned);
+    state.storePageInsights = parsed;
+  } catch (err) {
+    state.storePageInsights = { error: 'Analysis failed: ' + err.message };
+  }
+  renderStepModal();
+}
+
+function applyStorePageFix() {
+  const ins = state.storePageInsights;
+  if (!ins || !ins.fixedValue) return;
+  if (ins.field === 'subtitle' || ins.field === 'description') {
+    state.formData.description = ins.fixedValue;
+    const el = document.getElementById('ob-desc');
+    if (el) { el.value = ins.fixedValue; charCount('ob-desc-count', ins.fixedValue, 4000); }
+  }
+  // Mark as applied
+  state.storePageInsights = { ...ins, applied: true };
+  renderStepModal();
+}
+
+function dismissStorePageInsights() {
+  state.storePageInsights = null;
+  renderStepModal();
 }
 
 function _screenshotSrc(s) {

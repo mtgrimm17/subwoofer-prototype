@@ -1866,6 +1866,9 @@ const state = {
   // [{ id, name, coverUrl, platforms, summary }]
   titlePicklist: [],
 
+  // AI store page insights: null | { loading: true } | { field, issue, suggestion, fixedValue } | { error }
+  storePageInsights: null,
+
   // Whether incomplete-question highlights (amber rails) are enabled.
   // Starts false — enabled only after AI pre-population (≥80% filled)
   // or when the user returns to the onboarding modal after completing it.
