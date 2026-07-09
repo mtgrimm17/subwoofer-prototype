@@ -474,21 +474,29 @@ async function igdbSearch(title) {
   if (!res.ok) throw new Error('IGDB search failed (' + res.status + ')');
 
   const games = await res.json();
+  console.log('[IGDB raw]', JSON.stringify(games.map(g => ({ id: g.id, name: g.name, platforms: g.platforms, websites: (g.websites||[]).map(w=>w.category), cover: g.cover?.url }))));
   return games.map(g => ({
     id:        g.id,
     name:      g.name || '',
-    // Upgrade thumbnail from t_thumb (32px) to t_cover_small (90×128)
-    coverUrl:  g.cover?.url
-                 ? 'https:' + g.cover.url.replace('t_thumb', 't_cover_small')
-                 : null,
+    // Upgrade thumbnail from t_thumb (32px) to t_cover_small (90×128),
+    // then proxy through wsrv.nl so the image loads cross-origin in the browser.
+    coverUrl: (() => {
+      if (!g.cover?.url) return null;
+      const direct = (g.cover.url.startsWith('//') ? 'https:' : '') + g.cover.url.replace('t_thumb', 't_cover_small');
+      const clean  = direct.replace(/^https?:\/\//, '');
+      return 'https://wsrv.nl/?url=' + encodeURIComponent(clean) + '&output=jpg';
+    })(),
     platforms:   _igdbPlatforms(g.platforms, g.websites, g.release_dates),
     summary:     g.summary || '',
     // Up to 6 screenshots upgraded from t_thumb to t_screenshot_big (889×500)
+    // also proxied through wsrv.nl for the same reason.
     screenshots: (g.screenshots || []).slice(0, 6)
       .filter(s => s && s.url)
       .map(s => {
-        const abs = s.url.startsWith('//') ? 'https:' + s.url : s.url;
-        return abs.replace('/t_thumb/', '/t_screenshot_big/');
+        const abs   = s.url.startsWith('//') ? 'https:' + s.url : s.url;
+        const sized = abs.replace('/t_thumb/', '/t_screenshot_big/');
+        const clean = sized.replace(/^https?:\/\//, '');
+        return 'https://wsrv.nl/?url=' + encodeURIComponent(clean) + '&output=jpg';
       }),
   }));
 }
