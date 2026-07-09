@@ -1752,18 +1752,18 @@ function renderStepModal() {
 function buildStoreInsightsPanel() {
   const ins = state.storePageInsights;
 
-  // No interaction yet → show Analyze button
+  // ── Idle ────────────────────────────────────────────
   if (!ins) return `
     <div class="sp-insights-panel sp-insights-idle">
       <div class="sp-insights-badge">
         <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
         <span>Subwoofer AI</span>
       </div>
-      <p class="sp-insights-prompt">Get an AI-powered evaluation of your store page listing with a one-click fix.</p>
+      <p class="sp-insights-prompt">Get an AI-powered evaluation of your store page listing with one-click fixes.</p>
       <button class="btn btn-primary sp-ins-btn" onclick="runStorePageInsights()">Analyze my listing →</button>
     </div>`;
 
-  // Loading
+  // ── Loading ─────────────────────────────────────────
   if (ins.loading) return `
     <div class="sp-insights-panel sp-insights-loading">
       <div class="sp-insights-badge">
@@ -1773,7 +1773,7 @@ function buildStoreInsightsPanel() {
       <div class="sp-ins-spinner-row"><span class="ai-spinner"></span> Evaluating your listing…</div>
     </div>`;
 
-  // Error
+  // ── Error ───────────────────────────────────────────
   if (ins.error) return `
     <div class="sp-insights-panel sp-insights-error">
       <div class="sp-insights-badge">
@@ -1782,13 +1782,13 @@ function buildStoreInsightsPanel() {
       </div>
       <div class="sp-ins-error-msg">${escHtml(ins.error)}</div>
       <div class="sp-ins-footer-row">
-        <button class="btn btn-ghost sp-ins-btn-sm" onclick="runStorePageInsights()">Retry</button>
-        <button class="btn btn-ghost sp-ins-btn-sm" onclick="dismissStorePageInsights()">Dismiss</button>
+        <button class="btn btn-ghost btn-sm" onclick="runStorePageInsights()">Retry</button>
+        <button class="btn btn-ghost btn-sm" onclick="state.storePageInsights=null;renderStepModal()">Dismiss</button>
       </div>
     </div>`;
 
-  // Applied
-  if (ins.applied) return `
+  // ── All done ────────────────────────────────────────
+  if (ins.done) return `
     <div class="sp-insights-panel sp-insights-done">
       <div class="sp-insights-badge">
         <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
@@ -1796,37 +1796,44 @@ function buildStoreInsightsPanel() {
       </div>
       <div class="sp-ins-applied">
         <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Fix applied! Your ${escHtml(ins.field)} has been updated.
+        All suggestions reviewed.
       </div>
       <div class="sp-ins-footer-row">
-        <button class="btn btn-ghost sp-ins-btn-sm" onclick="runStorePageInsights()">Analyze again</button>
-        <button class="btn btn-ghost sp-ins-btn-sm" onclick="dismissStorePageInsights()">Dismiss</button>
+        <button class="btn btn-ghost btn-sm" onclick="runStorePageInsights()">Analyze again</button>
+        <button class="btn btn-ghost btn-sm" onclick="state.storePageInsights=null;renderStepModal()">Close</button>
       </div>
     </div>`;
 
-  // Insight ready
-  const fieldLabel = ins.field === 'subtitle' ? 'Subtitle' : ins.field === 'description' ? 'Description' : ins.field;
-  return `
-    <div class="sp-insights-panel sp-insights-result">
-      <div class="sp-insights-badge">
-        <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
-        <span>Subwoofer AI</span>
-        <span class="sp-ins-field-tag">${escHtml(fieldLabel)}</span>
-      </div>
-      <div class="sp-ins-issue">${escHtml(ins.issue || '')}</div>
-      <div class="sp-ins-suggestion">${escHtml(ins.suggestion || '')}</div>
-      ${ins.fixedValue ? `
-        <div class="sp-ins-preview">
-          <div class="sp-ins-preview-label">Suggested fix</div>
-          <div class="sp-ins-preview-text">${escHtml(ins.fixedValue)}</div>
+  // ── Active issue ────────────────────────────────────
+  if (ins.issues && ins.issues.length > 0) {
+    const issue  = ins.issues[ins.index];
+    const total  = ins.issues.length;
+    const current = ins.index + 1;
+    const fieldLabel = { subtitle: 'Subtitle', description: 'Description', title: 'Title' }[issue.field] || (issue.field || 'Listing');
+    const progress = total > 1 ? `<span class="sp-ins-progress">${current} / ${total}</span>` : '';
+    return `
+      <div class="sp-insights-panel sp-insights-result">
+        <div class="sp-insights-badge">
+          <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
+          <span>Subwoofer AI</span>
+          <span class="sp-ins-field-tag">${escHtml(fieldLabel)}</span>
+          ${progress}
         </div>
+        <div class="sp-ins-issue">${escHtml(issue.issue || '')}</div>
+        <div class="sp-ins-suggestion">${escHtml(issue.suggestion || '')}</div>
+        ${issue.fixedValue ? `
+          <div class="sp-ins-preview">
+            <div class="sp-ins-preview-label">Suggested fix</div>
+            <div class="sp-ins-preview-text">${escHtml(issue.fixedValue)}</div>
+          </div>` : ''}
         <div class="sp-ins-footer-row">
-          <button class="btn btn-primary sp-ins-fix-btn" onclick="applyStorePageFix()">
-            ✦ Fix it
-          </button>
-          <button class="btn btn-ghost sp-ins-btn-sm" onclick="dismissStorePageInsights()">Dismiss</button>
-        </div>` : ''}
-    </div>`;
+          <button class="btn btn-primary" onclick="applyStorePageFix()" ${!issue.fixedValue ? 'disabled style="opacity:.4"' : ''}>✦ Fix it</button>
+          <button class="btn btn-ghost btn-sm" onclick="dismissStorePageInsights()">Dismiss</button>
+        </div>
+      </div>`;
+  }
+
+  return '';
 }
 
 function buildStorePreviewSection() {

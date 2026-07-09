@@ -1839,36 +1839,32 @@ function handleScreenshotFiles(files) {
 async function runStorePageInsights() {
   if (!CLAUDE_API_KEY) {
     state.storePageInsights = { error: 'No API key configured.' };
-    renderStepModal();
-    return;
+    renderStepModal(); return;
   }
   state.storePageInsights = { loading: true };
   renderStepModal();
 
-  const fd = state.formData;
-  const title    = fd.title || '(no title)';
-  const subtitle = fd.description
-    ? (fd.description.search(/[.!?]/) > 10
-        ? fd.description.slice(0, fd.description.search(/[.!?]/) + 1)
-        : fd.description.slice(0, 80))
-    : '';
-  const desc = fd.description || '(no description)';
+  const fd    = state.formData;
+  const title = fd.title || '(no title)';
+  const desc  = fd.description || '(no description)';
 
   const prompt = `You are a professional App Store listing consultant reviewing a mobile game's store page.
 
 Game: "${title}"
-Subtitle (auto-derived first sentence): "${subtitle || '(empty)'}"
-Description: "${desc.slice(0, 600)}${desc.length > 600 ? '…' : ''}"
+Description: "${desc.slice(0, 800)}${desc.length > 800 ? '…' : ''}"
 
-Identify the SINGLE most impactful improvement for this listing. Focus on what would most increase downloads. Target either the subtitle or description.
+Identify up to 5 specific, actionable improvements for this listing. Focus on what would most increase downloads.
+Each issue should target a specific field: "subtitle" (max 30 chars) or "description" (max 4000 chars).
 
-Respond ONLY with valid JSON in this exact format — no extra text, no markdown:
-{
-  "field": "subtitle",
-  "issue": "One sentence describing the specific problem",
-  "suggestion": "One sentence explaining what makes a great version of this field",
-  "fixedValue": "The improved text (max 30 chars for subtitle, max 4000 for description)"
-}`;
+Respond ONLY with valid JSON — an array of objects, no extra text, no markdown:
+[
+  {
+    "field": "subtitle",
+    "issue": "One sentence describing the specific problem",
+    "suggestion": "One sentence explaining what makes a great version",
+    "fixedValue": "The improved text"
+  }
+]`;
 
   try {
     const res = await fetch(CLAUDE_ENDPOINT, {
@@ -1881,7 +1877,7 @@ Respond ONLY with valid JSON in this exact format — no extra text, no markdown
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 400,
+        max_tokens: 1200,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -1890,28 +1886,39 @@ Respond ONLY with valid JSON in this exact format — no extra text, no markdown
     const raw     = (data.content?.[0]?.text || '').trim();
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     const parsed  = JSON.parse(cleaned);
-    state.storePageInsights = parsed;
+    const issues  = (Array.isArray(parsed) ? parsed : [parsed]).slice(0, 5);
+    state.storePageInsights = { issues, index: 0 };
   } catch (err) {
     state.storePageInsights = { error: 'Analysis failed: ' + err.message };
   }
   renderStepModal();
 }
 
+function _advanceStoreInsight() {
+  const ins = state.storePageInsights;
+  if (!ins || !ins.issues) { state.storePageInsights = null; return; }
+  const next = ins.index + 1;
+  state.storePageInsights = (next >= ins.issues.length)
+    ? { done: true }
+    : { issues: ins.issues, index: next };
+}
+
 function applyStorePageFix() {
   const ins = state.storePageInsights;
-  if (!ins || !ins.fixedValue) return;
-  if (ins.field === 'subtitle' || ins.field === 'description') {
-    state.formData.description = ins.fixedValue;
+  if (!ins || !ins.issues) return;
+  const issue = ins.issues[ins.index];
+  if (!issue || !issue.fixedValue) return;
+  if (issue.field === 'description' || issue.field === 'subtitle') {
+    state.formData.description = issue.fixedValue;
     const el = document.getElementById('ob-desc');
-    if (el) { el.value = ins.fixedValue; charCount('ob-desc-count', ins.fixedValue, 4000); }
+    if (el) { el.value = issue.fixedValue; charCount('ob-desc-count', issue.fixedValue, 4000); }
   }
-  // Mark as applied
-  state.storePageInsights = { ...ins, applied: true };
+  _advanceStoreInsight();
   renderStepModal();
 }
 
 function dismissStorePageInsights() {
-  state.storePageInsights = null;
+  _advanceStoreInsight();
   renderStepModal();
 }
 

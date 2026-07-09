@@ -6200,22 +6200,6 @@ body.is-splash .profile-wrap        { display: none; }
   align-items: center;
 }
 .sp-ins-btn { width: 100%; }
-.sp-ins-fix-btn {
-  background: var(--accent);
-  color: var(--bg);
-  font-weight: 700;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.1s;
-}
-.sp-ins-fix-btn:hover { filter: brightness(1.1); }
-.sp-ins-btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-}
 .sp-ins-spinner-row {
   display: flex;
   align-items: center;
@@ -6236,7 +6220,15 @@ body.is-splash .profile-wrap        { display: none; }
   color: var(--green);
   margin-bottom: 10px;
 }
-.sp-insights-result { border-color: var(--accent); }
+.sp-insights-result { border-color: var(--orange); }
+.sp-ins-progress {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
 
 /* ============================================================
    AI DISCLAIMER FOOTER  (v1.70)
@@ -6248,9 +6240,9 @@ body.is-splash .profile-wrap        { display: none; }
   transform: translateX(-50%);
   font-size: 10px;
   color: var(--text-faint);
-  opacity: 0.55;
+  opacity: 0.7;
   letter-spacing: 0.01em;
-  z-index: 5;
+  z-index: 200;
   pointer-events: none;
   white-space: nowrap;
 }
