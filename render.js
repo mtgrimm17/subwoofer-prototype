@@ -519,7 +519,7 @@ function buildTitlePicklist() {
       ? (item.summary.length > 90 ? item.summary.slice(0, 90) + '…' : item.summary)
       : '';
     return `
-      <div class="picklist-row ${item._isLocal ? 'picklist-row-local' : ''}" onmousedown="_cancelPicklistClose()" onclick="selectPicklistItem(${JSON.stringify(String(item.id))})">
+      <div class="picklist-row" onmousedown="_cancelPicklistClose()" onclick="selectPicklistItem(${item.id})">
         ${thumb}
         <div class="picklist-info">
           <div class="picklist-name">${escHtml(item.name)}</div>

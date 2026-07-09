@@ -1608,19 +1608,6 @@ function dashSetDate(value) {
   _refreshDashTimeline();
 }
 
-/* ── Demo game: Go Ape Ship! ─────────────────────────────── */
-// Local entry that surfaces first when the demo title is typed, ensuring
-// predictable demo behaviour independent of IGDB availability/latency.
-const DEMO_GAME = {
-  id:        '__gas__',
-  name:      'Go Ape Ship!',
-  coverUrl:  'Assets/icon.png',
-  platforms: ['ios', 'android'],
-  summary:   'Go Ape Ship! is a wild mobile arcade game where you captain a rocket-powered ape on an intergalactic adventure. Blast through asteroid fields, collect space bananas, and unlock a fleet of increasingly ridiculous ships. Simple swipe controls, infinite replayability.',
-  screenshots: [],
-  _isLocal:  true,
-};
-
 /* ── IGDB title picklist ─────────────────────────────────── */
 
 let _titleSearchTimer  = null;
@@ -1673,39 +1660,23 @@ function _onTitleInputScenario(value) {
 }
 
 async function _runTitlePicklist(title) {
-  // Always check for the local demo game first
-  const lower = title.toLowerCase();
-  const demoMatch = lower.length >= 3 &&
-    ('go ape ship!'.includes(lower) || lower.includes('go ape') || lower.includes('ape ship'));
-
-  if (!IGDB_CLIENT_ID) {
-    // No IGDB key — only surface the demo entry if it matches
-    if ((state.formData.title || '').trim() === title) {
-      state.titlePicklist = demoMatch ? [DEMO_GAME] : [];
-      _renderTitlePicklist();
-    }
-    return;
-  }
-
+  if (!IGDB_CLIENT_ID) return;   // no key configured — silent no-op
   try {
     const results = await igdbSearch(title);
+    // Only apply if the title hasn't changed since the search started
     if ((state.formData.title || '').trim() === title) {
-      // Prepend demo entry (deduplicate by name)
-      const igdbFiltered = results.filter(r => r.name.toLowerCase() !== DEMO_GAME.name.toLowerCase());
-      state.titlePicklist = demoMatch ? [DEMO_GAME, ...igdbFiltered] : igdbFiltered;
+      state.titlePicklist = results;
       _renderTitlePicklist();
     }
   } catch (err) {
     console.warn('[Picklist] IGDB search failed:', err.message);
-    if ((state.formData.title || '').trim() === title) {
-      state.titlePicklist = demoMatch ? [DEMO_GAME] : [];
-      _renderTitlePicklist();
-    }
+    state.titlePicklist = [];
+    _renderTitlePicklist();
   }
 }
 
 function selectPicklistItem(igdbId) {
-  const item = (state.titlePicklist || []).find(x => String(x.id) === String(igdbId));
+  const item = (state.titlePicklist || []).find(x => x.id === igdbId);
   if (!item) return;
 
   // Close picklist immediately
