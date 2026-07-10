@@ -627,28 +627,31 @@ const PLATFORMS = {
   ios: {
     id: 'ios', label: 'iOS App Store', color: '#007AFF',
     steps: [
-      { id: 'contentRating', label: 'Content Rating',    hasInference: true  },
-      { id: 'privacy',       label: 'Data Privacy',      hasInference: false },
-      { id: 'business',      label: 'Business',          hasInference: true  },
-      { id: 'storePreview',  label: 'Store Page Preview',hasInference: false },
+      { id: 'contentRating',      label: 'Content Rating',         hasInference: true  },
+      { id: 'privacy',            label: 'Data Privacy',           hasInference: false },
+      { id: 'business',           label: 'Business',               hasInference: true  },
+      { id: 'storePreview',       label: 'Store Page Preview',     hasInference: false },
+      { id: 'improveSubmission',  label: 'Improve Your Submission' },
     ],
   },
   android: {
     id: 'android', label: 'Google Play', color: '#34A853',
     steps: [
-      { id: 'contentRating', label: 'Content Rating',     hasInference: true  },
-      { id: 'dataSafety',    label: 'Data Safety',        hasInference: false },
-      { id: 'business',      label: 'Business',           hasInference: false },
-      { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
+      { id: 'contentRating',      label: 'Content Rating',         hasInference: true  },
+      { id: 'dataSafety',         label: 'Data Safety',            hasInference: false },
+      { id: 'business',           label: 'Business',               hasInference: false },
+      { id: 'storePreview',       label: 'Store Page Preview',     hasInference: false },
+      { id: 'improveSubmission',  label: 'Improve Your Submission' },
     ],
   },
   steam: {
     id: 'steam', label: 'Steam', color: '#4c6b8a',
     steps: [
-      { id: 'contentRating', label: 'Content Rating',     hasInference: true  },
-      { id: 'storeTags',     label: 'Store Tags',         hasInference: false },
-      { id: 'technical',     label: 'Technical',          hasInference: false },
-      { id: 'storePreview',  label: 'Store Page Preview', hasInference: false },
+      { id: 'contentRating',      label: 'Content Rating',         hasInference: true  },
+      { id: 'storeTags',          label: 'Store Tags',             hasInference: false },
+      { id: 'technical',          label: 'Technical',              hasInference: false },
+      { id: 'storePreview',       label: 'Store Page Preview',     hasInference: false },
+      { id: 'improveSubmission',  label: 'Improve Your Submission' },
     ],
   },
   egs: {
@@ -1062,6 +1065,8 @@ function computeIOSSectionRisk(sectionId) {
 }
 
 function isIOSSectionComplete(sectionId) {
+  if (sectionId === 'improveSubmission') return true; // informational — always complete
+
   const a = state.iosSubmitAnswers;
 
   if (sectionId === 'privacy') {
@@ -1247,6 +1252,8 @@ function androidCqProgress() {
 }
 
 function isAndroidSectionComplete(sectionId) {
+  if (sectionId === 'improveSubmission') return true; // informational — always complete
+
   const a = state.androidSubmitAnswers;
   if (sectionId === 'dataSafety') {
     const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
@@ -2057,6 +2064,8 @@ function makeBlankSteamAnswers() {
 }
 
 function isSteamSectionComplete(sectionId) {
+  if (sectionId === 'improveSubmission') return true; // informational — always complete
+
   const a = state.steamSubmitAnswers;
   if (sectionId === 'contentRating') {
     if (a.usesAI === null) return false;

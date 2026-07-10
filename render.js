@@ -1705,17 +1705,20 @@ function renderStepModal() {
     if (stepId === 'contentRating')      body = buildAndroidContentRatingSection();
     else if (stepId === 'dataSafety')    body = buildAndroidDataSafetySection();
     else if (stepId === 'business')      body = buildAndroidBusinessSection();
-    else if (stepId === 'storePreview')  body = buildAndroidStorePreviewSection();
+    else if (stepId === 'storePreview')          body = buildAndroidStorePreviewSection();
+    else if (stepId === 'improveSubmission')     body = buildImproveSubmissionSection(platformId);
   } else if (platformId === 'steam') {
-    if (stepId === 'contentRating')      body = buildSteamContentRatingSection();
-    else if (stepId === 'storeTags')     body = buildSteamStoreTagsSection();
-    else if (stepId === 'technical')     body = buildSteamTechnicalSection();
-    else if (stepId === 'storePreview')  body = buildSteamStorePreviewSection();
-  } else if (stepId === 'privacy')        body = buildPrivacySection();
-  else if (stepId === 'contentRating')    body = buildContentRatingSection();
-  else if (stepId === 'business')         body = buildBusinessSection() + buildExportComplianceSection();
-  else if (stepId === 'distribution')     body = buildDistributionSection();
-  else if (stepId === 'storePreview')     body = buildStorePreviewSection();
+    if (stepId === 'contentRating')              body = buildSteamContentRatingSection();
+    else if (stepId === 'storeTags')             body = buildSteamStoreTagsSection();
+    else if (stepId === 'technical')             body = buildSteamTechnicalSection();
+    else if (stepId === 'storePreview')          body = buildSteamStorePreviewSection();
+    else if (stepId === 'improveSubmission')     body = buildImproveSubmissionSection(platformId);
+  } else if (stepId === 'privacy')            body = buildPrivacySection();
+  else if (stepId === 'contentRating')        body = buildContentRatingSection();
+  else if (stepId === 'business')             body = buildBusinessSection() + buildExportComplianceSection();
+  else if (stepId === 'distribution')         body = buildDistributionSection();
+  else if (stepId === 'storePreview')         body = buildStorePreviewSection();
+  else if (stepId === 'improveSubmission')    body = buildImproveSubmissionSection(platformId);
 
   const complete = platformId === 'android' ? isAndroidSectionComplete(stepId)
                : platformId === 'steam'   ? isSteamSectionComplete(stepId)
@@ -1834,6 +1837,120 @@ function buildStoreInsightsPanel() {
   }
 
   return '';
+}
+
+/* ── Improve Your Submission ─────────────────────────── */
+function buildImproveSubmissionSection(platformId) {
+  const platform  = PLATFORMS[platformId] || {};
+  const steps     = platform.steps || [];
+  const isIos     = platformId === 'ios';
+  const isAndroid = platformId === 'android';
+  const isSteam   = platformId === 'steam';
+
+  // ── Report Card ─────────────────────────────────────
+  const completeFn = isAndroid ? isAndroidSectionComplete
+                   : isSteam   ? isSteamSectionComplete
+                   :             isIOSSectionComplete;
+
+  const reportableSteps = steps.filter(s => s.id !== 'improveSubmission');
+  const totalSteps    = reportableSteps.length;
+  const completeCount = reportableSteps.filter(s => completeFn(s.id)).length;
+  const pct           = totalSteps > 0 ? Math.round((completeCount / totalSteps) * 100) : 0;
+
+  const grade = pct === 100 ? 'A' : pct >= 80 ? 'B' : pct >= 60 ? 'C' : 'D';
+  const gradeColor = pct === 100 ? 'var(--green)' : pct >= 80 ? 'var(--blue)' : pct >= 60 ? 'var(--orange)' : 'var(--magenta)';
+
+  const stepRows = reportableSteps.map(s => {
+    const done = completeFn(s.id);
+    return `
+      <div class="iys-step-row">
+        <div class="iys-step-icon" style="color:${done ? 'var(--green)' : 'var(--text-faint)'}">
+          ${done
+            ? `<svg viewBox="0 0 16 16" fill="none" width="14" height="14"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+            : `<svg viewBox="0 0 16 16" fill="none" width="14" height="14"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/></svg>`
+          }
+        </div>
+        <span class="iys-step-label" style="color:${done ? 'var(--text)' : 'var(--text-faint)'}">${escHtml(s.label)}</span>
+        ${done ? '' : `<span class="iys-step-tag">Incomplete</span>`}
+      </div>`;
+  }).join('');
+
+  // ── Partner Recommendations ─────────────────────────
+  const partners = [
+    {
+      category: 'QA & Playtesting',
+      items: [
+        { name: 'PlaytestCloud', tagline: 'Playtest on real devices with real players', url: 'https://playtestcloud.com', tag: 'Playtesting' },
+        { name: 'Global App Testing', tagline: 'Professional QA testing at scale for mobile', url: 'https://www.globalapptesting.com', tag: 'QA' },
+      ],
+    },
+    {
+      category: 'Press & PR',
+      items: [
+        { name: 'Impress', tagline: 'Indie game PR, reviews, and press coverage', url: 'https://www.impress.games', tag: 'Press', highlight: true },
+        { name: 'IndieGamePR', tagline: 'Dedicated PR for independent game developers', url: 'https://www.indiegamepr.com', tag: 'Press' },
+      ],
+    },
+    {
+      category: 'Analytics & ASO',
+      items: [
+        { name: 'AppFollow', tagline: 'Ratings, reviews, and app store intelligence', url: 'https://appfollow.io', tag: 'ASO' },
+        { name: 'Sensor Tower', tagline: 'App store analytics and market intelligence', url: 'https://sensortower.com', tag: 'Analytics' },
+      ],
+    },
+    {
+      category: 'Monetization',
+      items: [
+        { name: 'RevenueCat', tagline: 'In-app subscription infrastructure for mobile', url: 'https://www.revenuecat.com', tag: 'Subscriptions' },
+      ],
+    },
+  ];
+
+  // Filter categories relevant to platform
+  const filteredPartners = isIos || isAndroid
+    ? partners
+    : partners.filter(c => c.category !== 'Monetization');
+
+  const partnerHTML = filteredPartners.map(cat => `
+    <div class="iys-partner-cat">
+      <div class="iys-partner-cat-label">${escHtml(cat.category)}</div>
+      <div class="iys-partner-cards">
+        ${cat.items.map(p => `
+          <a href="${escHtml(p.url)}" target="_blank" rel="noopener" class="iys-partner-card${p.highlight ? ' iys-partner-highlight' : ''}">
+            <div class="iys-partner-avatar">${escHtml(p.name[0])}</div>
+            <div class="iys-partner-info">
+              <div class="iys-partner-name">${escHtml(p.name)}</div>
+              <div class="iys-partner-tagline">${escHtml(p.tagline)}</div>
+            </div>
+            <span class="iys-partner-tag">${escHtml(p.tag)}</span>
+          </a>`).join('')}
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="iys-wrap">
+
+      <div class="iys-section">
+        <div class="iys-section-header">
+          <div class="iys-grade-circle" style="border-color:${gradeColor};color:${gradeColor}">${grade}</div>
+          <div>
+            <div class="iys-section-title">Submission readiness</div>
+            <div class="iys-section-sub">${completeCount} of ${totalSteps} steps complete</div>
+          </div>
+          <div class="iys-pct-label" style="color:${gradeColor}">${pct}%</div>
+        </div>
+        <div class="iys-progress-bar-track">
+          <div class="iys-progress-bar-fill" style="width:${pct}%;background:${gradeColor}"></div>
+        </div>
+        <div class="iys-step-list">${stepRows}</div>
+      </div>
+
+      <div class="iys-section">
+        <div class="iys-section-title" style="margin-bottom:14px">Recommended partners</div>
+        ${partnerHTML}
+      </div>
+
+    </div>`;
 }
 
 function buildStorePreviewSection() {
