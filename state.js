@@ -627,31 +627,25 @@ const PLATFORMS = {
   ios: {
     id: 'ios', label: 'iOS App Store', color: '#007AFF',
     steps: [
-      { id: 'contentRating',      label: 'Content Rating',         hasInference: true  },
-      { id: 'privacy',            label: 'Data Privacy',           hasInference: false },
-      { id: 'business',           label: 'Business',               hasInference: true  },
-      { id: 'storePreview',       label: 'Store Page Preview',     hasInference: false },
-      { id: 'improveSubmission',  label: 'Improve Your Submission' },
+      { id: 'questionnaire',     label: 'Questionnaire',          hasInference: true  },
+      { id: 'storePreview',      label: 'Store Page Preview',     hasInference: false },
+      { id: 'improveSubmission', label: 'Improve Your Submission' },
     ],
   },
   android: {
     id: 'android', label: 'Google Play', color: '#34A853',
     steps: [
-      { id: 'contentRating',      label: 'Content Rating',         hasInference: true  },
-      { id: 'dataSafety',         label: 'Data Safety',            hasInference: false },
-      { id: 'business',           label: 'Business',               hasInference: false },
-      { id: 'storePreview',       label: 'Store Page Preview',     hasInference: false },
-      { id: 'improveSubmission',  label: 'Improve Your Submission' },
+      { id: 'questionnaire',     label: 'Questionnaire',          hasInference: true  },
+      { id: 'storePreview',      label: 'Store Page Preview',     hasInference: false },
+      { id: 'improveSubmission', label: 'Improve Your Submission' },
     ],
   },
   steam: {
     id: 'steam', label: 'Steam', color: '#4c6b8a',
     steps: [
-      { id: 'contentRating',      label: 'Content Rating',         hasInference: true  },
-      { id: 'storeTags',          label: 'Store Tags',             hasInference: false },
-      { id: 'technical',          label: 'Technical',              hasInference: false },
-      { id: 'storePreview',       label: 'Store Page Preview',     hasInference: false },
-      { id: 'improveSubmission',  label: 'Improve Your Submission' },
+      { id: 'questionnaire',     label: 'Questionnaire',          hasInference: true  },
+      { id: 'storePreview',      label: 'Store Page Preview',     hasInference: false },
+      { id: 'improveSubmission', label: 'Improve Your Submission' },
     ],
   },
   egs: {
@@ -1016,6 +1010,12 @@ function makeBlankIOSAnswers() {
 }
 
 function computeIOSSectionRisk(sectionId) {
+  if (sectionId === 'questionnaire') {
+    const risks = ['privacy','contentRating','business'].map(computeIOSSectionRisk);
+    if (risks.includes('HIGH'))   return 'HIGH';
+    if (risks.includes('MEDIUM')) return 'MEDIUM';
+    return 'LOW';
+  }
   const a    = state.iosSubmitAnswers;
   const meta = state.iosAnswerMeta;
 
@@ -1068,6 +1068,13 @@ function computeIOSSectionRisk(sectionId) {
 
 function isIOSSectionComplete(sectionId) {
   if (sectionId === 'improveSubmission') return !!state.iosSubmitAnswers.improveSubmissionSeen;
+
+  // Questionnaire combines contentRating + privacy + business
+  if (sectionId === 'questionnaire') {
+    return isIOSSectionComplete('contentRating') &&
+           isIOSSectionComplete('privacy') &&
+           isIOSSectionComplete('business');
+  }
 
   const a = state.iosSubmitAnswers;
 
@@ -1258,6 +1265,12 @@ function androidCqProgress() {
 function isAndroidSectionComplete(sectionId) {
   if (sectionId === 'improveSubmission') return !!state.androidSubmitAnswers.improveSubmissionSeen;
 
+  if (sectionId === 'questionnaire') {
+    return isAndroidSectionComplete('contentRating') &&
+           isAndroidSectionComplete('dataSafety') &&
+           isAndroidSectionComplete('business');
+  }
+
   const a = state.androidSubmitAnswers;
   if (sectionId === 'dataSafety') {
     const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
@@ -1288,6 +1301,12 @@ function isAndroidSectionComplete(sectionId) {
 }
 
 function computeAndroidSectionRisk(sectionId) {
+  if (sectionId === 'questionnaire') {
+    const risks = ['dataSafety','contentRating','business'].map(computeAndroidSectionRisk);
+    if (risks.includes('HIGH'))   return 'HIGH';
+    if (risks.includes('MEDIUM')) return 'MEDIUM';
+    return 'LOW';
+  }
   const a = state.androidSubmitAnswers;
   if (sectionId === 'dataSafety') {
     const privUrl = (a.privacyPolicyUrl || state.formData.privacyUrl || '').trim();
@@ -2125,6 +2144,12 @@ function makeBlankSteamAnswers() {
 function isSteamSectionComplete(sectionId) {
   if (sectionId === 'improveSubmission') return !!state.steamSubmitAnswers.improveSubmissionSeen;
 
+  if (sectionId === 'questionnaire') {
+    return isSteamSectionComplete('contentRating') &&
+           isSteamSectionComplete('storeTags') &&
+           isSteamSectionComplete('technical');
+  }
+
   const a = state.steamSubmitAnswers;
   if (sectionId === 'contentRating') {
     if (a.usesAI === null) return false;
@@ -2147,6 +2172,12 @@ function isSteamSectionComplete(sectionId) {
 }
 
 function computeSteamSectionRisk(sectionId) {
+  if (sectionId === 'questionnaire') {
+    const risks = ['contentRating','storeTags','technical'].map(computeSteamSectionRisk);
+    if (risks.includes('HIGH'))   return 'HIGH';
+    if (risks.includes('MEDIUM')) return 'MEDIUM';
+    return 'LOW';
+  }
   const a = state.steamSubmitAnswers;
   if (sectionId === 'contentRating') return a.usesAI === null ? 'HIGH' : 'LOW';
   if (sectionId === 'storeTags')     return a.topGenres.length === 0 ? 'HIGH' : 'LOW';

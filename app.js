@@ -397,12 +397,14 @@ async function openStepModal(pid, stepId) {
       state.stepModal.inferenceStatus = 'done';
       // Snapshot which questions are answered right after inference so Content Rating
       // can collapse those questions behind a "Show answered" chevron.
-      if (stepId === 'contentRating') {
+      if (stepId === 'questionnaire') {
         const a = state.iosSubmitAnswers;
         const answered = new Set();
         IOS_INTENSITY_QUESTIONS.forEach(q => { if (a[q.id] !== null) answered.add(q.id); });
         IOS_CONTENT_YN_QUESTIONS.forEach(q => { if (a[q.id] !== null) answered.add(q.id); });
         if (a.ageCategory !== null) answered.add('ageCategory');
+        if (a.hasIAP !== null)      answered.add('hasIAP');
+        if (a.usesEncryption !== null) answered.add('usesEncryption');
         state.iosAnsweredAtInference = answered;
         state.iosContentRatingExpanded = false;
       }

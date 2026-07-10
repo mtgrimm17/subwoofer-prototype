@@ -1498,37 +1498,54 @@ body {
 }
 .ob-dist-expand-btn:hover { color: var(--text); }
 
-/* ─── Platform chips (multi-select, text-only) ────────── */
+/* ─── Platform icon tiles (logo-only squares) ─────────── */
 
-.ob-plat-chips {
+.ob-plat-tile-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 4px;
 }
 
-.ob-plat-chip {
-  padding: 7px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
+.ob-plat-tile {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 2px solid transparent;
   background: var(--panel-2);
-  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  transition: color 0.12s, border-color 0.25s, background 0.25s;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
 }
 
-.ob-plat-chip:hover:not(.is-on) {
-  color: var(--text);
+.ob-plat-tile:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background: var(--panel-3);
 }
 
-.ob-plat-chip.is-on {
-  border-color: var(--sel-border);
-  background: var(--sel-bg);
-  color: var(--sel-color);
-  font-weight: 600;
+.ob-plat-tile.is-on {
+  border-color: var(--text);
+  background: var(--panel-3);
+}
+
+.ob-plat-tile-cs {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ob-plat-lock {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 11px;
+  color: var(--text-dim);
+  pointer-events: none;
 }
 
 /* ─── Language type-ahead search ─────────────────────── */
@@ -2385,20 +2402,28 @@ body {
   gap: 10px;
 }
 
+/* Pixelated progress bar — grid of small squares */
 .card-bar {
   flex: 1;
-  height: 4px;
-  background: var(--panel-3);
-  border-radius: 2px;
+  height: 10px;
+  border-radius: 0;
   overflow: hidden;
+  /* Dim pixel grid for the "empty" track */
+  background-color: rgba(74, 222, 128, 0.08);
+  background-image:
+    repeating-linear-gradient(90deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 8px),
+    repeating-linear-gradient(180deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 6px);
 }
 
 .card-bar-fill {
   height: 100%;
-  background: var(--green);
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
-  border-radius: 2px;
+  border-radius: 0;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Bright pixel grid for the filled portion */
+  background-color: var(--green);
+  background-image:
+    repeating-linear-gradient(90deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 8px),
+    repeating-linear-gradient(180deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 6px);
 }
 
 /* Submit button at the end of the progress bar */
@@ -2502,6 +2527,21 @@ body {
 
 /* Step modal body content wrapper */
 .ios-step-body-content { padding-bottom: 8px; }
+
+/* ── Questionnaire sub-section headers ─────────────── */
+.qs-section-divided {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.qs-section-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
 
 /* Loading shimmer placeholders while inference runs */
 .step-loading-placeholder { padding: 24px 0; display: flex; flex-direction: column; gap: 12px; }
@@ -4800,8 +4840,8 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   letter-spacing: 0.05em;
 }
 .prv-preset-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 .prv-preset-chip {
@@ -4816,7 +4856,6 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   font-family: inherit;
   text-align: left;
   transition: border-color 0.12s, background 0.12s;
-  min-width: 110px;
 }
 .prv-preset-chip:hover {
   border-color: var(--border-hover);

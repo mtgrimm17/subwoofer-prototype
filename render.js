@@ -714,21 +714,27 @@ function buildObPlatTilesHTML() {
     { id:'ios',      label:'App Store',         comingSoon: false },
     { id:'android',  label:'Google Play',        comingSoon: false },
     { id:'steam',    label:'Steam',              comingSoon: false },
-    { id:'psn',      label:'PlayStation Store',  comingSoon: true  },
-    { id:'xbox',     label:'Xbox Store',         comingSoon: true  },
     { id:'egs',      label:'Epic Games Store',   comingSoon: true  },
     { id:'nintendo', label:'Nintendo eShop',     comingSoon: true  },
+    { id:'psn',      label:'PlayStation Store',  comingSoon: true  },
+    { id:'xbox',     label:'Xbox Store',         comingSoon: true  },
   ];
-  const chips = PLATFORMS_OB.map(({ id, label, comingSoon }) => {
+  const lockSVG = `<svg class="ob-plat-lock" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="8" height="7" rx="1.5" fill="currentColor" opacity="0.5"/><path d="M4 6V4a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/></svg>`;
+  const tiles = PLATFORMS_OB.map(({ id, label, comingSoon }) => {
     if (comingSoon) {
-      return `<button class="ob-plat-chip ob-plat-chip-cs" disabled title="${label} — coming soon">
-        ${label}<span class="ob-cs-badge">${t('ob.plat.coming_soon') || 'Coming Soon'}</span>
+      return `<button class="ob-plat-tile ob-plat-tile-cs" disabled title="${label} — coming soon">
+        ${platformIcon(id, 28, 'color')}
+        ${lockSVG}
       </button>`;
     }
     const isOn = state.activePlatforms.has(id);
-    return `<button class="ob-plat-chip${isOn ? ' is-on' : ''}" onclick="toggleOnboardingPlatform('${id}')">${label}</button>`;
+    return `<button class="ob-plat-tile${isOn ? ' is-on' : ''}"
+                    onclick="toggleOnboardingPlatform('${id}')"
+                    title="${label}">
+      ${platformIcon(id, 28, isOn ? 'white' : 'color')}
+    </button>`;
   }).join('');
-  return `<div class="ob-plat-chips">${chips}</div>`;
+  return `<div class="ob-plat-tile-row">${tiles}</div>`;
 }
 
 /* ── Language picker ── two-row: primary (amber dropdown) + supported (green chips) */
@@ -1625,16 +1631,12 @@ function buildTaskContent(platformId, stepId, done) {
 
 /* ── Inference loading messages (per platform + step) ─── */
 function _getInferenceMsgs(platformId, stepId) {
-  if (platformId === 'ios' && stepId === 'contentRating')
-    return ['Scanning description for content signals…','Checking violence, language & mature themes…','Calculating IARC age rating…','Applying App Store content policies…'];
-  if (platformId === 'ios' && stepId === 'privacy')
-    return ['Scanning for data collection signals…','Identifying third-party SDKs & data types…','Mapping to Apple privacy labels…','Generating privacy nutrition labels…'];
-  if (platformId === 'android' && stepId === 'contentRating')
-    return ['Scanning for IARC content signals…','Checking Google Play content policies…','Calculating target audience rating…','Preparing content rating declaration…'];
-  if (platformId === 'android' && stepId === 'dataSafety')
-    return ['Identifying data collection patterns…','Reviewing SDK and API usage…','Mapping to Google Play data types…','Preparing Data Safety section…'];
-  if (stepId === 'business')
-    return ['Reviewing business model and pricing…','Checking IAP & subscription policies…','Verifying billing requirements…','Applying regional policy rules…'];
+  if (stepId === 'questionnaire' && platformId === 'ios')
+    return ['Scanning for content signals…','Checking violence, language & mature themes…','Reviewing data collection & business model…','Preparing your questionnaire…'];
+  if (stepId === 'questionnaire' && platformId === 'android')
+    return ['Scanning for IARC content signals…','Identifying data collection & safety requirements…','Checking Google Play policy compliance…','Preparing your questionnaire…'];
+  if (stepId === 'questionnaire' && platformId === 'steam')
+    return ['Scanning game content for Steam requirements…','Reviewing genres, features & technical specs…','Checking Steam content policies…','Preparing your questionnaire…'];
   if (stepId === 'distribution')
     return ['Analyzing market selection options…','Checking regional availability…','Applying distribution strategy…','Finalizing territorial availability…'];
   return ['Reading your game details…','Cross-referencing platform requirements…','Inferring answers from your submission…','Preparing recommendations…'];
@@ -1642,29 +1644,21 @@ function _getInferenceMsgs(platformId, stepId) {
 
 /* ── Inference answer counter ────────────────────────── */
 function _countInferenceAnswers(platformId, stepId) {
-  if (platformId === 'ios') {
-    if (stepId === 'contentRating') {
-      const a = state.iosSubmitAnswers;
-      const fields = [
-        'parentalControls','ageAssurance','unrestrictedInternet','userGenContent',
-        'messagingChat','advertising',
-        'profanity','horrorFear','substancesAlcohol',
-        'matureSuggestive','sexualContent','graphicSexual',
-        'cartoonViolence','realisticViolence','extendedViolence','gunsWeapons',
-        'simulatedGambling','contests','realMoneyGambling','lootBoxes',
-        'ageCategory',
-      ];
-      const total    = fields.length;
-      const answered = fields.filter(f => a[f] != null).length;
-      return { answered, total };
-    }
-    if (stepId === 'business') {
-      const a = state.iosSubmitAnswers;
-      const fields = ['hasIAP','usesEncryption'];
-      const total    = fields.length;
-      const answered = fields.filter(f => a[f] != null).length;
-      return { answered, total };
-    }
+  if (platformId === 'ios' && stepId === 'questionnaire') {
+    const a = state.iosSubmitAnswers;
+    const fields = [
+      'parentalControls','ageAssurance','unrestrictedInternet','userGenContent',
+      'messagingChat','advertising',
+      'profanity','horrorFear','substancesAlcohol',
+      'matureSuggestive','sexualContent','graphicSexual',
+      'cartoonViolence','realisticViolence','extendedViolence','gunsWeapons',
+      'simulatedGambling','contests','realMoneyGambling','lootBoxes',
+      'ageCategory',
+      'hasIAP','usesEncryption',
+    ];
+    const total    = fields.length;
+    const answered = fields.filter(f => a[f] != null).length;
+    return { answered, total };
   }
   // Android / Steam — use CQ_QUESTIONS root questions for that platform
   const platKey = platformId === 'steam' ? 'steam' : 'android';
@@ -1684,8 +1678,8 @@ function renderStepModal() {
   const modal = document.getElementById('submit-modal');
   if (!modal) return;
   const { platformId, stepId, inferenceStatus, inferenceError } = state.stepModal || {};
-  // Privacy / Data Safety sections need extra width for the data matrix
-  const isWide = stepId === 'privacy' || (platformId === 'android' && stepId === 'dataSafety');
+  // Questionnaire contains privacy matrix — needs extra width for iOS and Android
+  const isWide = stepId === 'questionnaire' && (platformId === 'ios' || platformId === 'android');
   modal.className = 'submit-modal' + (isWide ? ' submit-modal-wide' : '') + (state.showHighlights ? ' is-validating' : '');
   if (!platformId || !stepId) return;
 
@@ -1757,23 +1751,29 @@ function renderStepModal() {
         </div>
       </div>`;
   } else if (platformId === 'android') {
-    if (stepId === 'contentRating')      body = buildAndroidContentRatingSection();
-    else if (stepId === 'dataSafety')    body = buildAndroidDataSafetySection();
-    else if (stepId === 'business')      body = buildAndroidBusinessSection();
-    else if (stepId === 'storePreview')          body = buildAndroidStorePreviewSection();
-    else if (stepId === 'improveSubmission')     body = buildImproveSubmissionSection(platformId);
+    if (stepId === 'questionnaire')           body = buildQuestionnaireSection(platformId);
+    else if (stepId === 'storePreview')       body = buildAndroidStorePreviewSection();
+    else if (stepId === 'improveSubmission')  body = buildImproveSubmissionSection(platformId);
+    // Legacy individual step fallbacks (for backward-compat with saved state)
+    else if (stepId === 'contentRating')      body = buildAndroidContentRatingSection();
+    else if (stepId === 'dataSafety')         body = buildAndroidDataSafetySection();
+    else if (stepId === 'business')           body = buildAndroidBusinessSection();
   } else if (platformId === 'steam') {
-    if (stepId === 'contentRating')              body = buildSteamContentRatingSection();
-    else if (stepId === 'storeTags')             body = buildSteamStoreTagsSection();
-    else if (stepId === 'technical')             body = buildSteamTechnicalSection();
-    else if (stepId === 'storePreview')          body = buildSteamStorePreviewSection();
-    else if (stepId === 'improveSubmission')     body = buildImproveSubmissionSection(platformId);
-  } else if (stepId === 'privacy')            body = buildPrivacySection();
-  else if (stepId === 'contentRating')        body = buildContentRatingSection();
-  else if (stepId === 'business')             body = buildBusinessSection() + buildExportComplianceSection();
+    if (stepId === 'questionnaire')           body = buildQuestionnaireSection(platformId);
+    else if (stepId === 'storePreview')       body = buildSteamStorePreviewSection();
+    else if (stepId === 'improveSubmission')  body = buildImproveSubmissionSection(platformId);
+    // Legacy fallbacks
+    else if (stepId === 'contentRating')      body = buildSteamContentRatingSection();
+    else if (stepId === 'storeTags')          body = buildSteamStoreTagsSection();
+    else if (stepId === 'technical')          body = buildSteamTechnicalSection();
+  } else if (stepId === 'questionnaire')      body = buildQuestionnaireSection(platformId);
   else if (stepId === 'distribution')         body = buildDistributionSection();
   else if (stepId === 'storePreview')         body = buildStorePreviewSection();
   else if (stepId === 'improveSubmission')    body = buildImproveSubmissionSection(platformId);
+  // iOS legacy fallbacks
+  else if (stepId === 'contentRating')        body = buildContentRatingSection();
+  else if (stepId === 'privacy')              body = buildPrivacySection();
+  else if (stepId === 'business')             body = buildBusinessSection() + buildExportComplianceSection();
 
   const complete = platformId === 'android' ? isAndroidSectionComplete(stepId)
                : platformId === 'steam'   ? isSteamSectionComplete(stepId)
@@ -2590,6 +2590,31 @@ function iosIntensityRow(label, fieldId, tooltip) {
 }
 
 /* ── Privacy ─────────────────────────────────────────── */
+/* ── Questionnaire: combined Content Rating + Data + Business ─ */
+function buildQuestionnaireSection(platformId) {
+  const sections = [];
+
+  if (platformId === 'ios') {
+    sections.push({ label: 'Content Rating',  body: buildContentRatingSection() });
+    sections.push({ label: 'Data Privacy',    body: buildPrivacySection() });
+    sections.push({ label: 'Business',        body: buildBusinessSection() + buildExportComplianceSection() });
+  } else if (platformId === 'android') {
+    sections.push({ label: 'Content Rating',  body: buildAndroidContentRatingSection() });
+    sections.push({ label: 'Data Safety',     body: buildAndroidDataSafetySection() });
+    sections.push({ label: 'Business',        body: buildAndroidBusinessSection() });
+  } else if (platformId === 'steam') {
+    sections.push({ label: 'Content Rating',  body: buildSteamContentRatingSection() });
+    sections.push({ label: 'Store Tags',      body: buildSteamStoreTagsSection() });
+    sections.push({ label: 'Technical',       body: buildSteamTechnicalSection() });
+  }
+
+  return sections.map((s, i) => `
+    <div class="qs-section${i > 0 ? ' qs-section-divided' : ''}">
+      <div class="qs-section-header">${s.label}</div>
+      ${s.body}
+    </div>`).join('');
+}
+
 /* ── Privacy / Data Safety preset chips ─────────────── */
 function _buildPrivacyPresetChips() {
   const selected = new Set(state.privacyPresets || []);
