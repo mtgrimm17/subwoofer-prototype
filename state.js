@@ -1770,6 +1770,51 @@ function loadProjectAndVersion(projectId, versionId) {
 }
 
 
+/* ── Data Collection Presets ─────────────────────────── */
+// Quick-select chips on the Privacy / Data Safety steps.
+// Selecting presets auto-fills the NLP description and triggers AI translation.
+const PRIVACY_PRESETS = [
+  {
+    id:    'guest',
+    label: 'Guest Play',
+    sub:   'No account, no tracking',
+    description: '',
+    setsNo:    true,  // sets collectsData = 'no'
+    exclusive: true,  // selecting this clears other chips
+  },
+  {
+    id:    'accounts',
+    label: 'User Accounts',
+    sub:   'Email, username & password',
+    description: 'We collect email addresses, usernames, and hashed passwords to create and authenticate user accounts. This data is used solely for login, account recovery, and personalizing the player experience.',
+  },
+  {
+    id:    'analytics',
+    label: 'Game Analytics',
+    sub:   'Gameplay events & crash reports',
+    description: 'We collect gameplay events, session duration, level progression, feature usage, and device crash reports through analytics SDKs to measure performance and improve the game. This data is not linked to personal identity.',
+  },
+  {
+    id:    'ads',
+    label: 'Advertising',
+    sub:   'Ad network & device identifiers',
+    description: 'We collect advertising identifiers (IDFA/GAID) and device information through our third-party ad network to serve relevant advertisements. This data may be used for cross-app tracking and targeted advertising.',
+  },
+  {
+    id:    'cloudsave',
+    label: 'Cloud Save',
+    sub:   'Game progress synced to cloud',
+    description: "We collect user identifiers and game save data — including progress, achievements, and settings — to synchronize the player's game state across devices. This data is linked to the player's account.",
+  },
+  {
+    id:    'leaderboards',
+    label: 'Leaderboards',
+    sub:   'Usernames & scores',
+    description: 'We collect player usernames and game scores to power leaderboards and achievement tracking. Usernames and high scores may be displayed publicly within the game.',
+  },
+];
+
+
 /* ── Application State ───────────────────────────────── */
 
 const state = {
@@ -1854,6 +1899,9 @@ const state = {
 
   // Privacy NLP AI translation status: null | 'loading' | 'complete' | 'error'
   privacyAIStatus: null,
+
+  // Selected quick-setup preset IDs for Privacy / Data Safety steps
+  privacyPresets: [],
 
   // Claude AI UI state (not persisted)
   claudeUI: {},

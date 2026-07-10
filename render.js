@@ -93,7 +93,6 @@ const OB_TAB_DEFS = [
   { labelKey: 'ob.tab.about',        icon: () => `<img src="Assets/Icon_About.png"        class="ob-tab-img" alt="">` },
   { labelKey: 'ob.tab.distribution', icon: () => `<img src="Assets/Icon_Distribution.png" class="ob-tab-img" alt="">` },
   { labelKey: 'ob.tab.assets',       icon: () => `<img src="Assets/Icon_Assets.png"       class="ob-tab-img" alt="">` },
-  { labelKey: 'ob.tab.compliance',   icon: () => `<img src="Assets/Icon_Compliance.png"   class="ob-tab-img" alt="">` },
 ];
 
 
@@ -103,7 +102,6 @@ function getTabProgress(tabIdx) {
     ['about', 'platforms'],   // About
     ['distribution'],         // Distribution (localization defaults to en, always answered)
     ['screenshots'],          // Assets
-    ['privacy_url', 'compliance'], // Compliance
   ];
   const ids = tabSections[tabIdx] || [];
   if (!ids.length) return 0;
@@ -147,13 +145,11 @@ function renderOnboardingBody() {
   if (state.onboardingTab === 0) el.innerHTML = buildAboutTab();
   if (state.onboardingTab === 1) { el.innerHTML = buildDistributionTab(); requestAnimationFrame(() => initObDistMap()); }
   if (state.onboardingTab === 2) el.innerHTML = buildAssetsTab();
-  if (state.onboardingTab === 3) el.innerHTML = buildComplianceTab();
   // Hydrate form fields from state (each helper is a no-op if its elements aren't in the DOM)
   hydrateGameDetailsTab();
   hydrateUploadAssetsTab();
   renderOnboardingScreenshotGrid();
   renderOnboardingFeaturePreview();
-  hydrateComplianceTab();
   // Set amber rail state for all sections based on current form values
   updateObSectionStates();
 }
@@ -161,7 +157,7 @@ function renderOnboardingBody() {
 function renderOnboardingFooter() {
   const el = document.getElementById('ob-footer');
   if (!el) return;
-  const isLast  = state.onboardingTab === 3;
+  const isLast  = state.onboardingTab === 2;
   const isFirst = state.onboardingTab === 0;
   const hasPlat = state.activePlatforms.size > 0;
   el.innerHTML = `
@@ -2594,6 +2590,25 @@ function iosIntensityRow(label, fieldId, tooltip) {
 }
 
 /* ── Privacy ─────────────────────────────────────────── */
+/* ── Privacy / Data Safety preset chips ─────────────── */
+function _buildPrivacyPresetChips() {
+  const selected = new Set(state.privacyPresets || []);
+  const chips = PRIVACY_PRESETS.map(p => {
+    const active = selected.has(p.id);
+    return `
+      <button class="prv-preset-chip${active ? ' is-active' : ''}"
+              onclick="togglePrivacyPreset('${p.id}')">
+        <span class="prv-preset-chip-label">${escHtml(p.label)}</span>
+        <span class="prv-preset-chip-sub">${escHtml(p.sub)}</span>
+      </button>`;
+  }).join('');
+  return `
+    <div class="prv-preset-wrap">
+      <div class="prv-preset-heading">Quick setup — select everything that applies:</div>
+      <div class="prv-preset-chips">${chips}</div>
+    </div>`;
+}
+
 function buildPrivacySection() {
   const a = state.iosSubmitAnswers;
   const noUrl = !a.privacyPolicyUrl.trim();
@@ -2635,8 +2650,9 @@ function buildPrivacySection() {
              onblur="reRenderStepModal()">
       ${noUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL is an automatic App Review rejection.</div>' : ''}
     </div>
-    ${iosYNRow(t('ios.privacy.collects.label') || 'Does your app collect any data from users?', 'collectsData',
-      t('ios.privacy.collects.tooltip') || 'Includes analytics SDKs, crash reporters, accounts, device IDs, or any third-party SDK that collects data.')}
+    ${_buildPrivacyPresetChips()}
+    ${a.collectsData === null ? iosYNRow(t('ios.privacy.collects.label') || 'Does your app collect any data from users?', 'collectsData',
+      t('ios.privacy.collects.tooltip') || 'Includes analytics SDKs, crash reporters, accounts, device IDs, or any third-party SDK that collects data.') : ''}
     ${collectBlock}`;
 }
 
@@ -3670,8 +3686,9 @@ function buildAndroidDataSafetySection() {
              onblur="reRenderStepModal()">
       ${!privUrl ? '<div class="ios-risk-note risk-HIGH">Required. A missing privacy policy URL will block your submission.</div>' : ''}
     </div>
-    ${androidYNRow('Collects or shares user data', 'collectsOrSharesData',
-      'Includes location, personal info, financial info, health data, messages, files, contacts, app activity, identifiers, and similar required disclosures.')}
+    ${_buildPrivacyPresetChips()}
+    ${a.collectsOrSharesData === null ? androidYNRow('Collects or shares user data', 'collectsOrSharesData',
+      'Includes location, personal info, financial info, health data, messages, files, contacts, app activity, identifiers, and similar required disclosures.') : ''}
     ${detailsBlock}`;
 }
 

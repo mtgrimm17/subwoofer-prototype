@@ -103,7 +103,7 @@ function _setObValidating(on) {
 function nextOnboardingTab() {
   // Prototype mode: advance freely — validation only triggers on Launch Dashboard
   _setObValidating(false);
-  if (state.onboardingTab < 3) {
+  if (state.onboardingTab < 2) {
     state.onboardingTab++;
     renderOnboarding();
     const body = document.getElementById('ob-body');
@@ -635,6 +635,61 @@ function togglePrivacyMatrix() {
 
 function toggleContentRatingExpanded(value) {
   state.iosContentRatingExpanded = value;
+  reRenderStepModal();
+}
+
+/* ── Privacy preset chips ────────────────────────────── */
+function togglePrivacyPreset(id) {
+  const preset = PRIVACY_PRESETS.find(p => p.id === id);
+  if (!preset) return;
+
+  let curr = [...(state.privacyPresets || [])];
+
+  if (id === 'guest') {
+    // Guest is exclusive — toggle off all others
+    state.privacyPresets = curr.includes('guest') ? [] : ['guest'];
+  } else {
+    // Any non-guest preset: deselect guest, toggle this one
+    curr = curr.filter(p => p !== 'guest');
+    state.privacyPresets = curr.includes(id)
+      ? curr.filter(p => p !== id)
+      : [...curr, id];
+  }
+
+  const selected  = state.privacyPresets;
+  const hasGuest  = selected.includes('guest');
+  const pid       = state.stepModal?.platformId;
+
+  if (selected.length === 0) {
+    // Nothing selected — just re-render chips, leave data-collection state alone
+    reRenderStepModal();
+    return;
+  }
+
+  if (hasGuest) {
+    state.iosSubmitAnswers.collectsData            = 'no';
+    state.androidSubmitAnswers.collectsOrSharesData = 'no';
+    state.iosSubmitAnswers.privacyDescription       = '';
+    state.androidSubmitAnswers.androidDataDescription = '';
+    reRenderStepModal();
+    return;
+  }
+
+  // Non-guest presets selected
+  state.iosSubmitAnswers.collectsData            = 'yes';
+  state.androidSubmitAnswers.collectsOrSharesData = 'yes';
+  const combined = selected
+    .map(pid2 => PRIVACY_PRESETS.find(p => p.id === pid2)?.description || '')
+    .filter(Boolean)
+    .join(' ');
+  state.iosSubmitAnswers.privacyDescription       = combined;
+  state.androidSubmitAnswers.androidDataDescription = combined;
+
+  // Trigger AI translation for the active platform only
+  if (combined.length >= 20) {
+    if (pid === 'ios')     _triggerPrivacyAI();
+    if (pid === 'android') _triggerAndroidDataAI();
+  }
   reRenderStepModal();
 }
 
@@ -2313,6 +2368,7 @@ function createNewProject() {
   state.questionInferred = makeBlankInferred();
   state.activePlatforms  = new Set();
   state.platformStepStatus = makeEmptyPlatformSteps();
+  state.privacyPresets   = [];
   state._newProjectMode  = true;
   closeAllDropdowns();
   openOnboarding(0);
