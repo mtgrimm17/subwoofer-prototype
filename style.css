@@ -6448,10 +6448,10 @@ body.is-splash .profile-wrap        { display: none; }
   flex-shrink: 0;
 }
 
-/* ── Improve Your Submission: 2×2 grid ─────────────── */
+/* ── Improve Your Submission: 4×1 grid ─────────────── */
 .iys-sections-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
