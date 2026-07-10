@@ -6447,3 +6447,53 @@ body.is-splash .profile-wrap        { display: none; }
   border-radius: 4px;
   flex-shrink: 0;
 }
+
+/* Grade scorecard row */
+.iys-grades-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.iys-grade-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  flex: 1;
+  min-width: 80px;
+}
+.iys-grade-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.iys-grade-badge {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.iys-grade-badge-A { color: var(--green); }
+.iys-grade-badge-B { color: var(--blue); }
+.iys-grade-badge-C { color: var(--orange); }
+.iys-grade-badge-D { color: var(--magenta); }
+.iys-grade-badge-na { color: var(--text-faint); font-size: 13px; font-weight: 400; }
+.iys-grade-sub {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.iys-subsection-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin: 12px 0 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}

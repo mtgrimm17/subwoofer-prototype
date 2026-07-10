@@ -1702,8 +1702,8 @@ function selectPicklistItem(igdbId) {
     }
   }
 
-  // Auto-activate platforms found in IGDB
-  const validPids = (item.platforms || []).filter(pid => !!PLATFORMS[pid] && !COMING_SOON_PLATFORMS.has(pid));
+  // Auto-activate platforms — use strict activationPlatforms (no unconfirmed console ports)
+  const validPids = (item.activationPlatforms || item.platforms || []).filter(pid => !!PLATFORMS[pid] && !COMING_SOON_PLATFORMS.has(pid));
   if (validPids.length) {
     state.activePlatforms.clear();
     validPids.forEach(pid => {
@@ -1886,18 +1886,47 @@ SCREENSHOTS:
 - First screenshot impact — it's the most important; does it immediately communicate the core appeal?
 - Visual clarity — is each screenshot readable and visually compelling at thumbnail scale?
 
-Return ONLY a valid JSON array. No markdown. No explanation. Only the JSON:
-[
-  {
-    "area": "Icon" | "Screenshots" | "Screenshot 1" | "Screenshot 2" (etc.),
-    "severity": "warning" | "tip" | "info",
-    "title": "Short title (max 10 words)",
-    "body": "2–3 sentence explanation with specific, actionable guidance"
-  }
-]
+STORE PAGE:
+You also have access to the game's title and description (provided separately in the message). Evaluate the store page copy quality:
+- Is the title distinctive and searchable?
+- Does the description open with a compelling hook in the first two sentences?
+- Is gameplay clearly described, not just vague adjectives?
+- Are there keyword opportunities being missed?
 
+METADATA / TAGS:
+- Does the title/description suggest good keyword targeting?
+- Are genre signals clear?
+
+BINARY (not available — mark as pending):
+- You have no binary to analyze. Score this N/A.
+
+Return ONLY a valid JSON object. No markdown. No explanation. Only the JSON:
+{
+  "scores": {
+    "storePage": "A" | "B" | "C" | "D",
+    "assets":    "A" | "B" | "C" | "D",
+    "metadata":  "A" | "B" | "C" | "D"
+  },
+  "items": [
+    {
+      "area": "Store Page" | "Assets" | "Icon" | "Screenshots" | "Screenshot 1" | "Metadata" | "Binary",
+      "severity": "warning" | "tip" | "info",
+      "title": "Short title (max 10 words)",
+      "body": "2–3 sentence explanation with specific, actionable guidance"
+    }
+  ]
+}
+
+Grade rubric: A = strong, minimal changes needed. B = solid but room to improve. C = notable gaps affecting conversion or compliance. D = significant issues requiring attention.
 Only include findings that are genuinely meaningful. Omit filler. If something is strong, say so briefly as "info". If something needs attention, be specific about what and why.`
   });
+
+  // Add store page copy for text analysis
+  const fd = state.formData;
+  if (fd.title || fd.description) {
+    content.push({ type: 'text', text:
+      `STORE PAGE COPY:\nTitle: ${fd.title || '(no title)'}\nDescription: ${(fd.description || '(no description)').slice(0, 800)}${(fd.description || '').length > 800 ? '…' : ''}` });
+  }
 
   // Attach icon if present
   if (icon) {
@@ -1929,7 +1958,7 @@ Only include findings that are genuinely meaningful. Omit filler. If something i
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 1200,
+        max_tokens: 1600,
         messages: [{ role: 'user', content }],
       }),
     });
@@ -1937,8 +1966,16 @@ Only include findings that are genuinely meaningful. Omit filler. If something i
     const data    = await res.json();
     const raw     = (data.content?.[0]?.text || '').trim();
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    const items   = JSON.parse(cleaned);
-    state.improveSubmissionAnalysis = { items: Array.isArray(items) ? items : [items] };
+    const parsed  = JSON.parse(cleaned);
+    // Support both new { scores, items } format and legacy flat array
+    if (Array.isArray(parsed)) {
+      state.improveSubmissionAnalysis = { scores: null, items: parsed };
+    } else {
+      state.improveSubmissionAnalysis = {
+        scores: parsed.scores || null,
+        items:  Array.isArray(parsed.items) ? parsed.items : [],
+      };
+    }
   } catch (err) {
     state.improveSubmissionAnalysis = { error: 'Analysis failed: ' + err.message };
   }

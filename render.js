@@ -1644,6 +1644,44 @@ function _getInferenceMsgs(platformId, stepId) {
   return ['Reading your game details…','Cross-referencing platform requirements…','Inferring answers from your submission…','Preparing recommendations…'];
 }
 
+/* ── Inference answer counter ────────────────────────── */
+function _countInferenceAnswers(platformId, stepId) {
+  if (platformId === 'ios') {
+    if (stepId === 'contentRating') {
+      const a = state.iosSubmitAnswers;
+      const fields = [
+        'parentalControls','ageAssurance','unrestrictedInternet','userGenContent',
+        'messagingChat','advertising',
+        'profanity','horrorFear','substancesAlcohol',
+        'matureSuggestive','sexualContent','graphicSexual',
+        'cartoonViolence','realisticViolence','extendedViolence','gunsWeapons',
+        'simulatedGambling','contests','realMoneyGambling','lootBoxes',
+        'ageCategory',
+      ];
+      const total    = fields.length;
+      const answered = fields.filter(f => a[f] != null).length;
+      return { answered, total };
+    }
+    if (stepId === 'business') {
+      const a = state.iosSubmitAnswers;
+      const fields = ['hasIAP','usesEncryption'];
+      const total    = fields.length;
+      const answered = fields.filter(f => a[f] != null).length;
+      return { answered, total };
+    }
+  }
+  // Android / Steam — use CQ_QUESTIONS root questions for that platform
+  const platKey = platformId === 'steam' ? 'steam' : 'android';
+  const rootQs  = CQ_QUESTIONS.filter(q => q.platforms.includes(platKey) && !q.parent);
+  const total   = rootQs.length;
+  const answered = rootQs.filter(q => {
+    const v = state.cqAnswers[q.id];
+    if (q.type === 'multi') return Array.isArray(v) && v.length > 0;
+    return v != null && v !== '';
+  }).length;
+  return { answered, total };
+}
+
 /* ── Step Modal (iOS per-step) ───────────────────────── */
 
 function renderStepModal() {
@@ -1667,11 +1705,12 @@ function renderStepModal() {
     if (inferenceStatus === 'loading') {
       inferenceBanner = ''; // loading screen replaces the banner during loading
     } else if (hasRun && inferenceStatus !== 'error') {
+      const { answered, total } = _countInferenceAnswers(platformId, stepId);
       inferenceBanner = `
         <div class="sw-tip-box sw-tip-box-inference">
           <div class="sw-tip-box-row">
             <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.ios.prepopulated') || 'Pre-populated answers based on your game info and answers from other platforms.'}</span>
+            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Subwoofer was able to answer ${answered} of ${total} required content questions using the information you provided.</span>
           </div>
         </div>`;
     } else if (inferenceStatus === 'error') {
@@ -1699,6 +1738,26 @@ function renderStepModal() {
         <div class="inf-headline">Subwoofer is working…</div>
         <div class="inf-steps">
           ${msgs.map((m, i) => `<div class="inf-step" style="animation-delay:${i * 1.3}s"><div class="inf-dot"></div><span>${m}</span></div>`).join('')}
+        </div>
+      </div>`;
+  } else if (stepId === 'improveSubmission' && state.improveSubmissionAnalysis?.loading) {
+    const iaMsgs = [
+      'Comparing store page to best in class…',
+      'Reviewing assets to maximize conversion…',
+      'Analyzing binary to gauge compliance risk…',
+      'Preparing your personalized report…',
+    ];
+    body = `
+      <div class="inf-loading-screen">
+        <div class="inf-rings-wrap">
+          <div class="inf-ring inf-ring-1"></div>
+          <div class="inf-ring inf-ring-2"></div>
+          <div class="inf-ring inf-ring-3"></div>
+          <img src="Assets/SubwooferIcon_Orange.png" class="inf-logo" onerror="this.style.display='none'">
+        </div>
+        <div class="inf-headline">Subwoofer is working…</div>
+        <div class="inf-steps">
+          ${iaMsgs.map((m, i) => `<div class="inf-step" style="animation-delay:${i * 1.3}s"><div class="inf-dot"></div><span>${m}</span></div>`).join('')}
         </div>
       </div>`;
   } else if (platformId === 'android') {
@@ -1849,43 +1908,70 @@ function buildImproveSubmissionSection(platformId) {
   else if (isAndroid) state.androidSubmitAnswers.improveSubmissionSeen = true;
   else                state.steamSubmitAnswers.improveSubmissionSeen   = true;
 
-  // ── Chunk 1: Subwoofer Guidance (AI visual analysis) ─────────
+  // ── Chunk 1: Subwoofer Guidance (AI analysis) ────────────────
   const ana = state.improveSubmissionAnalysis;
   let guidanceHTML = '';
 
+  // Helper: render a grade badge (A/B/C/D or N/A)
+  function _gradeBadge(grade) {
+    const cls = grade && /^[A-D]$/.test(grade) ? `iys-grade-badge iys-grade-badge-${grade}` : 'iys-grade-badge iys-grade-badge-na';
+    return `<span class="${cls}">${escHtml(grade || 'N/A')}</span>`;
+  }
+
+  // Helper: filter items by area keywords
+  function _itemsFor(items, ...keys) {
+    const lc = keys.map(k => k.toLowerCase());
+    return (items || []).filter(t => lc.some(k => (t.area || '').toLowerCase().includes(k)));
+  }
+
   if (!ana) {
-    // Idle — show analyze button
+    // Idle — show scorecard placeholders + analyze button
     const hasAssets = !!(state.uploads.appIcon || (state.uploads.screenshots || []).some(s => s.dataUrl));
+    const hasStorePage = !!(state.formData.title || state.formData.description);
     guidanceHTML = `
+      <div class="iys-grades-row">
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Store Page</span>
+          ${_gradeBadge(null)}
+          <span class="iys-grade-sub">Not analyzed</span>
+        </div>
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Assets</span>
+          ${_gradeBadge(null)}
+          <span class="iys-grade-sub">Not analyzed</span>
+        </div>
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Metadata</span>
+          ${_gradeBadge(null)}
+          <span class="iys-grade-sub">Not analyzed</span>
+        </div>
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Binary</span>
+          ${_gradeBadge('N/A')}
+          <span class="iys-grade-sub">Pending upload</span>
+        </div>
+      </div>
       <div class="iys-analyze-idle">
         <div class="iys-analyze-idle-text">
-          <div class="iys-analyze-idle-title">AI Visual Review</div>
-          <div class="iys-analyze-idle-sub">Analyze your icon and screenshots for quality, gameplay visibility, compliance risk, and conversion impact.</div>
+          <div class="iys-analyze-idle-title">AI Submission Review</div>
+          <div class="iys-analyze-idle-sub">Subwoofer will score your store page copy, assets, and metadata — then suggest specific improvements.</div>
         </div>
         <button class="btn btn-primary iys-analyze-btn" onclick="runImproveSubmissionAnalysis('${platformId}')"
-          ${!hasAssets ? 'disabled title="Upload an icon or screenshots first"' : ''}>
-          Analyze assets →
+          ${!hasAssets && !hasStorePage ? 'disabled title="Add a title, description, or upload assets first"' : ''}>
+          Run analysis →
         </button>
       </div>
       <div class="iys-tip iys-tip-info">
         <div class="iys-tip-header">
-          <span class="iys-tip-field">Binary Analysis</span>
+          <span class="iys-tip-field">Binary</span>
           <span class="iys-tip-pending">Pending</span>
         </div>
-        <div class="iys-tip-title">Binary analysis not yet run</div>
+        <div class="iys-tip-title">Binary analysis not yet available</div>
         <div class="iys-tip-body">Once a binary is uploaded, Subwoofer will scan for compliance signals — undeclared data collection SDKs, missing privacy manifests, deprecated APIs, and mismatches between declared and detected permissions.</div>
       </div>`;
   } else if (ana.loading) {
-    guidanceHTML = `
-      <div class="iys-analyze-loading">
-        <div class="inf-rings-wrap" style="width:48px;height:48px">
-          <div class="inf-ring inf-ring-1"></div>
-          <div class="inf-ring inf-ring-2"></div>
-          <div class="inf-ring inf-ring-3"></div>
-          <img src="Assets/SubwooferIcon_Orange.png" class="inf-logo" style="width:14px;height:14px" onerror="this.style.display='none'">
-        </div>
-        <div class="iys-analyze-loading-text">Analyzing your assets…</div>
-      </div>`;
+    // Inline fallback (full-body screen takes precedence when loading=true)
+    guidanceHTML = `<div class="iys-analyze-loading"><div class="iys-analyze-loading-text">Analyzing…</div></div>`;
   } else if (ana.error) {
     guidanceHTML = `
       <div class="iys-tip iys-tip-warning">
@@ -1893,24 +1979,75 @@ function buildImproveSubmissionSection(platformId) {
         <div class="iys-tip-title">${escHtml(ana.error)}</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="runImproveSubmissionAnalysis('${platformId}')">Retry</button>`;
-  } else if (ana.items && ana.items.length > 0) {
-    guidanceHTML = ana.items.map(t => `
-      <div class="iys-tip iys-tip-${escHtml(t.severity || 'info')}">
-        <div class="iys-tip-header">
-          <span class="iys-tip-field">${escHtml(t.area || '')}</span>
+  } else {
+    // Results — grade scorecard + items by subsection
+    const scores   = ana.scores || {};
+    const items    = ana.items  || [];
+    const spGrade  = scores.storePage || null;
+    const assGrade = scores.assets    || null;
+    const metGrade = scores.metadata  || null;
+
+    const spItems  = _itemsFor(items, 'store page', 'description', 'title', 'keyword', 'copy');
+    const assItems = _itemsFor(items, 'asset', 'icon', 'screenshot');
+    const metItems = _itemsFor(items, 'metadata', 'tag', 'keyword');
+    // Any items not matched above
+    const otherItems = items.filter(t =>
+      !spItems.includes(t) && !assItems.includes(t) && !metItems.includes(t)
+    );
+
+    function _renderItems(list) {
+      if (!list.length) return `<div class="iys-all-good" style="padding:8px 0">
+        <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Looking good
+      </div>`;
+      return list.map(t => `
+        <div class="iys-tip iys-tip-${escHtml(t.severity || 'info')}">
+          <div class="iys-tip-header"><span class="iys-tip-field">${escHtml(t.area || '')}</span></div>
+          <div class="iys-tip-title">${escHtml(t.title || '')}</div>
+          <div class="iys-tip-body">${escHtml(t.body || '')}</div>
+        </div>`).join('');
+    }
+
+    guidanceHTML = `
+      <div class="iys-grades-row">
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Store Page</span>
+          ${_gradeBadge(spGrade)}
+          <span class="iys-grade-sub">${spGrade ? 'Analyzed' : 'No score'}</span>
         </div>
-        <div class="iys-tip-title">${escHtml(t.title || '')}</div>
-        <div class="iys-tip-body">${escHtml(t.body || '')}</div>
-      </div>`).join('')
-    + `<div class="iys-reanalyze-row">
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Assets</span>
+          ${_gradeBadge(assGrade)}
+          <span class="iys-grade-sub">${assGrade ? 'Analyzed' : 'No score'}</span>
+        </div>
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Metadata</span>
+          ${_gradeBadge(metGrade)}
+          <span class="iys-grade-sub">${metGrade ? 'Analyzed' : 'No score'}</span>
+        </div>
+        <div class="iys-grade-cell">
+          <span class="iys-grade-label">Binary</span>
+          ${_gradeBadge('N/A')}
+          <span class="iys-grade-sub">Pending upload</span>
+        </div>
+      </div>
+      <div class="iys-subsection-label">Store Page</div>
+      ${_renderItems(spItems)}
+      <div class="iys-subsection-label">Assets</div>
+      ${_renderItems(assItems)}
+      <div class="iys-subsection-label">Metadata</div>
+      ${_renderItems(metItems)}
+      ${otherItems.length ? '<div class="iys-subsection-label">Other</div>' + _renderItems(otherItems) : ''}
+      <div class="iys-subsection-label">Binary</div>
+      <div class="iys-tip iys-tip-info">
+        <div class="iys-tip-header"><span class="iys-tip-field">Binary</span><span class="iys-tip-pending">Pending</span></div>
+        <div class="iys-tip-title">Binary analysis not yet available</div>
+        <div class="iys-tip-body">Upload your binary to scan for compliance signals — undeclared SDKs, missing privacy manifests, deprecated APIs, and permission mismatches.</div>
+      </div>
+      <div class="iys-reanalyze-row">
         <button class="btn btn-ghost btn-sm" onclick="state.improveSubmissionAnalysis=null;renderStepModal()">Clear results</button>
         <button class="btn btn-ghost btn-sm" onclick="runImproveSubmissionAnalysis('${platformId}')">Re-analyze</button>
-       </div>`;
-  } else {
-    guidanceHTML = `<div class="iys-all-good">
-      <svg viewBox="0 0 16 16" fill="none" width="15" height="15"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      No issues found — looking great!
-    </div>`;
+      </div>`;
   }
 
   // ── Chunk 2: Partner Recommendations ────────────────────────

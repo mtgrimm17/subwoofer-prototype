@@ -408,17 +408,18 @@ const IGDB_PLATFORM_ID_TO_PID = {
   130: 'nintendo', // Nintendo Switch
 };
 
-function _igdbPlatforms(platforms, websites, releaseDates) {
+// forDisplay=true  → show every platform IGDB lists (for picklist icons)
+// forDisplay=false → strict: consoles need a confirmed release status (for auto-activation)
+function _igdbPlatforms(platforms, websites, releaseDates, forDisplay = false) {
   const pids = new Set();
 
-  // Primary: website/storefront-based detection (most accurate — only surfaces real listings)
+  // Primary: website/storefront links (most reliable — real store listings)
   for (const w of (websites || [])) {
     const pid = IGDB_WEBSITE_TO_PID[w.category];
     if (pid) pids.add(pid);
   }
 
-  // Build a set of platform IDs confirmed as released per IGDB release_dates.
-  // status 4 = Released, status 7 = Early Access — both confirm the platform shipped.
+  // Build confirmed-released set (status 4 = Released, 7 = Early Access)
   const releasedIds = new Set();
   const hasRdData   = (releaseDates || []).length > 0;
   if (hasRdData) {
@@ -427,14 +428,15 @@ function _igdbPlatforms(platforms, websites, releaseDates) {
     }
   }
 
-  // Platform ID mapping — supplements website detection.
-  // Console platforms require a confirmed release status to filter out cancelled/TBD ports.
-  // PC/mobile IDs (steam, ios, android) are trusted as-is.
+  // Map IGDB platform IDs to our PIDs.
+  // For display: include every mapped platform.
+  // For activation: require console platforms to have a confirmed release to avoid
+  // auto-enabling platforms the developer hasn't shipped on.
   const CONSOLE_PIDS = new Set(['psn', 'xbox', 'nintendo']);
   for (const p of (platforms || [])) {
     const pid = IGDB_PLATFORM_ID_TO_PID[p];
     if (!pid) continue;
-    if (CONSOLE_PIDS.has(pid) && hasRdData && !releasedIds.has(p)) continue;
+    if (!forDisplay && CONSOLE_PIDS.has(pid) && hasRdData && !releasedIds.has(p)) continue;
     pids.add(pid);
   }
 
@@ -486,7 +488,10 @@ async function igdbSearch(title) {
       const clean  = direct.replace(/^https?:\/\//, '');
       return 'https://wsrv.nl/?url=' + encodeURIComponent(clean) + '&output=jpg';
     })(),
-    platforms:   _igdbPlatforms(g.platforms, g.websites, g.release_dates),
+    // forDisplay=true → consoles shown without requiring confirmed release status
+    platforms:   _igdbPlatforms(g.platforms, g.websites, g.release_dates, true),
+    // Strict activation list stored separately for selectPicklistItem
+    activationPlatforms: _igdbPlatforms(g.platforms, g.websites, g.release_dates, false),
     summary:     g.summary || '',
     // Up to 6 screenshots upgraded from t_thumb to t_screenshot_big (889×500)
     // also proxied through wsrv.nl for the same reason.
