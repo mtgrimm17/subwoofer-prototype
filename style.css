@@ -6448,22 +6448,29 @@ body.is-splash .profile-wrap        { display: none; }
   flex-shrink: 0;
 }
 
-/* ── Improve Your Submission: section cards ─────────── */
+/* ── Improve Your Submission: 2×2 grid ─────────────── */
+.iys-sections-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ── Section card ──────────────────────────────────── */
 .iys-section {
   display: flex;
-  gap: 0;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
+  height: 150px; /* all four cards identical height */
 }
 .iys-section-body {
   flex: 1;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  overflow: hidden;
 }
 .iys-section-title {
   font-size: 10px;
@@ -6472,20 +6479,53 @@ body.is-splash .profile-wrap        { display: none; }
   letter-spacing: 0.08em;
   color: var(--text-dim);
   margin-bottom: 8px;
+  flex-shrink: 0;
 }
+
+/* Content area — fills remaining space, clips if text is long */
+.iys-issue-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Footer row: counter on left, buttons on right */
+.iys-section-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+.iys-section-counter {
+  font-size: 10px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.iys-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Grade column */
 .iys-section-grade {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 62px;
-  padding: 12px 10px;
+  min-width: 52px;
+  padding: 10px 8px;
   border-left: 1px solid var(--border);
   background: var(--panel);
+  flex-shrink: 0;
 }
 /* Grade badge sizes */
 .iys-grade-badge {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1;
   display: block;
@@ -6496,17 +6536,7 @@ body.is-splash .profile-wrap        { display: none; }
 .iys-grade-badge-D { color: var(--magenta); }
 .iys-grade-badge-na { color: var(--text-faint); font-size: 13px; font-weight: 400; }
 
-/* Issue rows inside a section */
-.iys-issue-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px 0;
-  border-top: 1px solid var(--border);
-}
-.iys-issue-row:first-of-type { border-top: none; }
-.iys-issue-row.iys-issue-applied { opacity: 0.5; }
-.iys-issue-text { flex: 1; min-width: 0; }
+/* Issue content inside card */
 .iys-issue-field-tag {
   font-size: 10px;
   font-weight: 600;
@@ -6520,12 +6550,38 @@ body.is-splash .profile-wrap        { display: none; }
   font-weight: 500;
   color: var(--text);
   margin-bottom: 3px;
-  line-height: 1.4;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .iys-issue-body {
   font-size: 11px;
   color: var(--text-dim);
-  line-height: 1.5;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* All-good inline state */
+.iys-all-good-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--green);
+}
+
+/* Section loading placeholder */
+.iys-section-loading {
+  font-size: 11px;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 /* Subwoofer Fix button */
@@ -6534,8 +6590,7 @@ body.is-splash .profile-wrap        { display: none; }
   align-items: center;
   gap: 5px;
   flex-shrink: 0;
-  align-self: flex-start;
-  padding: 5px 10px;
+  padding: 5px 9px;
   background: var(--orange-soft);
   border: 1px solid var(--orange);
   color: var(--orange);
@@ -6546,7 +6601,6 @@ body.is-splash .profile-wrap        { display: none; }
   white-space: nowrap;
   font-family: inherit;
   line-height: 1;
-  margin-top: 2px;
 }
 .iys-fix-btn:hover { background: rgba(251,146,60,0.28); }
 .iys-fix-btn img { width: 12px; height: 12px; flex-shrink: 0; }
@@ -6558,25 +6612,15 @@ body.is-splash .profile-wrap        { display: none; }
 .iys-fix-btn-goto:hover { background: var(--panel-3); color: var(--text); }
 .iys-fix-btn-goto img { opacity: 0.5; }
 
-/* Applied state */
+/* Applied state tag */
 .iys-applied-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
-  align-self: flex-start;
   font-size: 10px;
   font-weight: 600;
   color: var(--green);
   padding: 4px 8px;
   background: var(--green-soft);
   border-radius: 5px;
-  margin-top: 2px;
-}
-
-/* Section loading placeholder */
-.iys-section-loading {
-  font-size: 11px;
-  color: var(--text-faint);
-  padding: 4px 0;
 }

@@ -1856,11 +1856,8 @@ async function runImproveSubmissionAnalysis(platformId) {
   const ups  = state.uploads;
   const icon = ups.appIcon;
   const shots = (ups.screenshots || []).filter(s => s.dataUrl);
-
-  if (!icon && shots.length === 0) {
-    state.improveSubmissionAnalysis = { error: 'Upload your app icon and/or screenshots first — there\'s nothing to analyze yet.' };
-    renderStepModal(); return;
-  }
+  // Note: don't gate on images — the analysis also scores store page text + metadata.
+  // If no images are available, Claude evaluates text only and notes missing assets.
 
   state.improveSubmissionAnalysis = { loading: true };
   renderStepModal();
@@ -2046,7 +2043,7 @@ Respond ONLY with valid JSON — an array of objects, no extra text, no markdown
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     const parsed  = JSON.parse(cleaned);
     const issues  = (Array.isArray(parsed) ? parsed : [parsed]).slice(0, 5);
-    state.storePageInsights = { issues };
+    state.storePageInsights = { issues, index: 0 };
   } catch (err) {
     state.storePageInsights = { error: 'Analysis failed: ' + err.message };
   }
@@ -2055,26 +2052,40 @@ Respond ONLY with valid JSON — an array of objects, no extra text, no markdown
 
 /* Auto-trigger both analyses when the Improve Your Submission step opens */
 function _autoRunImproveSubmission(pid) {
-  const needsSP  = !state.storePageInsights  || !!state.storePageInsights.error;
-  const hasAssets = !!(state.uploads.appIcon  || (state.uploads.screenshots || []).some(s => s.dataUrl || s.url));
-  const hasText   = !!(state.formData.title   || state.formData.description);
-  const needsAI  = (hasAssets || hasText) && (!state.improveSubmissionAnalysis || !!state.improveSubmissionAnalysis.error);
+  const needsSP = !state.storePageInsights || !!state.storePageInsights.error;
+  const needsAI = !state.improveSubmissionAnalysis || !!state.improveSubmissionAnalysis.error;
 
-  if (needsSP)  state.storePageInsights        = { loading: true };
-  if (needsAI)  state.improveSubmissionAnalysis = { loading: true };
+  // Reset cycling indices on fresh analysis run
+  state.improveSubmissionIdx = { assets: 0, meta: 0 };
+
+  if (needsSP) state.storePageInsights        = { loading: true };
+  if (needsAI) state.improveSubmissionAnalysis = { loading: true };
 
   renderStepModal(); // show loading screen immediately
 
-  if (needsSP)  runStorePageInsights();
-  if (needsAI)  runImproveSubmissionAnalysis(pid);
+  if (needsSP) runStorePageInsights();
+  if (needsAI) runImproveSubmissionAnalysis(pid);
 }
 
-/* Apply a specific store page fix by index (shows all issues at once) */
-function applyStorePageFix(i) {
+/* Advance to next store page issue (after Fix it or Dismiss) */
+function _advanceStoreIssue() {
   const ins = state.storePageInsights;
-  if (!ins?.issues?.[i]) return;
-  const issue = ins.issues[i];
-  if (!issue.fixedValue) return;
+  if (!ins?.issues) return;
+  const next = (ins.index || 0) + 1;
+  if (next >= ins.issues.length) {
+    ins.done = true;
+  } else {
+    ins.index = next;
+  }
+  renderStepModal();
+}
+
+/* Apply the current store page fix, then advance */
+function applyStorePageFix() {
+  const ins = state.storePageInsights;
+  if (!ins?.issues) return;
+  const issue = ins.issues[ins.index || 0];
+  if (!issue?.fixedValue) return;
 
   if (issue.field === 'description') {
     state.formData.description = issue.fixedValue;
@@ -2082,7 +2093,6 @@ function applyStorePageFix(i) {
     if (el) { el.value = issue.fixedValue; charCount('ob-desc-count', issue.fixedValue, 4000); }
   } else if (issue.field === 'subtitle') {
     state.formData.subtitle = issue.fixedValue;
-    // subtitle input lives in the store preview; update if visible
     const el = document.getElementById('ob-subtitle');
     if (el) { el.value = issue.fixedValue; charCount('ob-subtitle-count', issue.fixedValue, 30); }
   } else if (issue.field === 'title') {
@@ -2091,7 +2101,26 @@ function applyStorePageFix(i) {
     if (el) { el.value = issue.fixedValue; charCount('ob-title-count', issue.fixedValue, 30); }
   }
 
-  ins.issues[i].applied = true;
+  _advanceStoreIssue();
+}
+
+/* Skip the current store page issue without applying */
+function dismissStoreIssue() {
+  _advanceStoreIssue();
+}
+
+/* Advance asset or metadata cycling index */
+function _nextImprovementItem(section) {
+  if (!state.improveSubmissionIdx) state.improveSubmissionIdx = { assets: 0, meta: 0 };
+  const ana = state.improveSubmissionAnalysis;
+  if (!ana?.items) return;
+  const lc = section === 'assets'
+    ? ['asset', 'icon', 'screenshot']
+    : ['metadata', 'tag', 'keyword'];
+  const items = ana.items.filter(t => lc.some(k => (t.area || '').toLowerCase().includes(k)));
+  if (!items.length) return;
+  const key = section === 'assets' ? 'assets' : 'meta';
+  state.improveSubmissionIdx[key] = ((state.improveSubmissionIdx[key] || 0) + 1) % items.length;
   renderStepModal();
 }
 
