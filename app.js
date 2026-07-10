@@ -1720,18 +1720,23 @@ function selectPicklistItem(igdbId) {
     renderOnboardingFooter();
   }
 
-  // Auto-populate screenshots from IGDB (only if none uploaded yet).
-  // IGDB CDN images can't be hotlinked directly from <img> tags (returns 403),
-  // so we route each src through corsproxy.io which fetches from their server.
-  if (item.screenshots && item.screenshots.length > 0 && state.uploads.screenshots.length === 0) {
-    const ts = Date.now();
-    item.screenshots.forEach((url, i) => {
-      state.uploads.screenshots.push({
-        id:   'igdb-' + i + '-' + ts,
-        name: `screenshot-${i + 1}.jpg`,
-        url,  // stored as URL; rendering proxies through corsproxy.io
+  // Auto-populate screenshots from IGDB.
+  // Always clear previously IGDB-sourced screenshots (id starts with 'igdb-') when
+  // a new game is selected, then load the new game's screenshots. User-uploaded
+  // screenshots (those with a dataUrl) are left untouched.
+  // IGDB CDN images route through wsrv.nl to avoid 403s from direct hotlinking.
+  {
+    state.uploads.screenshots = state.uploads.screenshots.filter(s => s.dataUrl); // keep only real uploads
+    if (item.screenshots && item.screenshots.length > 0) {
+      const ts = Date.now();
+      item.screenshots.forEach((url, i) => {
+        state.uploads.screenshots.push({
+          id:   'igdb-' + i + '-' + ts,
+          name: `screenshot-${i + 1}.jpg`,
+          url,  // stored as URL; rendering proxies through wsrv.nl
+        });
       });
-    });
+    }
     const grid = document.getElementById('ob-screenshot-grid');
     if (grid) renderScreenshotGridInto(grid);
     updateObSectionStates();
