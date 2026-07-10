@@ -1010,6 +1010,8 @@ function makeBlankIOSAnswers() {
     // Distribution
     selectedCountries:      [],
     distPreset:             'everywhere',
+    // Improve Your Submission — marks complete on first view
+    improveSubmissionSeen:  false,
   };
 }
 
@@ -1065,7 +1067,7 @@ function computeIOSSectionRisk(sectionId) {
 }
 
 function isIOSSectionComplete(sectionId) {
-  if (sectionId === 'improveSubmission') return true; // informational — always complete
+  if (sectionId === 'improveSubmission') return !!state.iosSubmitAnswers.improveSubmissionSeen;
 
   const a = state.iosSubmitAnswers;
 
@@ -1235,6 +1237,8 @@ function makeBlankAndroidAnswers() {
     dataPerType:              {},
     // Store Preview
     storePreviewSeen:         false,
+    // Improve Your Submission — marks complete on first view
+    improveSubmissionSeen:    false,
   };
 }
 
@@ -1252,7 +1256,7 @@ function androidCqProgress() {
 }
 
 function isAndroidSectionComplete(sectionId) {
-  if (sectionId === 'improveSubmission') return true; // informational — always complete
+  if (sectionId === 'improveSubmission') return !!state.androidSubmitAnswers.improveSubmissionSeen;
 
   const a = state.androidSubmitAnswers;
   if (sectionId === 'dataSafety') {
@@ -2060,11 +2064,13 @@ function makeBlankSteamAnswers() {
     // Store Preview
     storePreviewSeen:   false,
     privacyPolicyUrl:   '',
+    // Improve Your Submission — marks complete on first view
+    improveSubmissionSeen: false,
   };
 }
 
 function isSteamSectionComplete(sectionId) {
-  if (sectionId === 'improveSubmission') return true; // informational — always complete
+  if (sectionId === 'improveSubmission') return !!state.steamSubmitAnswers.improveSubmissionSeen;
 
   const a = state.steamSubmitAnswers;
   if (sectionId === 'contentRating') {

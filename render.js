@@ -1841,79 +1841,65 @@ function buildStoreInsightsPanel() {
 
 /* ── Improve Your Submission ─────────────────────────── */
 function buildImproveSubmissionSection(platformId) {
-  const platform  = PLATFORMS[platformId] || {};
-  const steps     = platform.steps || [];
   const isIos     = platformId === 'ios';
   const isAndroid = platformId === 'android';
-  const isSteam   = platformId === 'steam';
 
-  // ── Report Card ─────────────────────────────────────
-  const completeFn = isAndroid ? isAndroidSectionComplete
-                   : isSteam   ? isSteamSectionComplete
-                   :             isIOSSectionComplete;
+  // Mark as seen on first render — triggers step completion
+  if (isIos)          state.iosSubmitAnswers.improveSubmissionSeen     = true;
+  else if (isAndroid) state.androidSubmitAnswers.improveSubmissionSeen = true;
+  else                state.steamSubmitAnswers.improveSubmissionSeen   = true;
 
-  const reportableSteps = steps.filter(s => s.id !== 'improveSubmission');
-  const totalSteps    = reportableSteps.length;
-  const completeCount = reportableSteps.filter(s => completeFn(s.id)).length;
-  const pct           = totalSteps > 0 ? Math.round((completeCount / totalSteps) * 100) : 0;
-
-  const grade = pct === 100 ? 'A' : pct >= 80 ? 'B' : pct >= 60 ? 'C' : 'D';
-  const gradeColor = pct === 100 ? 'var(--green)' : pct >= 80 ? 'var(--blue)' : pct >= 60 ? 'var(--orange)' : 'var(--magenta)';
-
-  const stepRows = reportableSteps.map(s => {
-    const done = completeFn(s.id);
-    return `
-      <div class="iys-step-row">
-        <div class="iys-step-icon" style="color:${done ? 'var(--green)' : 'var(--text-faint)'}">
-          ${done
-            ? `<svg viewBox="0 0 16 16" fill="none" width="14" height="14"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-            : `<svg viewBox="0 0 16 16" fill="none" width="14" height="14"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/></svg>`
-          }
+  // ── Section 1: Subwoofer Guidance ───────────────────
+  const tips = _buildSubmissionTips(platformId);
+  const tipHTML = tips.length === 0
+    ? `<div class="iys-all-good">
+        <svg viewBox="0 0 16 16" fill="none" width="15" height="15"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Submission is looking great — no issues detected.
+       </div>`
+    : tips.map(t => `
+      <div class="iys-tip iys-tip-${t.severity}">
+        <div class="iys-tip-header">
+          <span class="iys-tip-field">${escHtml(t.field)}</span>
+          ${t.placeholder ? '<span class="iys-tip-pending">Pending</span>' : ''}
         </div>
-        <span class="iys-step-label" style="color:${done ? 'var(--text)' : 'var(--text-faint)'}">${escHtml(s.label)}</span>
-        ${done ? '' : `<span class="iys-step-tag">Incomplete</span>`}
-      </div>`;
-  }).join('');
+        <div class="iys-tip-title">${escHtml(t.title)}</div>
+        <div class="iys-tip-body">${escHtml(t.body)}</div>
+      </div>`).join('');
 
-  // ── Partner Recommendations ─────────────────────────
-  const partners = [
+  // ── Section 2: Partner Recommendations ──────────────
+  const partnerCats = [
     {
-      category: 'QA & Playtesting',
+      cat: 'QA & Playtesting',
       items: [
         { name: 'PlaytestCloud', tagline: 'Playtest on real devices with real players', url: 'https://playtestcloud.com', tag: 'Playtesting' },
-        { name: 'Global App Testing', tagline: 'Professional QA testing at scale for mobile', url: 'https://www.globalapptesting.com', tag: 'QA' },
+        { name: 'Global App Testing', tagline: 'Professional mobile QA at scale', url: 'https://www.globalapptesting.com', tag: 'QA' },
       ],
     },
     {
-      category: 'Press & PR',
+      cat: 'Press & PR',
       items: [
-        { name: 'Impress', tagline: 'Indie game PR, reviews, and press coverage', url: 'https://www.impress.games', tag: 'Press', highlight: true },
-        { name: 'IndieGamePR', tagline: 'Dedicated PR for independent game developers', url: 'https://www.indiegamepr.com', tag: 'Press' },
+        { name: 'Impress', tagline: 'Indie game PR, reviews, and press coverage', url: 'https://impress.games', tag: 'Press', highlight: true },
+        { name: 'IndieGamePR', tagline: 'Dedicated PR for independent developers', url: 'https://www.indiegamepr.com', tag: 'Press' },
       ],
     },
     {
-      category: 'Analytics & ASO',
+      cat: 'Analytics & ASO',
       items: [
         { name: 'AppFollow', tagline: 'Ratings, reviews, and app store intelligence', url: 'https://appfollow.io', tag: 'ASO' },
         { name: 'Sensor Tower', tagline: 'App store analytics and market intelligence', url: 'https://sensortower.com', tag: 'Analytics' },
       ],
     },
-    {
-      category: 'Monetization',
+    ...(isIos || isAndroid ? [{
+      cat: 'Monetization',
       items: [
         { name: 'RevenueCat', tagline: 'In-app subscription infrastructure for mobile', url: 'https://www.revenuecat.com', tag: 'Subscriptions' },
       ],
-    },
+    }] : []),
   ];
 
-  // Filter categories relevant to platform
-  const filteredPartners = isIos || isAndroid
-    ? partners
-    : partners.filter(c => c.category !== 'Monetization');
-
-  const partnerHTML = filteredPartners.map(cat => `
+  const partnerHTML = partnerCats.map(cat => `
     <div class="iys-partner-cat">
-      <div class="iys-partner-cat-label">${escHtml(cat.category)}</div>
+      <div class="iys-partner-cat-label">${escHtml(cat.cat)}</div>
       <div class="iys-partner-cards">
         ${cat.items.map(p => `
           <a href="${escHtml(p.url)}" target="_blank" rel="noopener" class="iys-partner-card${p.highlight ? ' iys-partner-highlight' : ''}">
@@ -1930,27 +1916,75 @@ function buildImproveSubmissionSection(platformId) {
   return `
     <div class="iys-wrap">
 
-      <div class="iys-section">
-        <div class="iys-section-header">
-          <div class="iys-grade-circle" style="border-color:${gradeColor};color:${gradeColor}">${grade}</div>
-          <div>
-            <div class="iys-section-title">Submission readiness</div>
-            <div class="iys-section-sub">${completeCount} of ${totalSteps} steps complete</div>
-          </div>
-          <div class="iys-pct-label" style="color:${gradeColor}">${pct}%</div>
-        </div>
-        <div class="iys-progress-bar-track">
-          <div class="iys-progress-bar-fill" style="width:${pct}%;background:${gradeColor}"></div>
-        </div>
-        <div class="iys-step-list">${stepRows}</div>
+      <div class="iys-chunk">
+        <div class="iys-chunk-label">Subwoofer Guidance</div>
+        ${tipHTML}
       </div>
 
-      <div class="iys-section">
-        <div class="iys-section-title" style="margin-bottom:14px">Recommended partners</div>
+      <div class="iys-chunk">
+        <div class="iys-chunk-label">Recommended Partners</div>
         ${partnerHTML}
       </div>
 
     </div>`;
+}
+
+/* Return quality tips based on current submission data */
+function _buildSubmissionTips(platformId) {
+  const fd    = state.formData;
+  const ups   = state.uploads;
+  const tips  = [];
+
+  // Description quality
+  const desc = (fd.description || '').trim();
+  if (!desc) {
+    tips.push({
+      severity: 'warning', field: 'Description',
+      title: 'No description provided',
+      body: 'A compelling description is the #1 driver of conversion on every app store. Add one that explains your game\'s hook in the first two lines.',
+    });
+  } else if (desc.length < 200) {
+    tips.push({
+      severity: 'tip', field: 'Description',
+      title: 'Description is very short',
+      body: 'Short descriptions often underperform. Aim for at least 300–500 characters to highlight key features, unique selling points, and a clear call to action.',
+    });
+  }
+
+  // Screenshot count
+  const shots = (ups.screenshots || []).length;
+  if (shots === 0) {
+    tips.push({
+      severity: 'warning', field: 'Screenshots',
+      title: 'No screenshots uploaded',
+      body: 'Screenshots are the primary visual signal that drives downloads. Upload at least 3 showing your game\'s best moments — gameplay, UI, and key features.',
+    });
+  } else if (shots < 3) {
+    tips.push({
+      severity: 'tip', field: 'Screenshots',
+      title: `Only ${shots} screenshot${shots === 1 ? '' : 's'} uploaded`,
+      body: 'Top-grossing games typically use 5–8 screenshots. Consider adding more to communicate the breadth of your game\'s content and features.',
+    });
+  }
+
+  // Icon
+  if (!ups.icon) {
+    tips.push({
+      severity: 'warning', field: 'App Icon',
+      title: 'No app icon uploaded',
+      body: 'The icon is the first thing users see in search results and on the store page. A strong icon significantly improves click-through rates.',
+    });
+  }
+
+  // Binary analysis (placeholder — analysis engine not yet implemented)
+  tips.push({
+    severity: 'info', field: 'Binary Analysis',
+    title: 'Binary analysis not yet run',
+    body: 'Once a binary is uploaded, Subwoofer will scan it for compliance signals — such as undeclared data collection SDKs, missing privacy manifests, deprecated APIs, or mismatches between declared and detected permissions.',
+    placeholder: true,
+  });
+
+  return tips;
 }
 
 function buildStorePreviewSection() {

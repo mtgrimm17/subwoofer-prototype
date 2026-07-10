@@ -6248,90 +6248,83 @@ body.is-splash .profile-wrap        { display: none; }
 }
 
 /* ============================================================
-   IMPROVE YOUR SUBMISSION STEP  (v1.73)
+   IMPROVE YOUR SUBMISSION STEP  (v1.74)
    ============================================================ */
 
 .iys-wrap {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 24px;
   padding: 4px 0;
 }
 
-.iys-section {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
-}
-
-/* Report card header */
-.iys-section-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-.iys-grade-circle {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  border: 2px solid;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; font-weight: 700;
-  flex-shrink: 0;
-}
-.iys-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-.iys-section-sub {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
-.iys-pct-label {
-  margin-left: auto;
-  font-size: 22px;
+/* Chunk = one of the two top-level sections */
+.iys-chunk { display: flex; flex-direction: column; gap: 10px; }
+.iys-chunk-label {
+  font-size: 10px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
 }
 
-/* Progress bar */
-.iys-progress-bar-track {
-  height: 4px;
-  background: var(--panel-3);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-.iys-progress-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.4s ease;
-}
-
-/* Step list */
-.iys-step-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.iys-step-row {
+/* "All good" state */
+.iys-all-good {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
+  color: var(--green);
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
-.iys-step-icon { display: flex; align-items: center; flex-shrink: 0; }
-.iys-step-label { flex: 1; }
-.iys-step-tag {
+
+/* Guidance tip cards */
+.iys-tip {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  border-left-width: 3px;
+}
+.iys-tip-warning { border-left-color: var(--magenta); }
+.iys-tip-tip     { border-left-color: var(--orange);  }
+.iys-tip-info    { border-left-color: var(--border);  }
+
+.iys-tip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.iys-tip-field {
   font-size: 10px;
-  color: var(--orange);
-  background: var(--orange-soft);
-  padding: 2px 7px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.iys-tip-pending {
+  font-size: 10px;
+  color: var(--text-faint);
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
   border-radius: 4px;
-  font-weight: 500;
+}
+.iys-tip-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.iys-tip-body {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.55;
 }
 
 /* Partner cards */
