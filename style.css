@@ -6448,52 +6448,135 @@ body.is-splash .profile-wrap        { display: none; }
   flex-shrink: 0;
 }
 
-/* Grade scorecard row */
-.iys-grades-row {
+/* ── Improve Your Submission: section cards ─────────── */
+.iys-section {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
+  gap: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
-.iys-grade-cell {
+.iys-section-body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.iys-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.iys-section-grade {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  flex: 1;
-  min-width: 80px;
+  justify-content: center;
+  min-width: 62px;
+  padding: 12px 10px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
 }
-.iys-grade-label {
-  font-size: 10px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+/* Grade badge sizes */
 .iys-grade-badge {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1;
+  display: block;
 }
 .iys-grade-badge-A { color: var(--green); }
 .iys-grade-badge-B { color: var(--blue); }
 .iys-grade-badge-C { color: var(--orange); }
 .iys-grade-badge-D { color: var(--magenta); }
 .iys-grade-badge-na { color: var(--text-faint); font-size: 13px; font-weight: 400; }
-.iys-grade-sub {
-  font-size: 10px;
-  color: var(--text-faint);
+
+/* Issue rows inside a section */
+.iys-issue-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
 }
-.iys-subsection-label {
+.iys-issue-row:first-of-type { border-top: none; }
+.iys-issue-row.iys-issue-applied { opacity: 0.5; }
+.iys-issue-text { flex: 1; min-width: 0; }
+.iys-issue-field-tag {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 3px;
+}
+.iys-issue-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+.iys-issue-body {
+  font-size: 11px;
   color: var(--text-dim);
-  margin: 12px 0 6px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+/* Subwoofer Fix button */
+.iys-fix-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding: 5px 10px;
+  background: var(--orange-soft);
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  line-height: 1;
+  margin-top: 2px;
+}
+.iys-fix-btn:hover { background: rgba(251,146,60,0.28); }
+.iys-fix-btn img { width: 12px; height: 12px; flex-shrink: 0; }
+.iys-fix-btn-goto {
+  background: var(--panel);
+  border-color: var(--border-hover);
+  color: var(--text-dim);
+}
+.iys-fix-btn-goto:hover { background: var(--panel-3); color: var(--text); }
+.iys-fix-btn-goto img { opacity: 0.5; }
+
+/* Applied state */
+.iys-applied-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green);
+  padding: 4px 8px;
+  background: var(--green-soft);
+  border-radius: 5px;
+  margin-top: 2px;
+}
+
+/* Section loading placeholder */
+.iys-section-loading {
+  font-size: 11px;
+  color: var(--text-faint);
+  padding: 4px 0;
 }

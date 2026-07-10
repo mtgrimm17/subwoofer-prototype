@@ -1740,7 +1740,7 @@ function renderStepModal() {
           ${msgs.map((m, i) => `<div class="inf-step" style="animation-delay:${i * 1.3}s"><div class="inf-dot"></div><span>${m}</span></div>`).join('')}
         </div>
       </div>`;
-  } else if (stepId === 'improveSubmission' && state.improveSubmissionAnalysis?.loading) {
+  } else if (stepId === 'improveSubmission' && (state.storePageInsights?.loading || state.improveSubmissionAnalysis?.loading)) {
     const iaMsgs = [
       'Comparing store page to best in class…',
       'Reviewing assets to maximize conversion…',
@@ -1908,149 +1908,165 @@ function buildImproveSubmissionSection(platformId) {
   else if (isAndroid) state.androidSubmitAnswers.improveSubmissionSeen = true;
   else                state.steamSubmitAnswers.improveSubmissionSeen   = true;
 
-  // ── Chunk 1: Subwoofer Guidance (AI analysis) ────────────────
+  const spi = state.storePageInsights;
   const ana = state.improveSubmissionAnalysis;
-  let guidanceHTML = '';
 
-  // Helper: render a grade badge (A/B/C/D or N/A)
+  // ── Shared helpers ───────────────────────────────────
   function _gradeBadge(grade) {
-    const cls = grade && /^[A-D]$/.test(grade) ? `iys-grade-badge iys-grade-badge-${grade}` : 'iys-grade-badge iys-grade-badge-na';
+    const cls = grade && /^[A-D]$/.test(grade)
+      ? `iys-grade-badge iys-grade-badge-${grade}`
+      : 'iys-grade-badge iys-grade-badge-na';
     return `<span class="${cls}">${escHtml(grade || 'N/A')}</span>`;
   }
 
-  // Helper: filter items by area keywords
-  function _itemsFor(items, ...keys) {
+  function _spGrade() {
+    if (!spi || spi.error || spi.loading) return null;
+    const n = (spi.issues || []).length;
+    if (n === 0) return 'A';
+    if (n === 1) return 'B';
+    if (n <= 3)  return 'C';
+    return 'D';
+  }
+
+  function _filterItems(items, ...keys) {
     const lc = keys.map(k => k.toLowerCase());
     return (items || []).filter(t => lc.some(k => (t.area || '').toLowerCase().includes(k)));
   }
 
-  if (!ana) {
-    // Idle — show scorecard placeholders + analyze button
-    const hasAssets = !!(state.uploads.appIcon || (state.uploads.screenshots || []).some(s => s.dataUrl));
-    const hasStorePage = !!(state.formData.title || state.formData.description);
-    guidanceHTML = `
-      <div class="iys-grades-row">
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Store Page</span>
-          ${_gradeBadge(null)}
-          <span class="iys-grade-sub">Not analyzed</span>
+  // ── Section card renderer ─────────────────────────────
+  // Each section: left body + right grade column
+  function _section(title, grade, bodyHTML) {
+    return `
+      <div class="iys-section">
+        <div class="iys-section-body">
+          <div class="iys-section-title">${title}</div>
+          ${bodyHTML}
         </div>
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Assets</span>
-          ${_gradeBadge(null)}
-          <span class="iys-grade-sub">Not analyzed</span>
+        <div class="iys-section-grade">
+          ${_gradeBadge(grade)}
         </div>
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Metadata</span>
-          ${_gradeBadge(null)}
-          <span class="iys-grade-sub">Not analyzed</span>
-        </div>
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Binary</span>
-          ${_gradeBadge('N/A')}
-          <span class="iys-grade-sub">Pending upload</span>
-        </div>
-      </div>
-      <div class="iys-analyze-idle">
-        <div class="iys-analyze-idle-text">
-          <div class="iys-analyze-idle-title">AI Submission Review</div>
-          <div class="iys-analyze-idle-sub">Subwoofer will score your store page copy, assets, and metadata — then suggest specific improvements.</div>
-        </div>
-        <button class="btn btn-primary iys-analyze-btn" onclick="runImproveSubmissionAnalysis('${platformId}')"
-          ${!hasAssets && !hasStorePage ? 'disabled title="Add a title, description, or upload assets first"' : ''}>
-          Run analysis →
-        </button>
-      </div>
-      <div class="iys-tip iys-tip-info">
-        <div class="iys-tip-header">
-          <span class="iys-tip-field">Binary</span>
-          <span class="iys-tip-pending">Pending</span>
-        </div>
-        <div class="iys-tip-title">Binary analysis not yet available</div>
-        <div class="iys-tip-body">Once a binary is uploaded, Subwoofer will scan for compliance signals — undeclared data collection SDKs, missing privacy manifests, deprecated APIs, and mismatches between declared and detected permissions.</div>
-      </div>`;
-  } else if (ana.loading) {
-    // Inline fallback (full-body screen takes precedence when loading=true)
-    guidanceHTML = `<div class="iys-analyze-loading"><div class="iys-analyze-loading-text">Analyzing…</div></div>`;
-  } else if (ana.error) {
-    guidanceHTML = `
-      <div class="iys-tip iys-tip-warning">
-        <div class="iys-tip-header"><span class="iys-tip-field">Analysis Error</span></div>
-        <div class="iys-tip-title">${escHtml(ana.error)}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="runImproveSubmissionAnalysis('${platformId}')">Retry</button>`;
-  } else {
-    // Results — grade scorecard + items by subsection
-    const scores   = ana.scores || {};
-    const items    = ana.items  || [];
-    const spGrade  = scores.storePage || null;
-    const assGrade = scores.assets    || null;
-    const metGrade = scores.metadata  || null;
-
-    const spItems  = _itemsFor(items, 'store page', 'description', 'title', 'keyword', 'copy');
-    const assItems = _itemsFor(items, 'asset', 'icon', 'screenshot');
-    const metItems = _itemsFor(items, 'metadata', 'tag', 'keyword');
-    // Any items not matched above
-    const otherItems = items.filter(t =>
-      !spItems.includes(t) && !assItems.includes(t) && !metItems.includes(t)
-    );
-
-    function _renderItems(list) {
-      if (!list.length) return `<div class="iys-all-good" style="padding:8px 0">
-        <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Looking good
-      </div>`;
-      return list.map(t => `
-        <div class="iys-tip iys-tip-${escHtml(t.severity || 'info')}">
-          <div class="iys-tip-header"><span class="iys-tip-field">${escHtml(t.area || '')}</span></div>
-          <div class="iys-tip-title">${escHtml(t.title || '')}</div>
-          <div class="iys-tip-body">${escHtml(t.body || '')}</div>
-        </div>`).join('');
-    }
-
-    guidanceHTML = `
-      <div class="iys-grades-row">
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Store Page</span>
-          ${_gradeBadge(spGrade)}
-          <span class="iys-grade-sub">${spGrade ? 'Analyzed' : 'No score'}</span>
-        </div>
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Assets</span>
-          ${_gradeBadge(assGrade)}
-          <span class="iys-grade-sub">${assGrade ? 'Analyzed' : 'No score'}</span>
-        </div>
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Metadata</span>
-          ${_gradeBadge(metGrade)}
-          <span class="iys-grade-sub">${metGrade ? 'Analyzed' : 'No score'}</span>
-        </div>
-        <div class="iys-grade-cell">
-          <span class="iys-grade-label">Binary</span>
-          ${_gradeBadge('N/A')}
-          <span class="iys-grade-sub">Pending upload</span>
-        </div>
-      </div>
-      <div class="iys-subsection-label">Store Page</div>
-      ${_renderItems(spItems)}
-      <div class="iys-subsection-label">Assets</div>
-      ${_renderItems(assItems)}
-      <div class="iys-subsection-label">Metadata</div>
-      ${_renderItems(metItems)}
-      ${otherItems.length ? '<div class="iys-subsection-label">Other</div>' + _renderItems(otherItems) : ''}
-      <div class="iys-subsection-label">Binary</div>
-      <div class="iys-tip iys-tip-info">
-        <div class="iys-tip-header"><span class="iys-tip-field">Binary</span><span class="iys-tip-pending">Pending</span></div>
-        <div class="iys-tip-title">Binary analysis not yet available</div>
-        <div class="iys-tip-body">Upload your binary to scan for compliance signals — undeclared SDKs, missing privacy manifests, deprecated APIs, and permission mismatches.</div>
-      </div>
-      <div class="iys-reanalyze-row">
-        <button class="btn btn-ghost btn-sm" onclick="state.improveSubmissionAnalysis=null;renderStepModal()">Clear results</button>
-        <button class="btn btn-ghost btn-sm" onclick="runImproveSubmissionAnalysis('${platformId}')">Re-analyze</button>
       </div>`;
   }
 
-  // ── Chunk 2: Partner Recommendations ────────────────────────
+  // ── All-good row ──────────────────────────────────────
+  function _allGood(msg) {
+    return `<div class="iys-all-good">
+      <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ${msg || 'Looking good'}
+    </div>`;
+  }
+
+  // ── STORE PAGE SECTION ────────────────────────────────
+  let spBody = '';
+  if (!spi || spi.loading) {
+    spBody = `<div class="iys-section-loading">Analyzing…</div>`;
+  } else if (spi.error) {
+    spBody = `<div class="iys-issue-row">
+      <div class="iys-issue-text">
+        <div class="iys-issue-title">Analysis failed</div>
+        <div class="iys-issue-body">${escHtml(spi.error)}</div>
+      </div>
+      <button class="iys-fix-btn" onclick="runStorePageInsights()">
+        <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry
+      </button>
+    </div>`;
+  } else if (!spi.issues || spi.issues.length === 0) {
+    spBody = _allGood('Store page looks strong');
+  } else {
+    spBody = spi.issues.map((issue, i) => {
+      const applied = !!issue.applied;
+      const hasfix  = !!issue.fixedValue;
+      const field   = { subtitle: 'Subtitle', description: 'Description', title: 'Title' }[issue.field] || (issue.field || '');
+      return `
+        <div class="iys-issue-row${applied ? ' iys-issue-applied' : ''}">
+          <div class="iys-issue-text">
+            ${field ? `<div class="iys-issue-field-tag">${escHtml(field)}</div>` : ''}
+            <div class="iys-issue-title">${escHtml(issue.issue || issue.title || '')}</div>
+            <div class="iys-issue-body">${escHtml(issue.suggestion || issue.body || '')}</div>
+          </div>
+          ${applied
+            ? `<span class="iys-applied-tag"><svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Applied</span>`
+            : hasfix
+              ? `<button class="iys-fix-btn" onclick="applyStorePageFix(${i})">
+                   <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Subwoofer Fix
+                 </button>`
+              : ''
+          }
+        </div>`;
+    }).join('');
+  }
+  const spSection = _section('Store Page', _spGrade(), spBody);
+
+  // ── ASSETS SECTION ────────────────────────────────────
+  const assItems = _filterItems(ana?.items, 'asset', 'icon', 'screenshot');
+  let assBody = '';
+  if (!ana || ana.loading) {
+    assBody = `<div class="iys-section-loading">Analyzing…</div>`;
+  } else if (ana.error) {
+    assBody = `<div class="iys-issue-row">
+      <div class="iys-issue-text">
+        <div class="iys-issue-title">Analysis failed</div>
+        <div class="iys-issue-body">${escHtml(ana.error)}</div>
+      </div>
+      <button class="iys-fix-btn" onclick="runImproveSubmissionAnalysis('${platformId}')">
+        <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry
+      </button>
+    </div>`;
+  } else if (assItems.length === 0) {
+    assBody = _allGood('Assets look strong');
+  } else {
+    assBody = assItems.map(t => `
+      <div class="iys-issue-row">
+        <div class="iys-issue-text">
+          ${t.area ? `<div class="iys-issue-field-tag">${escHtml(t.area)}</div>` : ''}
+          <div class="iys-issue-title">${escHtml(t.title || '')}</div>
+          <div class="iys-issue-body">${escHtml(t.body || '')}</div>
+        </div>
+        <button class="iys-fix-btn iys-fix-btn-goto" onclick="openStepModal('${platformId}','storePreview')">
+          <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Go to Assets
+        </button>
+      </div>`).join('');
+  }
+  const assSection = _section('Assets', ana?.scores?.assets || null, assBody);
+
+  // ── METADATA SECTION ──────────────────────────────────
+  const metItems = _filterItems(ana?.items, 'metadata', 'tag', 'keyword');
+  let metBody = '';
+  if (!ana || ana.loading) {
+    metBody = `<div class="iys-section-loading">Analyzing…</div>`;
+  } else if (ana.error) {
+    metBody = `<div class="iys-issue-row"><div class="iys-issue-text"><div class="iys-issue-title">See error above</div></div></div>`;
+  } else if (metItems.length === 0) {
+    metBody = _allGood('Metadata looks strong');
+  } else {
+    metBody = metItems.map(t => `
+      <div class="iys-issue-row">
+        <div class="iys-issue-text">
+          ${t.area ? `<div class="iys-issue-field-tag">${escHtml(t.area)}</div>` : ''}
+          <div class="iys-issue-title">${escHtml(t.title || '')}</div>
+          <div class="iys-issue-body">${escHtml(t.body || '')}</div>
+        </div>
+      </div>`).join('');
+  }
+  const metSection = _section('Metadata', ana?.scores?.metadata || null, metBody);
+
+  // ── BINARY SECTION ────────────────────────────────────
+  const binBody = `
+    <div class="iys-issue-row">
+      <div class="iys-issue-text">
+        <div class="iys-issue-title">Binary analysis not yet available</div>
+        <div class="iys-issue-body">Once uploaded, Subwoofer will scan for undeclared SDKs, missing privacy manifests, deprecated APIs, and permission mismatches.</div>
+      </div>
+    </div>`;
+  const binSection = _section('Binary', 'N/A', binBody);
+
+  // ── Re-analyze footer ─────────────────────────────────
+  const reanalyzeRow = (spi && !spi.loading) || (ana && !ana.loading) ? `
+    <div class="iys-reanalyze-row">
+      <button class="btn btn-ghost btn-sm" onclick="state.storePageInsights=null;state.improveSubmissionAnalysis=null;_autoRunImproveSubmission('${platformId}')">Re-analyze all</button>
+    </div>` : '';
+
+  // ── Chunk 2: Partner Recommendations ─────────────────
   const partnerCats = [
     {
       cat: 'QA & Playtesting',
@@ -2101,7 +2117,11 @@ function buildImproveSubmissionSection(platformId) {
     <div class="iys-wrap">
       <div class="iys-chunk">
         <div class="iys-chunk-label">Subwoofer Guidance</div>
-        ${guidanceHTML}
+        ${spSection}
+        ${assSection}
+        ${metSection}
+        ${binSection}
+        ${reanalyzeRow}
       </div>
       <div class="iys-chunk">
         <div class="iys-chunk-label">Recommended Partners</div>
@@ -2221,7 +2241,6 @@ function buildStorePreviewSection() {
     </div>`).join('');
 
   return `
-    ${buildStoreInsightsPanel()}
     <div class="ias-device-wrap">
       <div class="ias-label-row">
         <span class="ias-label-badge">

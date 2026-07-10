@@ -1646,6 +1646,7 @@ function getPlatformReleaseSummary(proj, platformId) {
 function makeBlankFormData() {
   return {
     title:                '',
+    subtitle:             '',
     description:          '',
     price:                '',   // collected per-platform (iOS Business), kept here for store preview
     gameScenario:         null, // null | 'new' | 'new_platform' | 'update'
