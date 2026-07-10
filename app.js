@@ -1834,6 +1834,117 @@ function handleScreenshotFiles(files) {
   });
 }
 
+/* ── Improve Your Submission — AI visual analysis ───────────── */
+
+async function runImproveSubmissionAnalysis(platformId) {
+  if (!CLAUDE_API_KEY) {
+    state.improveSubmissionAnalysis = { error: 'No API key configured.' };
+    renderStepModal(); return;
+  }
+
+  const ups  = state.uploads;
+  const icon = ups.appIcon;
+  const shots = (ups.screenshots || []).filter(s => s.dataUrl);
+
+  if (!icon && shots.length === 0) {
+    state.improveSubmissionAnalysis = { error: 'Upload your app icon and/or screenshots first — there\'s nothing to analyze yet.' };
+    renderStepModal(); return;
+  }
+
+  state.improveSubmissionAnalysis = { loading: true };
+  renderStepModal();
+
+  // Helper: strip data-URL prefix → bare base64 + media type
+  function parseDataUrl(dataUrl) {
+    const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!m) return null;
+    return { mediaType: m[1], data: m[2] };
+  }
+
+  // Build vision message content
+  const content = [];
+
+  // System context
+  content.push({ type: 'text', text:
+    `You are an expert mobile game App Store consultant evaluating submission assets for "${state.formData.title || 'this game'}".
+You will receive the app icon and up to 5 screenshots. Analyze them for quality, effectiveness, and compliance risk.
+
+Evaluation criteria:
+
+ICON:
+- Readability at small sizes (29×29 notification, 60×60 home screen) — is the focal point clear?
+- Absence of text or wordmarks (Apple/Google reject icons with text)
+- Color contrast and visibility on both light and dark backgrounds
+- Genre communication — does it signal the type of game?
+- Differentiation — would it stand out in a crowded category listing?
+- Avoid generic or over-designed icons that blur at small sizes
+
+SCREENSHOTS:
+- Gameplay visibility — do they show actual gameplay, not just menus, loading screens, or cutscenes?
+- Feature diversity — do they collectively showcase different game mechanics/moments, or are they repetitive?
+- Marketing text overlays — text burned into screenshots (taglines, "BEST GAME EVER", promotional copy) can trigger App Store rejection; pure UI/HUD text is fine
+- First screenshot impact — it's the most important; does it immediately communicate the core appeal?
+- Visual clarity — is each screenshot readable and visually compelling at thumbnail scale?
+
+Return ONLY a valid JSON array. No markdown. No explanation. Only the JSON:
+[
+  {
+    "area": "Icon" | "Screenshots" | "Screenshot 1" | "Screenshot 2" (etc.),
+    "severity": "warning" | "tip" | "info",
+    "title": "Short title (max 10 words)",
+    "body": "2–3 sentence explanation with specific, actionable guidance"
+  }
+]
+
+Only include findings that are genuinely meaningful. Omit filler. If something is strong, say so briefly as "info". If something needs attention, be specific about what and why.`
+  });
+
+  // Attach icon if present
+  if (icon) {
+    const parsed = parseDataUrl(icon.dataUrl);
+    if (parsed) {
+      content.push({ type: 'text', text: 'APP ICON:' });
+      content.push({ type: 'image', source: { type: 'base64', media_type: parsed.mediaType, data: parsed.data } });
+    }
+  }
+
+  // Attach up to 5 screenshots
+  const toAnalyze = shots.slice(0, 5);
+  toAnalyze.forEach((s, i) => {
+    const parsed = parseDataUrl(s.dataUrl);
+    if (parsed) {
+      content.push({ type: 'text', text: `SCREENSHOT ${i + 1}:` });
+      content.push({ type: 'image', source: { type: 'base64', media_type: parsed.mediaType, data: parsed.data } });
+    }
+  });
+
+  try {
+    const res = await fetch(CLAUDE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL,
+        max_tokens: 1200,
+        messages: [{ role: 'user', content }],
+      }),
+    });
+    if (!res.ok) throw new Error('API ' + res.status);
+    const data    = await res.json();
+    const raw     = (data.content?.[0]?.text || '').trim();
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const items   = JSON.parse(cleaned);
+    state.improveSubmissionAnalysis = { items: Array.isArray(items) ? items : [items] };
+  } catch (err) {
+    state.improveSubmissionAnalysis = { error: 'Analysis failed: ' + err.message };
+  }
+  renderStepModal();
+}
+
 /* ── Store Page AI Insights ("Fix it" button) ──────────────── */
 
 async function runStorePageInsights() {

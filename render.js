@@ -1844,29 +1844,76 @@ function buildImproveSubmissionSection(platformId) {
   const isIos     = platformId === 'ios';
   const isAndroid = platformId === 'android';
 
-  // Mark as seen on first render — triggers step completion
+  // Mark as seen on first render — triggers step completion in dashboard
   if (isIos)          state.iosSubmitAnswers.improveSubmissionSeen     = true;
   else if (isAndroid) state.androidSubmitAnswers.improveSubmissionSeen = true;
   else                state.steamSubmitAnswers.improveSubmissionSeen   = true;
 
-  // ── Section 1: Subwoofer Guidance ───────────────────
-  const tips = _buildSubmissionTips(platformId);
-  const tipHTML = tips.length === 0
-    ? `<div class="iys-all-good">
-        <svg viewBox="0 0 16 16" fill="none" width="15" height="15"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Submission is looking great — no issues detected.
-       </div>`
-    : tips.map(t => `
-      <div class="iys-tip iys-tip-${t.severity}">
-        <div class="iys-tip-header">
-          <span class="iys-tip-field">${escHtml(t.field)}</span>
-          ${t.placeholder ? '<span class="iys-tip-pending">Pending</span>' : ''}
-        </div>
-        <div class="iys-tip-title">${escHtml(t.title)}</div>
-        <div class="iys-tip-body">${escHtml(t.body)}</div>
-      </div>`).join('');
+  // ── Chunk 1: Subwoofer Guidance (AI visual analysis) ─────────
+  const ana = state.improveSubmissionAnalysis;
+  let guidanceHTML = '';
 
-  // ── Section 2: Partner Recommendations ──────────────
+  if (!ana) {
+    // Idle — show analyze button
+    const hasAssets = !!(state.uploads.appIcon || (state.uploads.screenshots || []).some(s => s.dataUrl));
+    guidanceHTML = `
+      <div class="iys-analyze-idle">
+        <div class="iys-analyze-idle-text">
+          <div class="iys-analyze-idle-title">AI Visual Review</div>
+          <div class="iys-analyze-idle-sub">Analyze your icon and screenshots for quality, gameplay visibility, compliance risk, and conversion impact.</div>
+        </div>
+        <button class="btn btn-primary iys-analyze-btn" onclick="runImproveSubmissionAnalysis('${platformId}')"
+          ${!hasAssets ? 'disabled title="Upload an icon or screenshots first"' : ''}>
+          Analyze assets →
+        </button>
+      </div>
+      <div class="iys-tip iys-tip-info">
+        <div class="iys-tip-header">
+          <span class="iys-tip-field">Binary Analysis</span>
+          <span class="iys-tip-pending">Pending</span>
+        </div>
+        <div class="iys-tip-title">Binary analysis not yet run</div>
+        <div class="iys-tip-body">Once a binary is uploaded, Subwoofer will scan for compliance signals — undeclared data collection SDKs, missing privacy manifests, deprecated APIs, and mismatches between declared and detected permissions.</div>
+      </div>`;
+  } else if (ana.loading) {
+    guidanceHTML = `
+      <div class="iys-analyze-loading">
+        <div class="inf-rings-wrap" style="width:48px;height:48px">
+          <div class="inf-ring inf-ring-1"></div>
+          <div class="inf-ring inf-ring-2"></div>
+          <div class="inf-ring inf-ring-3"></div>
+          <img src="Assets/SubwooferIcon_Orange.png" class="inf-logo" style="width:14px;height:14px" onerror="this.style.display='none'">
+        </div>
+        <div class="iys-analyze-loading-text">Analyzing your assets…</div>
+      </div>`;
+  } else if (ana.error) {
+    guidanceHTML = `
+      <div class="iys-tip iys-tip-warning">
+        <div class="iys-tip-header"><span class="iys-tip-field">Analysis Error</span></div>
+        <div class="iys-tip-title">${escHtml(ana.error)}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="runImproveSubmissionAnalysis('${platformId}')">Retry</button>`;
+  } else if (ana.items && ana.items.length > 0) {
+    guidanceHTML = ana.items.map(t => `
+      <div class="iys-tip iys-tip-${escHtml(t.severity || 'info')}">
+        <div class="iys-tip-header">
+          <span class="iys-tip-field">${escHtml(t.area || '')}</span>
+        </div>
+        <div class="iys-tip-title">${escHtml(t.title || '')}</div>
+        <div class="iys-tip-body">${escHtml(t.body || '')}</div>
+      </div>`).join('')
+    + `<div class="iys-reanalyze-row">
+        <button class="btn btn-ghost btn-sm" onclick="state.improveSubmissionAnalysis=null;renderStepModal()">Clear results</button>
+        <button class="btn btn-ghost btn-sm" onclick="runImproveSubmissionAnalysis('${platformId}')">Re-analyze</button>
+       </div>`;
+  } else {
+    guidanceHTML = `<div class="iys-all-good">
+      <svg viewBox="0 0 16 16" fill="none" width="15" height="15"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      No issues found — looking great!
+    </div>`;
+  }
+
+  // ── Chunk 2: Partner Recommendations ────────────────────────
   const partnerCats = [
     {
       cat: 'QA & Playtesting',
@@ -1915,76 +1962,15 @@ function buildImproveSubmissionSection(platformId) {
 
   return `
     <div class="iys-wrap">
-
       <div class="iys-chunk">
         <div class="iys-chunk-label">Subwoofer Guidance</div>
-        ${tipHTML}
+        ${guidanceHTML}
       </div>
-
       <div class="iys-chunk">
         <div class="iys-chunk-label">Recommended Partners</div>
         ${partnerHTML}
       </div>
-
     </div>`;
-}
-
-/* Return quality tips based on current submission data */
-function _buildSubmissionTips(platformId) {
-  const fd    = state.formData;
-  const ups   = state.uploads;
-  const tips  = [];
-
-  // Description quality
-  const desc = (fd.description || '').trim();
-  if (!desc) {
-    tips.push({
-      severity: 'warning', field: 'Description',
-      title: 'No description provided',
-      body: 'A compelling description is the #1 driver of conversion on every app store. Add one that explains your game\'s hook in the first two lines.',
-    });
-  } else if (desc.length < 200) {
-    tips.push({
-      severity: 'tip', field: 'Description',
-      title: 'Description is very short',
-      body: 'Short descriptions often underperform. Aim for at least 300–500 characters to highlight key features, unique selling points, and a clear call to action.',
-    });
-  }
-
-  // Screenshot count
-  const shots = (ups.screenshots || []).length;
-  if (shots === 0) {
-    tips.push({
-      severity: 'warning', field: 'Screenshots',
-      title: 'No screenshots uploaded',
-      body: 'Screenshots are the primary visual signal that drives downloads. Upload at least 3 showing your game\'s best moments — gameplay, UI, and key features.',
-    });
-  } else if (shots < 3) {
-    tips.push({
-      severity: 'tip', field: 'Screenshots',
-      title: `Only ${shots} screenshot${shots === 1 ? '' : 's'} uploaded`,
-      body: 'Top-grossing games typically use 5–8 screenshots. Consider adding more to communicate the breadth of your game\'s content and features.',
-    });
-  }
-
-  // Icon
-  if (!ups.icon) {
-    tips.push({
-      severity: 'warning', field: 'App Icon',
-      title: 'No app icon uploaded',
-      body: 'The icon is the first thing users see in search results and on the store page. A strong icon significantly improves click-through rates.',
-    });
-  }
-
-  // Binary analysis (placeholder — analysis engine not yet implemented)
-  tips.push({
-    severity: 'info', field: 'Binary Analysis',
-    title: 'Binary analysis not yet run',
-    body: 'Once a binary is uploaded, Subwoofer will scan it for compliance signals — such as undeclared data collection SDKs, missing privacy manifests, deprecated APIs, or mismatches between declared and detected permissions.',
-    placeholder: true,
-  });
-
-  return tips;
 }
 
 function buildStorePreviewSection() {
