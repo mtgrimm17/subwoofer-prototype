@@ -2121,8 +2121,8 @@ function _autoRunImproveSubmission(pid) {
   const needsSP = !state.storePageInsights || !!state.storePageInsights.error;
   const needsAI = !state.improveSubmissionAnalysis || !!state.improveSubmissionAnalysis.error;
 
-  // Reset cycling indices on fresh analysis run
-  state.improveSubmissionIdx = { assets: 0, meta: 0 };
+  // Reset cycling index on fresh analysis run
+  state.improveSubmissionIdx = { storePage: 0 };
 
   if (needsSP) state.storePageInsights        = { loading: true };
   if (needsAI) state.improveSubmissionAnalysis = { loading: true };
@@ -2175,18 +2175,14 @@ function dismissStoreIssue() {
   _advanceStoreIssue();
 }
 
-/* Advance asset or metadata cycling index */
+/* Advance the merged Store Page cycling index */
 function _nextImprovementItem(section) {
-  if (!state.improveSubmissionIdx) state.improveSubmissionIdx = { assets: 0, meta: 0 };
-  const ana = state.improveSubmissionAnalysis;
-  if (!ana?.items) return;
-  const lc = section === 'assets'
-    ? ['asset', 'icon', 'screenshot']
-    : ['metadata', 'tag', 'keyword'];
-  const items = ana.items.filter(t => lc.some(k => (t.area || '').toLowerCase().includes(k)));
-  if (!items.length) return;
-  const key = section === 'assets' ? 'assets' : 'meta';
-  state.improveSubmissionIdx[key] = ((state.improveSubmissionIdx[key] || 0) + 1) % items.length;
+  if (!state.improveSubmissionIdx) state.improveSubmissionIdx = { storePage: 0 };
+  if (section === 'storePage') {
+    // The merged list size is recomputed in the render function (max 5).
+    // We advance mod 5 as a safe upper bound; render clamps to actual length.
+    state.improveSubmissionIdx.storePage = ((state.improveSubmissionIdx.storePage || 0) + 1) % 5;
+  }
   renderStepModal();
 }
 
