@@ -2061,52 +2061,43 @@ function buildImproveSubmissionSection(platformId) {
       <button class="btn btn-ghost btn-sm" onclick="state.storePageInsights=null;state.improveSubmissionAnalysis=null;_autoRunImproveSubmission('${platformId}')">Re-analyze all</button>
     </div>` : '';
 
-  // ── Chunk 2: Partner Recommendations ─────────────────
-  const partnerCats = [
+  // ── Chunk 2: Recommended Partners — 3 columns (QA · Press · Marketing) ──
+  // One top pick per category, selected based on platform and game profile.
+  const partners = [
     {
-      cat: 'QA & Playtesting',
-      items: [
-        { name: 'PlaytestCloud', tagline: 'Playtest on real devices with real players', url: 'https://playtestcloud.com', tag: 'Playtesting' },
-        { name: 'Global App Testing', tagline: 'Professional mobile QA at scale', url: 'https://www.globalapptesting.com', tag: 'QA' },
-      ],
+      cat: 'QA',
+      p: isIos || isAndroid
+        ? { name: 'PlaytestCloud', tagline: 'Mobile playtesting on real devices with real players — ideal for pre-launch validation', url: 'https://playtestcloud.com', tag: 'Playtesting', highlight: true }
+        : { name: 'Global App Testing', tagline: 'Professional QA at scale — functional, performance, and compatibility testing', url: 'https://www.globalapptesting.com', tag: 'QA' },
     },
     {
-      cat: 'Press & PR',
-      items: [
-        { name: 'Impress', tagline: 'Indie game PR, reviews, and press coverage', url: 'https://impress.games', tag: 'Press', highlight: true },
-        { name: 'IndieGamePR', tagline: 'Dedicated PR for independent developers', url: 'https://www.indiegamepr.com', tag: 'Press' },
-      ],
+      cat: 'Press',
+      p: { name: 'Impress', tagline: 'Indie-focused PR with strong relationships at top gaming outlets — best cost/coverage ratio for small studios', url: 'https://impress.games', tag: 'Press', highlight: true },
     },
     {
-      cat: 'Analytics & ASO',
-      items: [
-        { name: 'AppFollow', tagline: 'Ratings, reviews, and app store intelligence', url: 'https://appfollow.io', tag: 'ASO' },
-        { name: 'Sensor Tower', tagline: 'App store analytics and market intelligence', url: 'https://sensortower.com', tag: 'Analytics' },
-      ],
+      cat: 'Marketing',
+      p: isIos || isAndroid
+        ? { name: 'Chartboost', tagline: 'Mobile-first UA platform with direct deal network and strong ROAS for casual and mid-core games', url: 'https://www.chartboost.com', tag: 'UA / Ads' }
+        : { name: 'Keymailer', tagline: 'Connect with content creators and streamers — efficient key distribution and campaign tracking', url: 'https://www.keymailer.co', tag: 'Influencers' },
     },
-    ...(isIos || isAndroid ? [{
-      cat: 'Monetization',
-      items: [
-        { name: 'RevenueCat', tagline: 'In-app subscription infrastructure for mobile', url: 'https://www.revenuecat.com', tag: 'Subscriptions' },
-      ],
-    }] : []),
   ];
 
-  const partnerHTML = partnerCats.map(cat => `
+  const partnerHTML = `<div class="iys-partner-row">${partners.map(({ cat, p }) => `
     <div class="iys-partner-cat">
-      <div class="iys-partner-cat-label">${escHtml(cat.cat)}</div>
+      <div class="iys-partner-cat-label">${escHtml(cat)}</div>
       <div class="iys-partner-cards">
-        ${cat.items.map(p => `
-          <a href="${escHtml(p.url)}" target="_blank" rel="noopener" class="iys-partner-card${p.highlight ? ' iys-partner-highlight' : ''}">
+        <a href="${escHtml(p.url)}" target="_blank" rel="noopener" class="iys-partner-card${p.highlight ? ' iys-partner-highlight' : ''}">
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
             <div class="iys-partner-avatar">${escHtml(p.name[0])}</div>
-            <div class="iys-partner-info">
+            <div class="iys-partner-info" style="min-width:0;flex:1;">
               <div class="iys-partner-name">${escHtml(p.name)}</div>
-              <div class="iys-partner-tagline">${escHtml(p.tagline)}</div>
             </div>
             <span class="iys-partner-tag">${escHtml(p.tag)}</span>
-          </a>`).join('')}
+          </div>
+          <div class="iys-partner-tagline" style="font-size:11px;line-height:1.5;">${escHtml(p.tagline)}</div>
+        </a>
       </div>
-    </div>`).join('');
+    </div>`).join('')}</div>`;
 
   return `
     <div class="iys-wrap">
@@ -4044,48 +4035,31 @@ function buildSteamContentRatingSection() {
 function buildSteamStoreTagsSection() {
   const a = state.steamSubmitAnswers;
 
-  const topGenreChecks = STEAM_TOP_GENRES.map(g => {
-    const checked = a.topGenres.includes(g);
-    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-      <input type="checkbox" ${checked ? 'checked' : ''}
-             onchange="toggleSteamTag('topGenres','${g}',this.checked,2)">
-      <span>${escHtml(g)}</span></label>`;
-  }).join('');
+  const _chips = (items, field, max, onclick) =>
+    `<div class="ms-chip-group">${items.map(g => {
+      const on = a[field].includes(g);
+      return `<button class="ms-chip${on ? ' is-on' : ''}"
+                      onclick="${onclick}('${field}','${escHtml(g)}',${!on},${max})">${escHtml(g)}</button>`;
+    }).join('')}</div>`;
 
-  const genreChecks = STEAM_GENRES.map(g => {
-    const checked = a.genres.includes(g);
-    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-      <input type="checkbox" ${checked ? 'checked' : ''}
-             onchange="toggleSteamTag('genres','${g}',this.checked,2)">
-      <span>${escHtml(g)}</span></label>`;
-  }).join('');
-
-  const subGenreChecks = STEAM_SUB_GENRES.map(g => {
-    const checked = a.subGenres.includes(g);
-    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-      <input type="checkbox" ${checked ? 'checked' : ''}
-             onchange="toggleSteamTag('subGenres','${g}',this.checked,3)">
-      <span>${escHtml(g)}</span></label>`;
-  }).join('');
-
-  const topCount = a.topGenres.length;
+  const topCount   = a.topGenres.length;
   const genreCount = a.genres.length;
-  const subCount = a.subGenres.length;
+  const subCount   = a.subGenres.length;
 
   return `
     <div class="ios-content-step-label" style="margin-top:0;">Top-Level Genre
       <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Required. Choose one or two top-level genres to categorize your title on Steam.</span></span>
     </div>
     ${topCount === 0 ? '<div class="ios-risk-note risk-HIGH" style="margin-bottom:8px;">Required — select at least one.</div>' : ''}
-    <div class="cq-check-list">${topGenreChecks}</div>
+    ${_chips(STEAM_TOP_GENRES, 'topGenres', 2, 'toggleSteamTag')}
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 2${genreCount > 0 ? ', ' + genreCount + ' selected' : ''})</span></div>
-    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${genreChecks}</div>
+    ${_chips(STEAM_GENRES, 'genres', 2, 'toggleSteamTag')}
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Sub-genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 3${subCount > 0 ? ', ' + subCount + ' selected' : ''})</span></div>
-    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${subGenreChecks}</div>`;
+    ${_chips(STEAM_SUB_GENRES, 'subGenres', 3, 'toggleSteamTag')}`;
 }
 
 /* ── Steam: Technical (PDFs 10 + 11) ───────────────── */
@@ -4111,34 +4085,35 @@ function buildSteamTechnicalSection() {
   );
 
   const gamepadBlock = a.inputSupport && a.inputSupport !== 'keyboard_only' ? `
-    <div class="ios-q-divider"></div>
-    <div class="ios-content-step-label">Controller Support</div>
-    ${ynRow('Full Xbox Controller support', a.xboxFullSupport,
-      "answerSteamField('xboxFullSupport','yes')",
-      "answerSteamField('xboxFullSupport','no')",
-      'Player can launch, configure, play, and exit using only an Xbox controller. Game displays correct glyphs and any text prompts open an on-screen keyboard.')}
+    <div class="cond-block">
+      <div class="ios-content-step-label" style="margin-top:0;">Controller Support</div>
+      ${ynRow('Full Xbox Controller support', a.xboxFullSupport,
+        "answerSteamField('xboxFullSupport','yes')",
+        "answerSteamField('xboxFullSupport','no')",
+        'Player can launch, configure, play, and exit using only an Xbox controller. Game displays correct glyphs and any text prompts open an on-screen keyboard.')}
 
-    <div style="margin-top:10px;">
-      <div class="form-label" style="margin-bottom:6px;">PlayStation Controller support <span style="color:var(--text-faint);font-weight:400;">(select all that apply)</span></div>
-      <div class="cq-check-list">${[
-        {id:'ps_dualshock_usb',   label:'DualShock Controller (USB)'},
-        {id:'ps_dualshock_bt',    label:'DualShock Controller (USB + Bluetooth)'},
-        {id:'ps_dualsense_usb',   label:'DualSense Controller (USB)'},
-        {id:'ps_dualsense_bt',    label:'DualSense Controller (USB + Bluetooth)'},
-        {id:'ps_none',            label:'No PlayStation controller support'},
-      ].map(c => {
-        const checked = a.psControllers.includes(c.id);
-        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
-          <input type="checkbox" ${checked ? 'checked' : ''}
-                 onchange="toggleSteamPS('${c.id}', this.checked)">
-          <span>${escHtml(c.label)}</span></label>`;
-      }).join('')}</div>
+      <div style="margin-top:12px;">
+        <div class="form-label" style="margin-bottom:6px;">PlayStation Controller support <span style="color:var(--text-faint);font-weight:400;">(select all that apply)</span></div>
+        <div class="ms-chip-group">${[
+          {id:'ps_dualshock_usb',   label:'DualShock (USB)'},
+          {id:'ps_dualshock_bt',    label:'DualShock (USB + BT)'},
+          {id:'ps_dualsense_usb',   label:'DualSense (USB)'},
+          {id:'ps_dualsense_bt',    label:'DualSense (USB + BT)'},
+          {id:'ps_none',            label:'No PS support'},
+        ].map(c => {
+          const on = a.psControllers.includes(c.id);
+          return `<button class="ms-chip${on ? ' is-on' : ''}"
+                          onclick="toggleSteamPS('${c.id}', ${!on})">${escHtml(c.label)}</button>`;
+        }).join('')}</div>
+      </div>
+
+      <div style="margin-top:12px;">
+        ${ynRow('Full Steam Input API integration', a.steamInputAPI,
+          "answerSteamField('steamInputAPI','yes')",
+          "answerSteamField('steamInputAPI','no')",
+          'Game fully integrates the Steam Input API, implements action bindings, queries action origins for correct glyph display, and allows button remapping through the Steam configurator.')}
+      </div>
     </div>
-
-    ${ynRow('Full Steam Input API integration', a.steamInputAPI,
-      "answerSteamField('steamInputAPI','yes')",
-      "answerSteamField('steamInputAPI','no')",
-      'Game fully integrates the Steam Input API, implements action bindings, queries action origins for correct glyph display, and allows button remapping through the Steam configurator.')}
   ` : '';
 
   const accessChecks = STEAM_ACCESSIBILITY_FEATURES.map(f => {

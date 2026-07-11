@@ -3293,14 +3293,13 @@ function toggleSteamAIType(typeId, checked) {
 function toggleSteamTag(field, value, checked, maxCount) {
   const arr = state.steamSubmitAnswers[field];
   if (checked) {
+    // Add only if under the cap
     if (arr.length < maxCount && !arr.includes(value)) arr.push(value);
-    else if (arr.length >= maxCount) {
-      // Uncheck the box visually — can't add more
-      event.target.checked = false;
-    }
+    // If at cap, silently ignore (chip stays un-on; re-render shows correct state)
   } else {
     state.steamSubmitAnswers[field] = arr.filter(v => v !== value);
   }
+  reRenderStepModal();
   updateSteamCard();
 }
 
