@@ -276,7 +276,7 @@ function buildDistributionTab() {
 
         <div class="sw-tip-box" style="margin-bottom:12px;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.distribution.languages') || 'Native language support is a great way to increase traction and conversion in secondary markets.'}</span>
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.distribution.languages') || 'On average, games see 30–50% more revenue in markets where they support the local language vs. English-only releases. The highest-impact localization for your selected markets is highlighted below.'}</span>
         </div>
 
         <div id="ob-lang-list-wrap">${buildObLangList()}</div>
@@ -290,7 +290,7 @@ function buildDistributionTab() {
 const OB_PLATFORM_TIMING = {
   ios:      { days: 2.2, color: '#60a5fa', label: 'App Store'   },
   android:  { days: 4.3, color: '#4ade80', label: 'Google Play' },
-  steam:    { days: 7.1, color: '#38bdf8', label: 'Steam'       },
+  steam:    { days: 7.1, color: '#38bdf8', label: 'Steam Store' },
   egs:      { days: 3.0, color: '#e2e2e2', label: 'Epic Games'  },
   xbox:     { days: 5.0, color: '#22c55e', label: 'Xbox'        },
   nintendo: { days: 5.0, color: '#ef4444', label: 'Nintendo'    },
@@ -480,9 +480,12 @@ const OB_REG_TIPS = {
   ZA: 'Film and Publication Board (FPB) classification required. Unclassified games may not be sold commercially.',
 };
 
-/** Regulatory tip: prefers locale key, falls back to OB_REG_TIPS const */
+/** Regulatory tip: prefers locale key, falls back to OB_REG_TIPS const.
+ *  Guards against locale returning the key string itself (meaning "not found"). */
 function regTip(code) {
-  return (typeof t === 'function' ? t(`reg.tip.${code.toLowerCase()}`) : null) || OB_REG_TIPS[code] || '';
+  const key = `reg.tip.${code.toLowerCase()}`;
+  const localeVal = typeof t === 'function' ? t(key) : null;
+  return (localeVal && localeVal !== key ? localeVal : null) || OB_REG_TIPS[code] || '';
 }
 
 const _chevDown = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
@@ -1400,7 +1403,6 @@ function buildActiveCard(pid) {
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${platLabel(pid)}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>
@@ -1451,7 +1453,6 @@ function buildIOSActiveCard(pid) {
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${platLabel(pid)}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>
@@ -1503,7 +1504,6 @@ function buildAndroidActiveCard(pid) {
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${platLabel(pid)}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>
@@ -3843,7 +3843,6 @@ function buildSteamActiveCard(pid) {
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${platLabel(pid)}</div>
-            <div class="active-card-progress-label" id="step-count-${pid}">${t('dash.steps_count', {complete: counts.complete, total: counts.total})}</div>
           </div>
         </div>
       </div>

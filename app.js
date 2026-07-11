@@ -663,9 +663,16 @@ function togglePrivacyPreset(id) {
   const pid       = state.stepModal?.platformId;
 
   if (selected.length === 0) {
-    // Nothing selected — clear any description text we may have set, then re-render
-    if (state.iosSubmitAnswers)     state.iosSubmitAnswers.privacyDescription    = '';
-    if (state.androidSubmitAnswers) state.androidSubmitAnswers.androidDataDescription = '';
+    // Nothing selected — clear descriptions AND any AI-inferred data types, then re-render
+    if (state.iosSubmitAnswers) {
+      state.iosSubmitAnswers.privacyDescription = '';
+      state.iosSubmitAnswers.dataPerType        = {};
+      state.iosSubmitAnswers.collectsData       = null;
+    }
+    if (state.androidSubmitAnswers) {
+      state.androidSubmitAnswers.androidDataDescription = '';
+    }
+    state.privacyAIStatus = null;
     reRenderStepModal();
     return;
   }

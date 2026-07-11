@@ -1532,7 +1532,8 @@ body {
 }
 
 .ob-plat-tile.is-on {
-  border-color: var(--text);
+  border-color: rgba(255,255,255,0.45);
+  border-width: 1.5px;
   background: var(--panel-3);
   color: white;
 }

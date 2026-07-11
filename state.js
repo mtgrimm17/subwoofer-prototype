@@ -625,26 +625,26 @@ const PLATFORM_ICONS = {
 
 const PLATFORMS = {
   ios: {
-    id: 'ios', label: 'iOS App Store', color: '#007AFF',
+    id: 'ios', label: 'App Store', color: '#007AFF',
     steps: [
-      { id: 'questionnaire',     label: 'Questionnaire',          hasInference: true  },
-      { id: 'storePreview',      label: 'Store Page Preview',     hasInference: false },
+      { id: 'questionnaire',     label: 'Questionnaire',           hasInference: true  },
+      { id: 'storePreview',      label: 'Product Page Preview',    hasInference: false },
       { id: 'improveSubmission', label: 'Improve Your Submission' },
     ],
   },
   android: {
     id: 'android', label: 'Google Play', color: '#34A853',
     steps: [
-      { id: 'questionnaire',     label: 'Questionnaire',          hasInference: true  },
-      { id: 'storePreview',      label: 'Store Page Preview',     hasInference: false },
+      { id: 'questionnaire',     label: 'Questionnaire',           hasInference: true  },
+      { id: 'storePreview',      label: 'Store Listing Preview',   hasInference: false },
       { id: 'improveSubmission', label: 'Improve Your Submission' },
     ],
   },
   steam: {
-    id: 'steam', label: 'Steam', color: '#4c6b8a',
+    id: 'steam', label: 'Steam Store', color: '#4c6b8a',
     steps: [
-      { id: 'questionnaire',     label: 'Questionnaire',          hasInference: true  },
-      { id: 'storePreview',      label: 'Store Page Preview',     hasInference: false },
+      { id: 'questionnaire',     label: 'Questionnaire',           hasInference: true  },
+      { id: 'storePreview',      label: 'Store Page Preview',      hasInference: false },
       { id: 'improveSubmission', label: 'Improve Your Submission' },
     ],
   },
