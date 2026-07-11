@@ -4310,6 +4310,22 @@ select.form-input {
   flex-shrink: 0;
 }
 
+/* Inference pre-fill note — sits left of the Save/Done button */
+.inf-footer-note {
+  font-size: 11px;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+  line-height: 1.4;
+}
+.inf-footer-icon {
+  color: var(--orange);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
 .submit-confirm-btn { background: var(--green); color: var(--bg); font-weight: 700; }
 .submit-confirm-btn:hover { background: #5eeb92; }
 
@@ -5619,6 +5635,15 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   border-color: var(--accent, #0a84ff);
   background: rgba(10,132,255,0.18);
   color: #4da3ff;
+}
+
+/* ynRow elements nested inside multi-type questions must fill container width
+   so justify-content:space-between pushes Yes/No to the far right */
+.cq-check-list {
+  width: 100%;
+}
+.cq-check-list .ios-q-row {
+  width: 100%;
 }
 
 .cq-checkboxes {

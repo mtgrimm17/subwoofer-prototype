@@ -1917,6 +1917,7 @@ const state = {
   iosContentRatingExpanded: false,
 
   // Same pattern for Android and Steam
+  androidInferenceRan: false,
   androidContentRatingExpanded: false,
   steamAnsweredAtInference: null,
   steamContentRatingExpanded: false,

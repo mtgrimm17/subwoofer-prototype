@@ -327,6 +327,7 @@ async function openStepModal(pid, stepId) {
         state.stepModal.inferenceStatus = 'done';
         // Collapse to unanswered view after inference
         if (stepId === 'questionnaire') {
+          state.androidInferenceRan = true;
           state.androidContentRatingExpanded = false;
         }
       } catch(err) {

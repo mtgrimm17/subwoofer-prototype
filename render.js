@@ -1686,29 +1686,28 @@ function renderStepModal() {
   const p    = PLATFORMS[platformId];
   const step = p.steps.find(s => s.id === stepId);
 
-  // Inference banner — shared across all platforms/steps with hasInference
-  let inferenceBanner = '';
+  // Inference banners — success note goes to footer; error stays in scroll area
+  let inferenceBanner     = '';
+  let inferenceFooterNote = '';
   if (step?.hasInference) {
-    const cacheKey    = platformId + ':' + stepId;
-    const hasRun      = platformId === 'ios' ? !!state.claudeCache : !!state.platformInferenceCache[cacheKey];
-    const retryFn     = platformId === 'ios' ? '_runClaudeAnalysis()' : `_retryInference('${platformId}','${stepId}')`;
+    const cacheKey = platformId + ':' + stepId;
+    const hasRun   = platformId === 'ios' ? !!state.claudeCache : !!state.platformInferenceCache[cacheKey];
+    const retryFn  = platformId === 'ios' ? '_runClaudeAnalysis()' : `_retryInference('${platformId}','${stepId}')`;
     if (inferenceStatus === 'loading') {
-      inferenceBanner = ''; // loading screen replaces the banner during loading
-    } else if (hasRun && inferenceStatus !== 'error') {
-      const { answered, total } = _countInferenceAnswers(platformId, stepId);
-      inferenceBanner = `
-        <div class="sw-tip-box sw-tip-box-inference">
-          <div class="sw-tip-box-row">
-            <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-            <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> Subwoofer was able to answer ${answered} of ${total} required content questions using the information you provided.</span>
-          </div>
-        </div>`;
+      // loading screen replaces the banner during loading
     } else if (inferenceStatus === 'error') {
       inferenceBanner = `
         <div class="ai-banner ai-banner-error">
           <span class="ai-banner-icon">⚠</span>
           <div class="ai-banner-text"><strong>Analysis failed:</strong> ${inferenceError || 'Unknown error'}</div>
           <button class="ai-autofill-btn" onclick="${retryFn}">Retry</button>
+        </div>`;
+    } else if (hasRun && stepId === 'questionnaire') {
+      const { answered: infAns, total: infTotal } = _countInferenceAnswers(platformId, stepId);
+      inferenceFooterNote = `
+        <div class="inf-footer-note">
+          <span class="inf-footer-icon">✦</span>
+          Subwoofer pre-filled ${infAns} of ${infTotal} questions — review highlighted answers
         </div>`;
     }
   }
@@ -1797,6 +1796,7 @@ function renderStepModal() {
       </div>
     </div>
     <div class="submit-modal-footer">
+      ${inferenceFooterNote}
       <button class="btn btn-primary" onclick="closeStepModal()">
         ${complete ? 'Done' : 'Save & Close'}
       </button>
@@ -2514,6 +2514,29 @@ function singleSelectRow(label, value, options, tooltip = '') {
     </div>`;
 }
 
+/**
+ * _isCurrentlyAnswered — real-time answer check for the Unanswered/All toggle.
+ * All three platforms' questionnaire filters funnel through this one function
+ * so changes to "what counts as answered" apply everywhere at once.
+ */
+function _isCurrentlyAnswered(platformId, qid) {
+  if (platformId === 'ios') {
+    const v = state.iosSubmitAnswers[qid];
+    return v !== null && v !== undefined && v !== '';
+  }
+  if (platformId === 'android') {
+    const v = state.cqAnswers[qid];
+    if (Array.isArray(v)) return v.length > 0;
+    return v !== null && v !== undefined && v !== '';
+  }
+  if (platformId === 'steam') {
+    const sca = state.steamSubmitAnswers.steamContentAnswers || {};
+    const v   = sca[qid];
+    return v !== null && v !== undefined;
+  }
+  return false;
+}
+
 /* ── iOS wrappers — add AI inference decoration on top of shared primitives ── */
 
 // iOS YES/NO row: injects AI confidence classes and badge content
@@ -2823,7 +2846,7 @@ function buildContentRatingSection() {
   let questionsHtml = '';
   for (const cat of IOS_CR_CATEGORIES) {
     const qsToShow = (collapseMode && !showAll)
-      ? cat.questions.filter(q => !answered.has(q.id))
+      ? cat.questions.filter(q => !_isCurrentlyAnswered('ios', q.id))
       : cat.questions;
 
     if (qsToShow.length > 0) {
@@ -3444,7 +3467,7 @@ function buildAndroidContentRatingSection() {
           tip, false, yc.trim(), '', nb2);
       }).join('');
       return `
-        <div class="ios-q-row" data-answered="${answered ? '1' : '0'}" style="flex-direction:column;align-items:flex-start;">
+        <div class="ios-q-row" data-answered="${answered ? '1' : '0'}" style="flex-direction:column;">
           <div class="ios-q-label" style="margin-bottom:8px;">${label}${ttHTML}</div>
           <div class="cq-check-list">${checks}</div>
         </div>`;
@@ -3454,10 +3477,10 @@ function buildAndroidContentRatingSection() {
   }
 
   /* Group android-visible questions by section and render */
-  const androidQs   = CQ_QUESTIONS.filter(q => q.platforms.includes('android'));
-  const sections    = [...new Set(androidQs.map(q => q.section))];
-  const showAll     = state.androidContentRatingExpanded;
-  const collapseMode = answered > 0;
+  const androidQs    = CQ_QUESTIONS.filter(q => q.platforms.includes('android'));
+  const sections     = [...new Set(androidQs.map(q => q.section))];
+  const showAll      = state.androidContentRatingExpanded;
+  const collapseMode = state.androidInferenceRan === true;
 
   const togglePill = collapseMode ? `
     <div class="cr-toggle-bar">
@@ -3468,17 +3491,13 @@ function buildAndroidContentRatingSection() {
     </div>` : '';
 
   let html = togglePill;
-  let firstSection = true;
 
   sections.forEach(section => {
     const visibleQs = androidQs.filter(q => q.section === section && cqIsVisible(q));
     if (!visibleQs.length) return;
 
     const filteredQs = (collapseMode && !showAll)
-      ? visibleQs.filter(q => {
-          const ans = state.cqAnswers[q.id];
-          return ans === null || ans === undefined || ans === '' || (Array.isArray(ans) && ans.length === 0);
-        })
+      ? visibleQs.filter(q => !_isCurrentlyAnswered('android', q.id))
       : visibleQs;
     if (!filteredQs.length) return;
 
@@ -3904,7 +3923,7 @@ function buildSteamContentRatingSection() {
   let catHtml = steamTogglePill;
   STEAM_CONTENT_CATEGORIES.forEach(grp => {
     const items = (steamCollapse && !steamShowAll)
-      ? grp.items.filter(item => !steamAnsweredSet.has(item.id))
+      ? grp.items.filter(item => !_isCurrentlyAnswered('steam', item.id))
       : grp.items;
     if (!items.length) return;
     catHtml += `<div class="ios-content-step-label">${escHtml(grp.group)}</div>`;
