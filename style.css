@@ -5742,6 +5742,57 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   color: #4da3ff;
 }
 
+/* ─── Multi-select chips (Steam genres/tags) ─────────────────
+   Used instead of white checkboxes — matches the yes/no chip aesthetic. */
+.ms-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.ms-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  line-height: 1;
+}
+.ms-chip:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.ms-chip.is-on {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.5);
+  color: var(--green);
+}
+.ms-chip.is-on::before {
+  content: '✓';
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ─── Conditional sub-question block ─────────────────────────
+   Visual indentation for questions that only appear when a
+   parent question has a specific answer. */
+.cond-block {
+  margin-top: 12px;
+  margin-left: 0;
+  padding: 14px 14px 14px 16px;
+  border-left: 2px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  border-radius: 0 6px 6px 0;
+}
+
 /* ═══════════════════════════════════════════════════
    ANDROID DATA SAFETY
    ═══════════════════════════════════════════════════ */
@@ -6529,8 +6580,15 @@ body.is-splash .profile-wrap        { display: none; }
   line-height: 1.55;
 }
 
+/* Partner section — 3 columns side by side */
+.iys-partner-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
 /* Partner cards */
-.iys-partner-cat { margin-bottom: 16px; }
+.iys-partner-cat { margin-bottom: 0; }
 .iys-partner-cat:last-child { margin-bottom: 0; }
 .iys-partner-cat-label {
   font-size: 10px;
@@ -6547,9 +6605,10 @@ body.is-splash .profile-wrap        { display: none; }
 }
 .iys-partner-card {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px;
   background: var(--panel-3);
   border: 1px solid var(--border);
   border-radius: 8px;
