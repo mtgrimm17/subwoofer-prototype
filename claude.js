@@ -9,6 +9,22 @@ const CLAUDE_API_KEY  = (typeof CONFIG !== 'undefined' &&
 const CLAUDE_MODEL    = 'claude-haiku-4-5-20251001';
 const CLAUDE_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
+/* ── Screenshot content blocks (shared across all inference calls) ── */
+// Returns up to 3 screenshot image content blocks for the Claude API messages array.
+// Returns [] if no screenshots are uploaded.
+function _buildScreenshotContent() {
+  const screenshots = ((state.uploads || {}).screenshots || []).slice(0, 3);
+  const blocks = [];
+  for (const sc of screenshots) {
+    if (sc.dataUrl && sc.dataUrl.includes(',')) {
+      const [meta, data] = sc.dataUrl.split(',');
+      const mimeType = meta.split(':')[1]?.split(';')[0] || 'image/png';
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: mimeType, data } });
+    }
+  }
+  return blocks;
+}
+
 /* ── Prompt builder ───────────────────────────────────────── */
 
 function buildGeminiPrompt() {
@@ -612,6 +628,75 @@ function _extractPlatformContext(pid) {
   return null;
 }
 
+/* ── Natural language game summary ──────────────────────────── */
+// Generates a compact prose paragraph from all known game state so
+// the LLM has an easy-to-reason-about narrative rather than raw K/V pairs.
+// Called at the top of buildSharedContext() and shown in the debug UI.
+
+function buildNaturalLanguageSummary() {
+  const fd  = state.formData;
+  const qa  = state.questionAnswers;
+  const a   = state.iosSubmitAnswers;
+
+  const parts = [];
+
+  // Title + genre + price
+  const title = fd.title || '(untitled)';
+  const genre = fd.genre ? ` ${fd.genre}` : '';
+  const price = fd.price ? `$${fd.price}` : 'free';
+  parts.push(`"${title}" is a${genre} game priced at ${price}.`);
+
+  // Description snippet
+  if (fd.description && fd.description.trim()) {
+    const snippet = fd.description.trim().slice(0, 200);
+    parts.push(`Description: ${snippet}${fd.description.length > 200 ? '…' : ''}`);
+  }
+
+  // Active platforms
+  const pids = [...state.activePlatforms];
+  if (pids.length) {
+    const names = { ios:'iOS App Store', android:'Google Play', steam:'Steam',
+                    egs:'Epic Games Store', psn:'PlayStation', xbox:'Xbox', nintendo:'Nintendo' };
+    parts.push(`Targeting: ${pids.map(p => names[p] || p).join(', ')}.`);
+  }
+
+  // Onboarding flags
+  const qaMap = { violence:'violence/combat', sexualContent:'sexual or mature content',
+                  strongLanguage:'strong language', dataCollection:'data collection',
+                  inAppPurchases:'in-app purchases' };
+  const yes = [], no = [];
+  for (const [k, label] of Object.entries(qaMap)) {
+    if (qa[k] === 'yes') yes.push(label);
+    else if (qa[k] === 'no') no.push(label);
+  }
+  if (yes.length) parts.push(`Contains: ${yes.join(', ')}.`);
+  if (no.length)  parts.push(`Does NOT contain: ${no.join(', ')}.`);
+
+  // iOS intensity summary (only confirmed answers)
+  const intensityHigh  = IOS_INTENSITY_QUESTIONS.filter(q => a[q.id] === 'frequent').map(q => q.label);
+  const intensityMed   = IOS_INTENSITY_QUESTIONS.filter(q => a[q.id] === 'infrequent').map(q => q.label);
+  if (intensityHigh.length) parts.push(`Frequent iOS content: ${intensityHigh.join(', ')}.`);
+  if (intensityMed.length)  parts.push(`Infrequent iOS content: ${intensityMed.join(', ')}.`);
+
+  // iOS yes/no content flags
+  const ynYes = IOS_CONTENT_YN_QUESTIONS.filter(q => a[q.id] === 'yes').map(q => q.label);
+  if (ynYes.length) parts.push(`iOS yes flags: ${ynYes.join(', ')}.`);
+
+  // CQ answers summary (first 10 non-null)
+  const cqEntries = Object.entries(state.cqAnswers)
+    .filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0))
+    .slice(0, 10);
+  if (cqEntries.length) {
+    const lines = cqEntries.map(([k, v]) => {
+      const q = CQ_QUESTIONS.find(x => x.id === k);
+      return `${q ? q.text.slice(0, 50) : k}: ${Array.isArray(v) ? v.join(', ') : v}`;
+    });
+    parts.push(`Questionnaire answers: ${lines.join('; ')}.`);
+  }
+
+  return parts.join(' ');
+}
+
 /* ── Shared context builder ──────────────────────────────────── */
 // Gathers all accumulated game knowledge regardless of which platforms
 // the user filled first. Iterates state.activePlatforms so inference
@@ -622,6 +707,10 @@ function buildSharedContext() {
   const qa  = state.questionAnswers;
   const cq  = state.cqAnswers;
   const parts = [];
+
+  // ── Natural language content summary (easiest for LLM to reason about) ──
+  const nlSummary = buildNaturalLanguageSummary();
+  if (nlSummary) parts.push(`CONTENT PROFILE SUMMARY:\n${nlSummary}`);
 
   // ── Game basics ──────────────────────────────────────────────
   parts.push(`GAME TITLE: ${fd.title || '(not provided)'}`);
@@ -753,6 +842,44 @@ Rules:
   console.log(`[Android CR inference] Applied ${applied} answers`);
 }
 
+/* ── Apply Steam inference results to state ──────────────────── */
+// Extracted so both inferSteamCR() and inferAllQuestionnaires() can reuse it.
+// steamData = { items: { <id>: { value, confidence } }, mature: { <id>: { value, confidence } } }
+
+function applySteamResults(steamData) {
+  const validItems = new Set(STEAM_CONTENT_CATEGORIES.flatMap(g => g.items.map(i => i.id)));
+  const MATURE_SET = new Set(['gen_mature','freq_violence','some_nudity','freq_nudity','adult_sexual']);
+  if (!state.steamSubmitAnswers.steamContentAnswers) state.steamSubmitAnswers.steamContentAnswers = {};
+  const sca  = state.steamSubmitAnswers.steamContentAnswers;
+  const meta = state.steamAnswerMeta;
+  let applied = 0;
+
+  for (const [id, entry] of Object.entries(steamData.items || {})) {
+    if (!validItems.has(id)) continue;
+    if (meta[id]?.humanConfirmed) continue;
+    const { value, confidence } = entry;
+    if (typeof confidence !== 'number' || confidence < 65) continue;
+    if (value === 'yes' || value === 'no') {
+      sca[id]  = value;
+      meta[id] = { confidence, humanConfirmed: false };
+      applied++;
+    }
+  }
+  for (const [id, entry] of Object.entries(steamData.mature || {})) {
+    if (!MATURE_SET.has(id)) continue;
+    if (meta[id]?.humanConfirmed) continue;
+    const { value, confidence } = entry;
+    if (typeof confidence !== 'number' || confidence < 65) continue;
+    if (value === 'yes' || value === 'no') {
+      sca[id]  = value;
+      meta[id] = { confidence, humanConfirmed: false };
+      applied++;
+    }
+  }
+  console.log(`[Steam] Applied ${applied} answers`);
+  return applied;
+}
+
 /* ── Steam Content Rating inference ─────────────────────────── */
 
 async function inferSteamCR() {
@@ -837,52 +964,228 @@ Rules:
   const text    = (data.content?.[0]?.text || '').trim();
   const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   const parsed  = JSON.parse(cleaned);
+  applySteamResults(parsed);
+}
 
-  const validItems = new Set(STEAM_CONTENT_CATEGORIES.flatMap(g => g.items.map(i => i.id)));
-  const MATURE_SET = new Set(['gen_mature','freq_violence','some_nudity','freq_nudity','adult_sexual']);
-  if (!state.steamSubmitAnswers.steamContentAnswers) state.steamSubmitAnswers.steamContentAnswers = {};
-  const sca  = state.steamSubmitAnswers.steamContentAnswers;
-  const meta = state.steamAnswerMeta;
-  let applied = 0;
+/* ── Unified inference prompt (all active platforms in one call) ── */
 
-  for (const [id, entry] of Object.entries(parsed.items || {})) {
-    if (!validItems.has(id)) continue;
-    if (meta[id]?.humanConfirmed) continue;
-    const { value, confidence } = entry;
-    if (typeof confidence !== 'number' || confidence < 65) continue;
-    if (value === 'yes' || value === 'no') {
-      sca[id]  = value;
-      meta[id] = { confidence, humanConfirmed: false };
-      applied++;
+function buildUnifiedInferencePrompt() {
+  const activePids = [...state.activePlatforms].filter(p => ['ios','android','steam'].includes(p));
+  const ctx        = buildSharedContext();   // includes natural-language summary at top
+
+  // ── iOS schema ───────────────────────────────────────────────────────────────
+  const iosSchema = activePids.includes('ios') ? `
+  "ios": {
+    "intensityQuestions": {
+      "profanity":          { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "horrorFear":         { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "substancesAlcohol":  { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "medicalTreatment":   { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "matureSuggestive":   { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "sexualContent":      { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "graphicSexual":      { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "cartoonViolence":    { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "realisticViolence":  { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "extendedViolence":   { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "gunsWeapons":        { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "simulatedGambling":  { "value": "none|infrequent|frequent", "confidence": 0-100 },
+      "contests":           { "value": "none|infrequent|frequent", "confidence": 0-100 }
+    },
+    "ynQuestions": {
+      "parentalControls":     { "value": "yes|no", "confidence": 0-100 },
+      "ageAssurance":         { "value": "yes|no", "confidence": 0-100 },
+      "unrestrictedInternet": { "value": "yes|no", "confidence": 0-100 },
+      "userGenContent":       { "value": "yes|no", "confidence": 0-100 },
+      "messagingChat":        { "value": "yes|no", "confidence": 0-100 },
+      "advertising":          { "value": "yes|no", "confidence": 0-100 },
+      "healthWellness":       { "value": "yes|no", "confidence": 0-100 },
+      "realMoneyGambling":    { "value": "yes|no", "confidence": 0-100 },
+      "lootBoxes":            { "value": "yes|no", "confidence": 0-100 }
+    },
+    "business":        { "hasIAP": { "value": "yes|no", "confidence": 0-100 }, "iapTypes": [] },
+    "exportCompliance": {
+      "usesEncryption":   { "value": "yes|no", "confidence": 0-100 },
+      "encryptionExempt": { "value": "yes|no", "confidence": 0-100 }
+    },
+    "ageCategory": { "value": "not_applicable|made_for_kids|override_higher", "confidence": 0-100 }
+  }` : '';
+
+  // ── Android schema ───────────────────────────────────────────────────────────
+  let androidSchema = '';
+  if (activePids.includes('android')) {
+    const visibleQ = CQ_QUESTIONS.filter(q =>
+      q.platforms.includes('android') && !q.parent && cqIsVisible(q)
+    );
+    const qLines = visibleQ.map(q => {
+      const typeHint = q.type === 'yn'     ? '"yes" or "no"'
+                     : q.type === 'single' ? `one of: ${(q.options||[]).map(o=>`"${o}"`).join(', ')}`
+                     : q.type === 'multi'  ? `array of: ${(q.options||[]).map(o=>`"${o}"`).join(', ')}`
+                     : 'string';
+      return `      "${q.id}": { "value": <${typeHint}>, "confidence": 0-100 }`;
+    }).join(',\n');
+    androidSchema = `
+  "android": {
+    "answers": {
+${qLines}
     }
+  }`;
   }
-  for (const [id, entry] of Object.entries(parsed.mature || {})) {
-    if (!MATURE_SET.has(id)) continue;
-    if (meta[id]?.humanConfirmed) continue;
-    const { value, confidence } = entry;
-    if (typeof confidence !== 'number' || confidence < 65) continue;
-    if (value === 'yes' || value === 'no') {
-      sca[id]  = value;
-      meta[id] = { confidence, humanConfirmed: false };
-      applied++;
+
+  // ── Steam schema ─────────────────────────────────────────────────────────────
+  let steamSchema = '';
+  if (activePids.includes('steam')) {
+    const allItems  = STEAM_CONTENT_CATEGORIES.flatMap(g => g.items.map(i => `      "${i.id}": { "value": "yes|no", "confidence": 0-100 }`));
+    const matureIds = ['gen_mature','freq_violence','some_nudity','freq_nudity','adult_sexual']
+      .map(id => `      "${id}": { "value": "yes|no", "confidence": 0-100 }`);
+    steamSchema = `
+  "steam": {
+    "items": {
+${allItems.join(',\n')}
+    },
+    "mature": {
+${matureIds.join(',\n')}
     }
+  }`;
   }
-  console.log(`[Steam CR inference] Applied ${applied} answers`);
+
+  const schemaSections = [iosSchema, androidSchema, steamSchema].filter(Boolean).join(',\n');
+
+  return `You are an expert game content analyst pre-filling platform questionnaires for a game submission tool.
+
+${ctx}
+
+Using ALL of the above information, fill out the content questionnaires for the active platforms: ${activePids.join(', ')}.
+
+CROSS-PLATFORM INFERENCE RULES — when iOS answers are present, use them as direct evidence for equivalent Android/Steam fields:
+- iOS "Realistic Violence: none"       → Steam rv_blood=no, rv_killing=no, rv_minorities=no (confidence ≥90); Android violence questions: no
+- iOS "Realistic Violence: infrequent" → Steam rv_blood=yes (confidence ≥85)
+- iOS "Realistic Violence: frequent"   → Steam rv_blood=yes, rv_killing=yes (confidence ≥85)
+- iOS "Cartoon or Fantasy Violence: none" → Steam fmv_cartoon=no, fmv_fights=no (confidence ≥90)
+- iOS "Cartoon or Fantasy Violence: infrequent|frequent" → Steam fmv_cartoon=yes (confidence ≥85)
+- iOS "Extended Graphic Violence: infrequent|frequent" → Steam hiv_extreme=yes, hiv_gratuitous=yes (confidence ≥85)
+- iOS "Profanity: none" → Steam lang_mild=no, lang_moderate=no (confidence ≥90)
+- iOS "Profanity: infrequent" → Steam lang_mild=yes (confidence ≥85); iOS "Profanity: frequent" → Steam lang_moderate=yes (confidence ≥85)
+- iOS "Horror/Fear Themes: none" → Steam hor_bleak=no, hor_frightening=no (confidence ≥90)
+- iOS "Horror/Fear Themes: infrequent|frequent" → Steam hor_bleak=yes (confidence ≥85)
+- iOS "Alcohol/Drugs: infrequent|frequent" → Steam drug_legal=yes (confidence ≥85)
+- iOS "Sexual Content: infrequent" → Steam sex_nonexplicit=yes (confidence ≥85)
+- iOS "Simulated Gambling: infrequent|frequent" → Steam gamb_interaction=yes, gamb_refs=yes (confidence ≥85)
+- iOS "hasIAP: yes" OR onboarding "In-app purchases: yes" → Steam int_purchases=yes (confidence ≥95); Android in-app-purchase questions: yes
+- iOS "messagingChat: yes" → Steam int_chat=yes (confidence ≥90)
+
+iOS INFERENCE GUIDELINES:
+- Nearly all networked mobile games use HTTPS → usesEncryption: "yes" (confidence 95), encryptionExempt: "yes" (confidence 90)
+- Default intensity to "none" and yn to "no" for content not confirmed
+- "infrequent" = present but not central; "frequent" = a primary element
+- ageCategory "not_applicable" for most games; "made_for_kids" only if explicitly child-targeted
+- business.iapTypes: array from [consumable, non-consumable, auto-renewable, non-renewing]
+
+ANDROID/STEAM CONFIDENCE THRESHOLDS:
+- Answer Android questions when confidence >= 80
+- Answer Steam questions when confidence >= 65 (cross-platform evidence lowers uncertainty)
+- Include empty arrays [] for Android multi-select when no options apply
+
+Return ONLY a valid JSON object — no markdown fences, no explanation:
+{
+${schemaSections}
+}`;
+}
+
+/* ── Single unified API call for all questionnaire platforms ─── */
+
+async function inferAllQuestionnaires() {
+  if (!CLAUDE_API_KEY) throw new Error('NO_KEY');
+  const activePids = [...state.activePlatforms].filter(p => ['ios','android','steam'].includes(p));
+  if (!activePids.length) return;
+
+  // Clear stale AI-inferred meta (preserve human-confirmed answers)
+  state.iosAnswerMeta   = Object.fromEntries(Object.entries(state.iosAnswerMeta).filter(([,v])   => v.humanConfirmed));
+  state.cqAnswerMeta    = Object.fromEntries(Object.entries(state.cqAnswerMeta).filter(([,v])    => v.humanConfirmed));
+  state.steamAnswerMeta = Object.fromEntries(Object.entries(state.steamAnswerMeta).filter(([,v]) => v.humanConfirmed));
+
+  const prompt     = buildUnifiedInferencePrompt();
+  const scrshots   = _buildScreenshotContent();
+
+  // Store full prompt for "See Prompt" debug button
+  state.lastInferencePrompt = (scrshots.length
+    ? `[${scrshots.length} screenshot(s) included in API call]\n\n`
+    : '') + prompt;
+
+  const content = [...scrshots, { type: 'text', text: prompt }];
+
+  console.log('[Unified] Calling Claude for platforms:', activePids.join(', '));
+  const res = await fetch(CLAUDE_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'x-api-key':                                 CLAUDE_API_KEY,
+      'anthropic-version':                         '2023-06-01',
+      'content-type':                              'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model:      CLAUDE_MODEL,
+      max_tokens: 8000,
+      messages:   [{ role: 'user', content }],
+    }),
+  });
+
+  if (!res.ok) {
+    let rawBody = {};
+    try { rawBody = await res.json(); } catch (_) {}
+    console.error('[Unified] HTTP', res.status, JSON.stringify(rawBody, null, 2));
+    const raw = rawBody.error?.message || '';
+    let msg = `Request failed (${res.status})`;
+    if (res.status === 429) msg = 'Rate limit reached — please retry in a moment.';
+    else if (res.status === 401) msg = 'API key rejected — check the key is valid.';
+    else if (res.status === 500 || res.status === 529) msg = 'Claude is temporarily overloaded — please retry.';
+    else msg = raw || msg;
+    throw new Error(msg);
+  }
+
+  const apiData = await res.json();
+  console.log('[Unified] Success — tokens:', apiData.usage?.input_tokens, '+', apiData.usage?.output_tokens);
+
+  const text    = apiData.content?.[0]?.text;
+  if (!text) throw new Error('Empty response from Claude');
+
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const parsed  = JSON.parse(cleaned);
+
+  // Apply iOS results
+  if (activePids.includes('ios') && parsed.ios) {
+    applyClaudeResults(parsed.ios);
+    state.claudeCache = { result: parsed.ios }; // backward compat
+  }
+
+  // Apply Android results
+  if (activePids.includes('android') && parsed.android?.answers) {
+    applyCQResults(parsed.android.answers);
+  }
+
+  // Apply Steam results
+  if (activePids.includes('steam') && parsed.steam) {
+    applySteamResults(parsed.steam);
+  }
 }
 
 /* ── Public dispatcher ───────────────────────────────────────── */
 
 async function runInference(pid, stepId) {
   if (!CLAUDE_API_KEY) throw new Error('NO_KEY');
-  const key = pid + ':' + stepId;
-  if (state.platformInferenceCache[key]) return; // already ran
 
-  if (pid === 'android' && (stepId === 'questionnaire' || stepId === 'contentRating')) {
-    await inferAndroidCR();
-  } else if (pid === 'steam' && (stepId === 'questionnaire' || stepId === 'contentRating')) {
-    await inferSteamCR();
+  // Questionnaire: one unified call answers all active platforms
+  if (stepId === 'questionnaire') {
+    const uKey = 'unified:questionnaire';
+    if (state.platformInferenceCache[uKey]) return; // already ran
+    await inferAllQuestionnaires();
+    state.platformInferenceCache[uKey] = true;
+    return;
   }
-  // ios:questionnaire / ios:contentRating handled by analyzeGameWithClaude() flow
 
+  // Legacy per-platform steps (contentRating etc.)
+  const key = pid + ':' + stepId;
+  if (state.platformInferenceCache[key]) return;
+  if (pid === 'android') await inferAndroidCR();
+  else if (pid === 'steam') await inferSteamCR();
   state.platformInferenceCache[key] = true;
 }

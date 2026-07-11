@@ -1917,8 +1917,10 @@ const state = {
   iosContentRatingExpanded: false,
 
   // Same snapshot pattern for Android and Steam
-  // Set of question IDs answered at filter-snapshot time; null = inference has not run.
   androidAnswerSnapshot: null,
+
+  // Full prompt sent in the last unified inference call — shown by "See Prompt" debug button.
+  lastInferencePrompt: null,
   androidContentRatingExpanded: false,
   steamAnsweredAtInference: null,
   steamContentRatingExpanded: false,

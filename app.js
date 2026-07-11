@@ -318,18 +318,11 @@ async function openStepModal(pid, stepId) {
       state.stepModal.inferenceStatus = 'loading';
       renderStepModal();
       try {
-        // Clear stale AI-inferred CQ meta before fresh run
-        state.cqAnswerMeta = Object.fromEntries(
-          Object.entries(state.cqAnswerMeta).filter(([, v]) => v.humanConfirmed)
-        );
-        delete state.platformInferenceCache[pid + ':' + stepId];
+        // Unified call: delete shared cache key so all platforms re-run together
+        delete state.platformInferenceCache['unified:questionnaire'];
         await runInference(pid, stepId);
         state.stepModal.inferenceStatus = 'done';
-        // Snapshot answered questions so Unanswered filter can collapse them
-        if (stepId === 'questionnaire') {
-          takeFilterSnapshot('android');
-          state.androidContentRatingExpanded = false;
-        }
+        _postInferenceSetup(stepId);
       } catch(err) {
         state.stepModal.inferenceStatus = 'error';
         state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
@@ -352,18 +345,11 @@ async function openStepModal(pid, stepId) {
       state.stepModal.inferenceStatus = 'loading';
       renderStepModal();
       try {
-        // Clear stale AI-inferred Steam meta before fresh run
-        state.steamAnswerMeta = Object.fromEntries(
-          Object.entries(state.steamAnswerMeta).filter(([, v]) => v.humanConfirmed)
-        );
-        delete state.platformInferenceCache[pid + ':' + stepId];
+        // Unified call: delete shared cache key so all platforms re-run together
+        delete state.platformInferenceCache['unified:questionnaire'];
         await runInference(pid, stepId);
         state.stepModal.inferenceStatus = 'done';
-        // Snapshot answered IDs so Content Rating toggle can collapse them
-        if (stepId === 'questionnaire') {
-          takeFilterSnapshot('steam');
-          state.steamContentRatingExpanded = false;
-        }
+        _postInferenceSetup(stepId);
       } catch(err) {
         state.stepModal.inferenceStatus = 'error';
         state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
@@ -396,21 +382,11 @@ async function openStepModal(pid, stepId) {
     state.stepModal.inferenceStatus = 'loading';
     renderStepModal();
     try {
-      // Clear stale AI-inferred meta (preserve human-confirmed answers)
-      state.iosAnswerMeta = Object.fromEntries(
-        Object.entries(state.iosAnswerMeta).filter(([, v]) => v.humanConfirmed)
-      );
-      state.claudeCache = null;
-      const result = await analyzeGameWithClaude();
-      state.claudeCache = { result };
-      applyClaudeResults(result);
+      // Unified call: delete shared cache key so all platforms re-run together
+      delete state.platformInferenceCache['unified:questionnaire'];
+      await runInference(pid, stepId);
       state.stepModal.inferenceStatus = 'done';
-      // Snapshot which questions are answered right after inference so Content Rating
-      // can collapse those questions behind the Unanswered filter.
-      if (stepId === 'questionnaire') {
-        takeFilterSnapshot('ios');
-        state.iosContentRatingExpanded = false;
-      }
+      _postInferenceSetup(stepId);
     } catch(err) {
       state.stepModal.inferenceStatus = 'error';
       state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
@@ -950,24 +926,9 @@ function toggleIOSCountry(code) {
 
 /* ── Claude AI handlers ───────────────────────────────── */
 
-// Called by the Retry button on analysis error
+// Called by the Retry button on analysis error — delegates to unified retry
 async function _runClaudeAnalysis() {
-  state.stepModal.inferenceStatus = 'loading';
-  state.stepModal.inferenceError  = null;
-  state.iosAnswerMeta = Object.fromEntries(
-    Object.entries(state.iosAnswerMeta).filter(([, v]) => v.humanConfirmed)
-  );
-  reRenderStepModal();
-  try {
-    const result = await analyzeGameWithClaude();
-    state.claudeCache = { result };
-    applyClaudeResults(result);
-    state.stepModal.inferenceStatus = 'done';
-  } catch(err) {
-    state.stepModal.inferenceStatus = 'error';
-    state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
-  }
-  reRenderStepModal();
+  await _retryInference('ios', state.stepModal?.stepId || 'questionnaire');
   updateIOSCard();
 }
 
@@ -3358,9 +3319,14 @@ function toggleSteamAccessibility(featureId, checked) {
 
 /* Retry inference for any platform+step */
 async function _retryInference(pid, stepId) {
-  const key = pid + ':' + stepId;
-  delete state.platformInferenceCache[key];
+  // Questionnaire steps use the shared unified cache key
+  if (stepId === 'questionnaire') {
+    delete state.platformInferenceCache['unified:questionnaire'];
+  } else {
+    delete state.platformInferenceCache[pid + ':' + stepId];
+  }
   state.stepModal.inferenceStatus = 'loading';
+  state.stepModal.inferenceError  = null;
   const rerender = pid === 'android' ? reRenderAndroidStepModal
                  : pid === 'steam'   ? reRenderSteamStepModal
                  : reRenderStepModal;
@@ -3368,9 +3334,45 @@ async function _retryInference(pid, stepId) {
   try {
     await runInference(pid, stepId);
     state.stepModal.inferenceStatus = 'done';
+    _postInferenceSetup(stepId);
   } catch(err) {
     state.stepModal.inferenceStatus  = 'error';
     state.stepModal.inferenceError   = err.message;
   }
   rerender();
+}
+
+/* Post-inference setup: take filter snapshots + collapse to Unanswered for all active platforms */
+function _postInferenceSetup(stepId) {
+  if (stepId !== 'questionnaire') return;
+  for (const p of ['ios', 'android', 'steam']) {
+    if (!state.activePlatforms.has(p)) continue;
+    takeFilterSnapshot(p);
+    if (p === 'ios')     state.iosContentRatingExpanded     = false;
+    if (p === 'android') state.androidContentRatingExpanded = false;
+    if (p === 'steam')   state.steamContentRatingExpanded   = false;
+  }
+}
+
+/* Show/hide the "See Prompt" debug overlay */
+function showInferencePrompt() {
+  const existing = document.getElementById('prompt-debug-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const text = (state.lastInferencePrompt || '(no prompt stored yet)')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'prompt-debug-overlay';
+  overlay.className = 'prompt-debug-overlay';
+  overlay.innerHTML = `
+    <div class="prompt-debug-modal">
+      <div class="prompt-debug-header">
+        <span class="prompt-debug-title">AI Inference Prompt</span>
+        <button class="prompt-debug-close" onclick="document.getElementById('prompt-debug-overlay').remove()">✕</button>
+      </div>
+      <textarea class="prompt-debug-body" readonly spellcheck="false">${text}</textarea>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }

@@ -1690,9 +1690,10 @@ function renderStepModal() {
   let inferenceBanner     = '';
   let inferenceFooterNote = '';
   if (step?.hasInference) {
-    const cacheKey = platformId + ':' + stepId;
-    const hasRun   = platformId === 'ios' ? !!state.claudeCache : !!state.platformInferenceCache[cacheKey];
-    const retryFn  = platformId === 'ios' ? '_runClaudeAnalysis()' : `_retryInference('${platformId}','${stepId}')`;
+    const hasRun  = stepId === 'questionnaire'
+      ? !!state.platformInferenceCache['unified:questionnaire']
+      : !!state.platformInferenceCache[platformId + ':' + stepId];
+    const retryFn = `_retryInference('${platformId}','${stepId}')`;
     if (inferenceStatus === 'loading') {
       // loading screen replaces the banner during loading
     } else if (inferenceStatus === 'error') {
@@ -1708,6 +1709,7 @@ function renderStepModal() {
         <div class="inf-footer-note">
           <span class="inf-footer-icon">✦</span>
           Subwoofer pre-filled ${infAns} of ${infTotal} questions — please review ALL answers before submitting
+          ${state.lastInferencePrompt ? '<button class="see-prompt-btn" onclick="showInferencePrompt()">See Prompt</button>' : ''}
         </div>`;
     }
   }
@@ -2642,6 +2644,20 @@ function iosIntensityRow(label, fieldId, tooltip) {
 /* ── Privacy ─────────────────────────────────────────── */
 /* ── Questionnaire: combined Content Rating + Data + Business ─ */
 function buildQuestionnaireSection(platformId) {
+  // ── Debug: natural language content summary (temporary — won't ship) ──────
+  let debugSummaryBlock = '';
+  if (typeof buildNaturalLanguageSummary === 'function') {
+    const summary = buildNaturalLanguageSummary();
+    if (summary) {
+      const safe = summary.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      debugSummaryBlock = `
+        <div class="content-summary-debug">
+          <div class="csd-header">🔍 Content Profile Summary <span class="csd-tag">DEBUG</span></div>
+          <div class="csd-body">${safe}</div>
+        </div>`;
+    }
+  }
+
   const sections = [];
 
   if (platformId === 'ios') {
@@ -2658,7 +2674,7 @@ function buildQuestionnaireSection(platformId) {
     sections.push({ label: 'Technical',       body: buildSteamTechnicalSection() });
   }
 
-  return sections.map((s, i) => `
+  return debugSummaryBlock + sections.map((s, i) => `
     <div class="qs-section${i > 0 ? ' qs-section-divided' : ''}">
       <div class="qs-section-header">${s.label}</div>
       ${s.body}
