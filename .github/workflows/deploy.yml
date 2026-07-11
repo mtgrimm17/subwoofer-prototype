@@ -30,6 +30,40 @@ jobs:
           sed -i 's/__IGDB_CLIENT_ID__/${{ secrets.IGDB_CLIENT_ID }}/g' index.html
           sed -i 's/__IGDB_CLIENT_SECRET__/${{ secrets.IGDB_CLIENT_SECRET }}/g' index.html
 
+      - name: Bundle JS and CSS inline
+        run: |
+          python3 << 'PYEOF'
+          import re, sys
+
+          with open('index.html', 'r', encoding='utf-8') as f:
+              html = f.read()
+
+          # Inline style.css
+          with open('style.css', 'r', encoding='utf-8') as f:
+              css = f.read()
+          html = re.sub(
+              r'<link rel="stylesheet" href="style\.css[^"]*">',
+              lambda m: f'<style>\n{css}\n</style>',
+              html
+          )
+
+          # Inline each JS file in order
+          for js_file in ['locale.js', 'state.js', 'claude.js', 'render.js', 'app.js']:
+              base = js_file.replace('.js', '')
+              with open(js_file, 'r', encoding='utf-8') as f:
+                  js = f.read()
+              html = re.sub(
+                  r'<script src="' + re.escape(base) + r'\.js[^"]*"></script>',
+                  lambda m, c=js: f'<script>\n{c}\n</script>',
+                  html
+              )
+
+          with open('index.html', 'w', encoding='utf-8') as f:
+              f.write(html)
+
+          print('Bundled locale.js, state.js, claude.js, render.js, app.js + style.css into index.html')
+          PYEOF
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
