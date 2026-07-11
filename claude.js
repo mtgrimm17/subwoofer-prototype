@@ -855,12 +855,12 @@ async function runInference(pid, stepId) {
   const key = pid + ':' + stepId;
   if (state.platformInferenceCache[key]) return; // already ran
 
-  if (pid === 'android' && stepId === 'contentRating') {
+  if (pid === 'android' && (stepId === 'questionnaire' || stepId === 'contentRating')) {
     await inferAndroidCR();
-  } else if (pid === 'steam' && stepId === 'contentRating') {
+  } else if (pid === 'steam' && (stepId === 'questionnaire' || stepId === 'contentRating')) {
     await inferSteamCR();
   }
-  // ios:contentRating is handled by existing analyzeGameWithClaude() flow
+  // ios:questionnaire / ios:contentRating handled by analyzeGameWithClaude() flow
 
   state.platformInferenceCache[key] = true;
 }

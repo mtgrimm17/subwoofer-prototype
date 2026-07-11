@@ -1906,7 +1906,7 @@ function buildImproveSubmissionSection(platformId) {
 
   const spi = state.storePageInsights;
   const ana = state.improveSubmissionAnalysis;
-  const idx = state.improveSubmissionIdx || { assets: 0, meta: 0 };
+  const idx = state.improveSubmissionIdx || { storePage: 0 };
 
   // ── Shared helpers ───────────────────────────────────
   function _gradeBadge(grade) {
@@ -1945,106 +1945,82 @@ function buildImproveSubmissionSection(platformId) {
       </div>`;
   }
 
-  // ── STORE PAGE SECTION ────────────────────────────────
-  let spContent = '', spFooter = '', spGrade = null;
-  if (spi?.loading) {
-    spContent = _loadingBody();
-  } else if (!spi) {
-    spContent = _loadingBody(); // never ran yet (shouldn't happen post-auto-trigger)
-  } else if (spi.error) {
-    spContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(spi.error)}</div></div>`;
-    spFooter  = `<button class="iys-fix-btn" onclick="runStorePageInsights()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
-  } else if (!spi.issues?.length || spi.done) {
-    spContent = _allGood(spi.done ? 'All suggestions reviewed' : 'Store page looks strong');
-    spGrade   = 'A';
+  // ── Grade ordering helper ─────────────────────────────
+  function _worseGrade(a, b) {
+    const ORD = { D:3, C:2, B:1, A:0 };
+    if (!a) return b; if (!b) return a;
+    return (ORD[a] ?? -1) >= (ORD[b] ?? -1) ? a : b;
+  }
+
+  // ── MERGED STORE PAGE SECTION ─────────────────────────
+  // Combines: Store Page text issues (spi) + Assets + Metadata (ana) — max 5
+  const loading = (spi?.loading || !spi) && (ana?.loading || !ana);
+  const hasError = spi?.error || ana?.error;
+
+  // Build unified item list (normalised to { tag, title, body, fixedValue?, type })
+  const _spItems = (!spi?.loading && !spi?.error && spi?.issues && !spi?.done)
+    ? spi.issues.slice(spi.index || 0).map(iss => ({
+        tag: { subtitle:'Subtitle', description:'Description', title:'Title' }[iss.field] || 'Store Page',
+        title: iss.issue || iss.title || '',
+        body: iss.suggestion || iss.body || '',
+        fixedValue: iss.fixedValue,
+        type: 'sp',
+      }))
+    : [];
+  const _anaItems = (!ana?.loading && !ana?.error && ana?.items)
+    ? _filterItems(ana.items, 'store', 'asset', 'icon', 'screenshot', 'metadata', 'tag', 'keyword')
+        .map(item => ({ tag: item.area || 'Store Page', title: item.title || '', body: item.body || '', fixedValue: null, type: 'ana' }))
+    : [];
+
+  const mergedItems = [..._spItems, ..._anaItems].slice(0, 5);
+
+  // Overall grade
+  const spGrade  = (!spi?.loading && !spi?.error) ? (spi?.done || !spi?.issues?.length ? 'A' : spi.issues.length <= 1 ? 'B' : spi.issues.length <= 3 ? 'C' : 'D') : null;
+  const assGrade = ana?.scores?.assets   || null;
+  const metGrade = ana?.scores?.metadata || null;
+  const mergedGrade = _worseGrade(spGrade, _worseGrade(assGrade, metGrade));
+
+  let spPageContent = '', spPageFooter = '';
+  if (loading) {
+    spPageContent = _loadingBody();
+  } else if (hasError) {
+    spPageContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(spi?.error || ana?.error)}</div></div>`;
+    spPageFooter  = `<button class="iys-fix-btn" onclick="state.storePageInsights=null;state.improveSubmissionAnalysis=null;_autoRunImproveSubmission('${platformId}')"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
+  } else if (!mergedItems.length) {
+    spPageContent = _allGood('Store page, assets & metadata all look strong');
   } else {
-    const n     = spi.issues.length;
-    const i     = Math.min(spi.index || 0, n - 1);
-    const issue = spi.issues[i];
-    const field = { subtitle: 'Subtitle', description: 'Description', title: 'Title' }[issue.field] || '';
-    const hasFix = !!issue.fixedValue;
-    spGrade = n <= 1 ? 'B' : n <= 3 ? 'C' : 'D';
-    spContent = `
+    const n   = mergedItems.length;
+    const i   = Math.min(idx.storePage || 0, n - 1);
+    const cur = mergedItems[i];
+    spPageContent = `
       <div class="iys-issue-content">
-        ${field ? `<div class="iys-issue-field-tag">${escHtml(field)}</div>` : ''}
-        <div class="iys-issue-title">${escHtml(issue.issue || issue.title || '')}</div>
-        <div class="iys-issue-body">${escHtml(issue.suggestion || issue.body || '')}</div>
+        ${cur.tag ? `<div class="iys-issue-field-tag">${escHtml(cur.tag)}</div>` : ''}
+        <div class="iys-issue-title">${escHtml(cur.title)}</div>
+        <div class="iys-issue-body">${escHtml(cur.body)}</div>
       </div>`;
-    spFooter = `
+    const hasNext = n > 1;
+    const hasFix  = cur.type === 'sp' && !!cur.fixedValue;
+    spPageFooter = `
       <span class="iys-section-counter">${i + 1} / ${n}</span>
       <div class="iys-section-actions">
         ${hasFix ? `<button class="iys-fix-btn" onclick="applyStorePageFix()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Subwoofer Fix</button>` : ''}
-        <button class="btn btn-ghost btn-sm" onclick="dismissStoreIssue()">Dismiss</button>
+        ${hasNext ? `<button class="btn btn-ghost btn-sm" onclick="_nextImprovementItem('storePage')">Next</button>` : ''}
       </div>`;
   }
-  const spSection = _section('Store Page', spGrade, spContent, spFooter);
+  const spPageSection = _section('Store Page', mergedGrade, spPageContent, spPageFooter);
 
-  // ── ASSETS SECTION ────────────────────────────────────
-  const assItems  = _filterItems(ana?.items, 'asset', 'icon', 'screenshot');
-  const assGrade  = ana?.scores?.assets || null;
-  let assContent  = '', assFooter = '';
-  if (ana?.loading) {
-    assContent = _loadingBody();
-  } else if (!ana) {
-    assContent = _loadingBody();
-  } else if (ana.error) {
-    assContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(ana.error)}</div></div>`;
-    assFooter  = `<button class="iys-fix-btn" onclick="_autoRunImproveSubmission('${platformId}')"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
-  } else if (!assItems.length) {
-    assContent = _allGood('Assets look strong');
-  } else {
-    const i = Math.min(idx.assets || 0, assItems.length - 1);
-    const t = assItems[i];
-    assContent = `
-      <div class="iys-issue-content">
-        ${t.area ? `<div class="iys-issue-field-tag">${escHtml(t.area)}</div>` : ''}
-        <div class="iys-issue-title">${escHtml(t.title || '')}</div>
-        <div class="iys-issue-body">${escHtml(t.body || '')}</div>
-      </div>`;
-    if (assItems.length > 1) {
-      assFooter = `
-        <span class="iys-section-counter">${i + 1} / ${assItems.length}</span>
-        <div class="iys-section-actions">
-          <button class="iys-fix-btn iys-fix-btn-goto" onclick="_nextImprovementItem('assets')">
-            <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Next
-          </button>
-        </div>`;
-    }
-  }
-  const assSection = _section('Assets', assGrade, assContent, assFooter);
-
-  // ── METADATA SECTION ──────────────────────────────────
-  const metItems = _filterItems(ana?.items, 'metadata', 'tag', 'keyword');
-  const metGrade = ana?.scores?.metadata || null;
-  let metContent = '', metFooter = '';
-  if (ana?.loading) {
-    metContent = _loadingBody();
-  } else if (!ana) {
-    metContent = _loadingBody();
-  } else if (ana.error) {
-    metContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(ana.error)}</div></div>`;
-  } else if (!metItems.length) {
-    metContent = _allGood('Metadata looks strong');
-  } else {
-    const i = Math.min(idx.meta || 0, metItems.length - 1);
-    const t = metItems[i];
-    metContent = `
-      <div class="iys-issue-content">
-        ${t.area ? `<div class="iys-issue-field-tag">${escHtml(t.area)}</div>` : ''}
-        <div class="iys-issue-title">${escHtml(t.title || '')}</div>
-        <div class="iys-issue-body">${escHtml(t.body || '')}</div>
-      </div>`;
-    if (metItems.length > 1) {
-      metFooter = `
-        <span class="iys-section-counter">${i + 1} / ${metItems.length}</span>
-        <div class="iys-section-actions">
-          <button class="iys-fix-btn iys-fix-btn-goto" onclick="_nextImprovementItem('meta')">
-            <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Next
-          </button>
-        </div>`;
-    }
-  }
-  const metSection = _section('Metadata', metGrade, metContent, metFooter);
+  // ── LOCALIZATION SECTION ──────────────────────────────
+  const langRec  = _highestImpactUnselectedLang();
+  const langName = langRec.lang ? (OB_LANG_NAMES[langRec.lang] || langRec.lang) : null;
+  const locGrade = langRec.lang ? (langRec.total > 50_000_000 ? 'C' : 'B') : 'A';
+  const locContent = langName
+    ? `<div class="iys-issue-content">
+         <div class="iys-issue-field-tag">${escHtml(langName)}</div>
+         <div class="iys-issue-title">Localize into ${escHtml(langName)}</div>
+         <div class="iys-issue-body">~${_obFmtGamers(langRec.total)} potential players in your selected markets speak ${escHtml(langName)} as their primary language. Games localized into the local language see 30–50% more revenue on average vs. English-only releases.</div>
+       </div>`
+    : _allGood('Localization looks strong for your target markets');
+  const locSection = _section('Localization', locGrade, locContent, '');
 
   // ── BINARY SECTION ────────────────────────────────────
   const binContent = `
@@ -2104,9 +2080,8 @@ function buildImproveSubmissionSection(platformId) {
       <div class="iys-chunk">
         <div class="iys-chunk-label">Subwoofer Guidance</div>
         <div class="iys-sections-grid">
-          ${spSection}
-          ${assSection}
-          ${metSection}
+          ${spPageSection}
+          ${locSection}
           ${binSection}
         </div>
         ${reanalyzeRow}
