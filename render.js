@@ -1569,8 +1569,8 @@ function renderTaskModal() {
   modal.innerHTML = `
     <div class="task-modal-header" style="border-top-color:${p.color};">
       <div class="task-modal-context">
-        <div class="task-modal-platform-icon" style="color:${p.color};">
-          ${platformIcon(platformId, 16)}
+        <div class="task-modal-platform-icon">
+          ${platformIcon(platformId, 16, 'white')}
         </div>
         <span class="task-modal-platform-name">${platLabel(platformId)}</span>
         <span class="task-modal-sep">›</span>
@@ -1782,7 +1782,7 @@ function renderStepModal() {
   modal.innerHTML = `
     <div class="submit-modal-header" style="border-top-color:${p.color};">
       <div class="submit-modal-title-row">
-        <div class="submit-modal-hicon" style="color:${p.color};">${platformIcon(platformId, 22)}</div>
+        <div class="submit-modal-hicon">${platformIcon(platformId, 22, 'white')}</div>
         <div>
           <div class="submit-modal-title">${step?.label || ''}</div>
           <div class="submit-modal-subtitle">${p.label}</div>
