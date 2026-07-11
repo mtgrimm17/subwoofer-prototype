@@ -773,6 +773,27 @@ async function inferSteamCR() {
 
 ${ctx}
 
+CROSS-PLATFORM INFERENCE RULES (apply these first using the context above):
+When the context contains iOS App Store Content Rating answers, use them as direct evidence:
+- "Realistic Violence: none" → rv_blood=no, rv_killing=no, rv_minorities=no (confidence ≥90)
+- "Realistic Violence: infrequent" → rv_blood=yes, rv_killing=no (confidence ≥85)
+- "Realistic Violence: frequent" → rv_blood=yes, rv_killing=yes (confidence ≥85)
+- "Cartoon or Fantasy Violence: none" → fmv_cartoon=no, fmv_fights=no (confidence ≥90)
+- "Cartoon or Fantasy Violence: infrequent/frequent" → fmv_cartoon=yes (confidence ≥85)
+- "Extended Graphic or Sadistic Violence: infrequent/frequent" → hiv_extreme=yes, hiv_gratuitous=yes (confidence ≥85)
+- "Profanity or Crude Humor: none" → lang_mild=no, lang_moderate=no (confidence ≥90)
+- "Profanity or Crude Humor: infrequent" → lang_mild=yes (confidence ≥85)
+- "Profanity or Crude Humor: frequent" → lang_moderate=yes (confidence ≥85)
+- "Horror/Fear Themes: none" → hor_bleak=no, hor_frightening=no (confidence ≥90)
+- "Horror/Fear Themes: infrequent" → hor_bleak=yes (confidence ≥85)
+- "Horror/Fear Themes: frequent" → hor_frightening=yes (confidence ≥85)
+- "Alcohol, Tobacco, or Drug Use: infrequent/frequent" → drug_legal=yes (confidence ≥85)
+- "Sexual Content or Nudity: infrequent" → sex_nonexplicit=yes (confidence ≥85)
+- "Sexual Content or Nudity: frequent" → sex_nonexplicit=yes, some_nudity (confidence ≥85)
+- "Simulated Gambling: infrequent/frequent" → gamb_interaction=yes, gamb_refs=yes (confidence ≥85)
+- "In-App Purchases: yes" OR onboarding "In-app purchases: yes" → int_purchases=yes (confidence ≥95)
+- "Messaging and Chat: yes" → int_chat=yes (confidence ≥90)
+
 Answer each Steam content survey item with yes or no, and provide a confidence score.
 
 CONTENT CATEGORY ITEMS (answer yes if it applies to this game):
@@ -792,8 +813,9 @@ Return ONLY valid JSON — no markdown, no explanation:
 }
 
 Rules:
-- Only include items where confidence >= 80
-- Be conservative — prefer "no" when uncertain
+- Include items where confidence >= 65 (be willing to answer based on iOS/Android cross-references above)
+- Be conservative for items with no prior-platform evidence — prefer "no" when uncertain
+- IMPORTANT: When iOS/Android context clearly answers an equivalent question, use it with high confidence
 - Cascade: if adult_sexual=yes → freq_nudity, some_nudity, gen_mature also yes
 - If freq_violence=yes → gen_mature also yes`;
 
@@ -827,7 +849,7 @@ Rules:
     if (!validItems.has(id)) continue;
     if (meta[id]?.humanConfirmed) continue;
     const { value, confidence } = entry;
-    if (typeof confidence !== 'number' || confidence < 80) continue;
+    if (typeof confidence !== 'number' || confidence < 65) continue;
     if (value === 'yes' || value === 'no') {
       sca[id]  = value;
       meta[id] = { confidence, humanConfirmed: false };
@@ -838,7 +860,7 @@ Rules:
     if (!MATURE_SET.has(id)) continue;
     if (meta[id]?.humanConfirmed) continue;
     const { value, confidence } = entry;
-    if (typeof confidence !== 'number' || confidence < 80) continue;
+    if (typeof confidence !== 'number' || confidence < 65) continue;
     if (value === 'yes' || value === 'no') {
       sca[id]  = value;
       meta[id] = { confidence, humanConfirmed: false };

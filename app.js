@@ -325,9 +325,9 @@ async function openStepModal(pid, stepId) {
         delete state.platformInferenceCache[pid + ':' + stepId];
         await runInference(pid, stepId);
         state.stepModal.inferenceStatus = 'done';
-        // Collapse to unanswered view after inference
+        // Snapshot answered questions so Unanswered filter can collapse them
         if (stepId === 'questionnaire') {
-          state.androidInferenceRan = true;
+          takeFilterSnapshot('android');
           state.androidContentRatingExpanded = false;
         }
       } catch(err) {
@@ -361,9 +361,7 @@ async function openStepModal(pid, stepId) {
         state.stepModal.inferenceStatus = 'done';
         // Snapshot answered IDs so Content Rating toggle can collapse them
         if (stepId === 'questionnaire') {
-          const sca = state.steamSubmitAnswers.steamContentAnswers || {};
-          const answered = new Set(Object.keys(sca).filter(id => sca[id] === 'yes' || sca[id] === 'no'));
-          state.steamAnsweredAtInference  = answered;
+          takeFilterSnapshot('steam');
           state.steamContentRatingExpanded = false;
         }
       } catch(err) {
@@ -408,16 +406,9 @@ async function openStepModal(pid, stepId) {
       applyClaudeResults(result);
       state.stepModal.inferenceStatus = 'done';
       // Snapshot which questions are answered right after inference so Content Rating
-      // can collapse those questions behind a "Show answered" chevron.
+      // can collapse those questions behind the Unanswered filter.
       if (stepId === 'questionnaire') {
-        const a = state.iosSubmitAnswers;
-        const answered = new Set();
-        IOS_INTENSITY_QUESTIONS.forEach(q => { if (a[q.id] !== null) answered.add(q.id); });
-        IOS_CONTENT_YN_QUESTIONS.forEach(q => { if (a[q.id] !== null) answered.add(q.id); });
-        if (a.ageCategory !== null) answered.add('ageCategory');
-        if (a.hasIAP !== null)      answered.add('hasIAP');
-        if (a.usesEncryption !== null) answered.add('usesEncryption');
-        state.iosAnsweredAtInference = answered;
+        takeFilterSnapshot('ios');
         state.iosContentRatingExpanded = false;
       }
     } catch(err) {
@@ -648,16 +639,20 @@ function togglePrivacyMatrix() {
 }
 
 function toggleContentRatingExpanded(value) {
+  // Re-snapshot on "Unanswered" click so newly-answered questions get hidden
+  if (!value) takeFilterSnapshot('ios');
   state.iosContentRatingExpanded = value;
   reRenderStepModal();
 }
 
 function toggleAndroidContentRatingExpanded(value) {
+  if (!value) takeFilterSnapshot('android');
   state.androidContentRatingExpanded = value;
   reRenderStepModal();
 }
 
 function toggleSteamContentRatingExpanded(value) {
+  if (!value) takeFilterSnapshot('steam');
   state.steamContentRatingExpanded = value;
   reRenderStepModal();
 }

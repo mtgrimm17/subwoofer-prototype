@@ -1916,8 +1916,9 @@ const state = {
   // Whether the user has expanded the "Show answered" section manually.
   iosContentRatingExpanded: false,
 
-  // Same pattern for Android and Steam
-  androidInferenceRan: false,
+  // Same snapshot pattern for Android and Steam
+  // Set of question IDs answered at filter-snapshot time; null = inference has not run.
+  androidAnswerSnapshot: null,
   androidContentRatingExpanded: false,
   steamAnsweredAtInference: null,
   steamContentRatingExpanded: false,

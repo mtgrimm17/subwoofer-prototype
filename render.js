@@ -1707,7 +1707,7 @@ function renderStepModal() {
       inferenceFooterNote = `
         <div class="inf-footer-note">
           <span class="inf-footer-icon">✦</span>
-          Subwoofer pre-filled ${infAns} of ${infTotal} questions — review highlighted answers
+          Subwoofer pre-filled ${infAns} of ${infTotal} questions — please review ALL answers before submitting
         </div>`;
     }
   }
@@ -2425,18 +2425,82 @@ function renderTrackSubmitModal(pid) {
 }
 
 /* ── AI inference badge helper ───────────────────────── */
-function aiInferenceClass(fieldId, value) {
-  const val  = state.iosSubmitAnswers[fieldId];
-  const meta = state.iosAnswerMeta[fieldId];
-  if (val !== value || !meta || meta.humanConfirmed) return '';
-  return ' ai-confident';  // single AI-inferred state — confidence threshold handled at apply time
+/* ══════════════════════════════════════════════════════════════
+   SHARED AI BADGE HELPERS — used by all platforms
+   ══════════════════════════════════════════════════════════════ */
+
+// Get answer metadata for any platform.
+function _getAnswerMeta(platformId, qid) {
+  if (platformId === 'ios')     return state.iosAnswerMeta[qid];
+  if (platformId === 'android') return state.cqAnswerMeta[qid];
+  if (platformId === 'steam')   return state.steamAnswerMeta[qid];
+  return null;
 }
 
-function aiInferenceBadge(fieldId, value) {
-  const val  = state.iosSubmitAnswers[fieldId];
-  const meta = state.iosAnswerMeta[fieldId];
-  if (val !== value || !meta || meta.humanConfirmed) return '';
-  return '<span class="ai-badge">✦</span>';
+// Get the live (current) answer value for any platform.
+function _getLiveAnswer(platformId, qid) {
+  if (platformId === 'ios')     return state.iosSubmitAnswers[qid];
+  if (platformId === 'android') return state.cqAnswers[qid];
+  if (platformId === 'steam')   return (state.steamSubmitAnswers.steamContentAnswers || {})[qid];
+  return null;
+}
+
+/**
+ * Returns ' ai-confident' CSS class suffix when the question was answered by AI
+ * and the current value matches `val` (if provided).
+ * Pass val=undefined to skip the value check (e.g. Steam caller already checks externally).
+ */
+function _platformAIClass(platformId, qid, val) {
+  const meta = _getAnswerMeta(platformId, qid);
+  if (!meta || meta.humanConfirmed) return '';
+  if (val !== undefined) {
+    const ans   = _getLiveAnswer(platformId, qid);
+    const match = Array.isArray(ans) ? ans.includes(val) : ans === val;
+    if (!match) return '';
+  }
+  return ' ai-confident';
+}
+
+/** Returns AI badge HTML or empty string. */
+function _platformAIBadge(platformId, qid, val) {
+  return _platformAIClass(platformId, qid, val) ? '<span class="ai-badge">✦</span>' : '';
+}
+
+/* ── Shared toggle pill for Unanswered / All filter ─────── */
+// Returns toggle pill HTML if collapseMode is active, empty string otherwise.
+// offFn / onFn are onclick strings (e.g. 'toggleContentRatingExpanded(false)')
+function buildCRTogglePill(collapseMode, showAll, offFn, onFn) {
+  if (!collapseMode) return '';
+  return `
+    <div class="cr-toggle-bar">
+      <button class="cr-toggle-btn${!showAll ? ' cr-toggle-active' : ''}"
+              onclick="${offFn}">Unanswered</button>
+      <button class="cr-toggle-btn${showAll ? ' cr-toggle-active' : ''}"
+              onclick="${onFn}">All</button>
+    </div>`;
+}
+
+/* ── Snapshot helper — captures answered IDs at filter time ─ */
+// Called when inference completes or when user clicks "Unanswered".
+// Stores a frozen Set so re-answering questions doesn't auto-disappear them.
+function takeFilterSnapshot(platformId) {
+  if (platformId === 'ios') {
+    const a = state.iosSubmitAnswers;
+    const s = new Set();
+    IOS_INTENSITY_QUESTIONS.forEach(q => { if (a[q.id] !== null && a[q.id] !== undefined) s.add(q.id); });
+    IOS_CONTENT_YN_QUESTIONS.forEach(q => { if (a[q.id] !== null && a[q.id] !== undefined) s.add(q.id); });
+    state.iosAnsweredAtInference = s;
+  } else if (platformId === 'android') {
+    const androidQs = CQ_QUESTIONS.filter(q => q.platforms.includes('android'));
+    state.androidAnswerSnapshot = new Set(
+      androidQs.map(q => q.id).filter(id => _isCurrentlyAnswered('android', id))
+    );
+  } else if (platformId === 'steam') {
+    const sca = state.steamSubmitAnswers.steamContentAnswers || {};
+    state.steamAnsweredAtInference = new Set(
+      Object.keys(sca).filter(id => sca[id] === 'yes' || sca[id] === 'no')
+    );
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2548,10 +2612,10 @@ function iosYNRow(label, fieldId, desc, tooltip, inverted = false) {
     `answerIOSField('${fieldId}','yes')`,
     `answerIOSField('${fieldId}','no')`,
     ttText, inverted,
-    val === 'yes' ? aiInferenceClass(fieldId, 'yes').trim() : '',
-    val === 'no'  ? aiInferenceClass(fieldId, 'no').trim()  : '',
-    'YES' + aiInferenceBadge(fieldId, 'yes'),
-    'NO'  + aiInferenceBadge(fieldId, 'no')
+    _platformAIClass('ios', fieldId, 'yes').trim(),
+    _platformAIClass('ios', fieldId, 'no').trim(),
+    'YES' + _platformAIBadge('ios', fieldId, 'yes'),
+    'NO'  + _platformAIBadge('ios', fieldId, 'no')
   );
 }
 
@@ -2560,16 +2624,16 @@ function iosIntensityRow(label, fieldId, tooltip) {
   const val  = state.iosSubmitAnswers[fieldId];
   const opts = [
     { value: 'frequent',   label: 'Frequent',   selectedClass: 'is-sel-frequent',
-      extraClass: val === 'frequent'   ? aiInferenceClass(fieldId, 'frequent').trim()   : '',
-      content: 'Frequent'   + aiInferenceBadge(fieldId, 'frequent'),
+      extraClass: _platformAIClass('ios', fieldId, 'frequent').trim(),
+      content: 'Frequent'   + _platformAIBadge('ios', fieldId, 'frequent'),
       onSelect: `answerIOSField('${fieldId}','frequent')` },
     { value: 'infrequent', label: 'Infrequent', selectedClass: 'is-sel-infrequent',
-      extraClass: val === 'infrequent' ? aiInferenceClass(fieldId, 'infrequent').trim() : '',
-      content: 'Infrequent' + aiInferenceBadge(fieldId, 'infrequent'),
+      extraClass: _platformAIClass('ios', fieldId, 'infrequent').trim(),
+      content: 'Infrequent' + _platformAIBadge('ios', fieldId, 'infrequent'),
       onSelect: `answerIOSField('${fieldId}','infrequent')` },
     { value: 'none',       label: 'None',       selectedClass: 'is-sel-none',
-      extraClass: val === 'none'       ? aiInferenceClass(fieldId, 'none').trim()       : '',
-      content: 'None'       + aiInferenceBadge(fieldId, 'none'),
+      extraClass: _platformAIClass('ios', fieldId, 'none').trim(),
+      content: 'None'       + _platformAIBadge('ios', fieldId, 'none'),
       onSelect: `answerIOSField('${fieldId}','none')` },
   ];
   return singleSelectRow(label, val, opts, tooltip);
@@ -2834,19 +2898,15 @@ function buildContentRatingSection() {
   const collapseMode = answered !== null;
 
   // "Unanswered / All" toggle pill — shown only after AI inference has run
-  const togglePill = collapseMode ? `
-    <div class="cr-toggle-bar">
-      <button class="cr-toggle-btn${!showAll ? ' cr-toggle-active' : ''}"
-              onclick="toggleContentRatingExpanded(false)">Unanswered</button>
-      <button class="cr-toggle-btn${showAll ? ' cr-toggle-active' : ''}"
-              onclick="toggleContentRatingExpanded(true)">All</button>
-    </div>` : '';
+  const togglePill = buildCRTogglePill(collapseMode, showAll,
+    'toggleContentRatingExpanded(false)', 'toggleContentRatingExpanded(true)');
 
   // Build question rows — filter by answered/unanswered when in collapseMode + "Unanswered" view
+  // Uses snapshot (answered) not live state so questions don't vanish mid-session
   let questionsHtml = '';
   for (const cat of IOS_CR_CATEGORIES) {
     const qsToShow = (collapseMode && !showAll)
-      ? cat.questions.filter(q => !_isCurrentlyAnswered('ios', q.id))
+      ? cat.questions.filter(q => !answered.has(q.id))
       : cat.questions;
 
     if (qsToShow.length > 0) {
@@ -3398,10 +3458,10 @@ function buildAndroidContentRatingSection() {
     const ttHTML  = `<span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${escHtml(tooltip)}</span></span>`;
 
     if (q.type === 'yn') {
-      const yc2 = ans === 'yes' ? _cqInfClass(q.id, 'yes') : '';
-      const nc2 = ans === 'no'  ? _cqInfClass(q.id, 'no')  : '';
-      const yb2 = ans === 'yes' ? 'YES' + _cqInfBadge(q.id, 'yes') : 'YES';
-      const nb2 = ans === 'no'  ? 'NO'  + _cqInfBadge(q.id, 'no')  : 'NO';
+      const yc2 = _platformAIClass('android', q.id, 'yes').trim();
+      const nc2 = _platformAIClass('android', q.id, 'no').trim();
+      const yb2 = 'YES' + _platformAIBadge('android', q.id, 'yes');
+      const nb2 = 'NO'  + _platformAIBadge('android', q.id, 'no');
       // Ensure label is one line (long text → tooltip)
       const qShort = label.length > 52 ? label.slice(0, 52).replace(/[;,]?\s*$/, '') + '…' : label;
       return ynRow(qShort + ttHTML, ans,
@@ -3459,8 +3519,8 @@ function buildAndroidContentRatingSection() {
         const val   = current.includes(o) ? 'yes' : null;
         const short = o.length > 48 ? o.slice(0, 48).replace(/[;,]?\s*$/, '') + '…' : o;
         const tip   = o.length > 48 ? o : '';
-        const yc    = val === 'yes' ? _cqInfClass(q.id, o) : '';
-        const nb2   = val === 'yes' ? 'YES' + _cqInfBadge(q.id, o) : 'YES';
+        const yc    = _platformAIClass('android', q.id, o).trim();
+        const nb2   = 'YES' + _platformAIBadge('android', q.id, o);
         return ynRow(escHtml(short), val,
           `answerAndroidCRMultiOpt('${q.id}',${optIdx},'yes')`,
           `answerAndroidCRMultiOpt('${q.id}',${optIdx},'no')`,
@@ -3480,15 +3540,10 @@ function buildAndroidContentRatingSection() {
   const androidQs    = CQ_QUESTIONS.filter(q => q.platforms.includes('android'));
   const sections     = [...new Set(androidQs.map(q => q.section))];
   const showAll      = state.androidContentRatingExpanded;
-  const collapseMode = state.androidInferenceRan === true;
+  const collapseMode = state.androidAnswerSnapshot !== null;
 
-  const togglePill = collapseMode ? `
-    <div class="cr-toggle-bar">
-      <button class="cr-toggle-btn${!showAll ? ' cr-toggle-active' : ''}"
-              onclick="toggleAndroidContentRatingExpanded(false)">Unanswered</button>
-      <button class="cr-toggle-btn${showAll ? ' cr-toggle-active' : ''}"
-              onclick="toggleAndroidContentRatingExpanded(true)">All</button>
-    </div>` : '';
+  const togglePill = buildCRTogglePill(collapseMode, showAll,
+    'toggleAndroidContentRatingExpanded(false)', 'toggleAndroidContentRatingExpanded(true)');
 
   let html = togglePill;
 
@@ -3496,8 +3551,9 @@ function buildAndroidContentRatingSection() {
     const visibleQs = androidQs.filter(q => q.section === section && cqIsVisible(q));
     if (!visibleQs.length) return;
 
+    // Use snapshot so questions don't vanish while the user is actively answering
     const filteredQs = (collapseMode && !showAll)
-      ? visibleQs.filter(q => !_isCurrentlyAnswered('android', q.id))
+      ? visibleQs.filter(q => !state.androidAnswerSnapshot?.has(q.id))
       : visibleQs;
     if (!filteredQs.length) return;
 
@@ -3859,32 +3915,7 @@ function buildSteamActiveCard(pid) {
     </div>`;
 }
 
-/* ── Shared AI badge helpers (Steam + Android) ──────── */
-
-function _steamInfClass(itemId) {
-  const meta = state.steamAnswerMeta[itemId];
-  if (!meta || meta.humanConfirmed) return '';
-  return ' ai-confident';
-}
-function _steamInfBadge(itemId) {
-  const meta = state.steamAnswerMeta[itemId];
-  if (!meta || meta.humanConfirmed) return '';
-  return '<span class="ai-badge">✦</span>';
-}
-function _cqInfClass(qid, val) {
-  const meta = state.cqAnswerMeta[qid];
-  if (!meta || meta.humanConfirmed) return '';
-  const ans  = state.cqAnswers[qid];
-  const match = Array.isArray(ans) ? ans.includes(val) : ans === val;
-  return match ? ' ai-confident' : '';
-}
-function _cqInfBadge(qid, val) {
-  const meta = state.cqAnswerMeta[qid];
-  if (!meta || meta.humanConfirmed) return '';
-  const ans  = state.cqAnswers[qid];
-  const match = Array.isArray(ans) ? ans.includes(val) : ans === val;
-  return match ? '<span class="ai-badge">✦</span>' : '';
-}
+/* ── (AI badge helpers moved to shared section above buildContentRatingSection) ── */
 
 /* ── Steam: Content Rating (PDF 7) ──────────────────── */
 function buildSteamContentRatingSection() {
@@ -3894,10 +3925,10 @@ function buildSteamContentRatingSection() {
   // Helper: ynRow for a Steam content item with AI badge support
   function steamItemRow(itemId, label, tooltip) {
     const val  = sca[itemId] || null;
-    const yc   = val === 'yes' ? _steamInfClass(itemId) : '';
-    const nc   = val === 'no'  ? _steamInfClass(itemId) : '';
-    const yb   = val === 'yes' ? 'YES' + _steamInfBadge(itemId) : 'YES';
-    const nb   = val === 'no'  ? 'NO'  + _steamInfBadge(itemId) : 'NO';
+    const yc   = _platformAIClass('steam', itemId, 'yes').trim();
+    const nc   = _platformAIClass('steam', itemId, 'no').trim();
+    const yb   = 'YES' + _platformAIBadge('steam', itemId, 'yes');
+    const nb   = 'NO'  + _platformAIBadge('steam', itemId, 'no');
     // Ensure label fits one line (truncate at 50 chars, rest goes to tooltip)
     const shortLabel = label.length > 50 ? label.slice(0, 50).replace(/[;,]?\s*$/, '') + '…' : label;
     const fullTip    = tooltip && tooltip !== label ? tooltip : (label.length > 50 ? label : '');
@@ -3909,21 +3940,17 @@ function buildSteamContentRatingSection() {
 
   // Unanswered/All toggle (shown after AI inference has run)
   const steamShowAll     = state.steamContentRatingExpanded;
-  const steamAnsweredSet = state.steamAnsweredAtInference;
+  const steamAnsweredSet = state.steamAnsweredAtInference; // snapshot — not updated live
   const steamCollapse    = steamAnsweredSet !== null;
-  const steamTogglePill  = steamCollapse ? `
-    <div class="cr-toggle-bar">
-      <button class="cr-toggle-btn${!steamShowAll ? ' cr-toggle-active' : ''}"
-              onclick="toggleSteamContentRatingExpanded(false)">Unanswered</button>
-      <button class="cr-toggle-btn${steamShowAll ? ' cr-toggle-active' : ''}"
-              onclick="toggleSteamContentRatingExpanded(true)">All</button>
-    </div>` : '';
+  const steamTogglePill  = buildCRTogglePill(steamCollapse, steamShowAll,
+    'toggleSteamContentRatingExpanded(false)', 'toggleSteamContentRatingExpanded(true)');
 
   // Content categories — each item is a ynRow
+  // Filter uses snapshot so questions don't vanish while actively answering
   let catHtml = steamTogglePill;
   STEAM_CONTENT_CATEGORIES.forEach(grp => {
     const items = (steamCollapse && !steamShowAll)
-      ? grp.items.filter(item => !_isCurrentlyAnswered('steam', item.id))
+      ? grp.items.filter(item => !steamAnsweredSet?.has(item.id))
       : grp.items;
     if (!items.length) return;
     catHtml += `<div class="ios-content-step-label">${escHtml(grp.group)}</div>`;
