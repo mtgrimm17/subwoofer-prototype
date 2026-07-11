@@ -640,6 +640,16 @@ function toggleContentRatingExpanded(value) {
   reRenderStepModal();
 }
 
+function toggleAndroidContentRatingExpanded(value) {
+  state.androidContentRatingExpanded = value;
+  reRenderStepModal();
+}
+
+function toggleSteamContentRatingExpanded(value) {
+  state.steamContentRatingExpanded = value;
+  reRenderStepModal();
+}
+
 /* ── Privacy preset chips ────────────────────────────── */
 function togglePrivacyPreset(id) {
   const preset = PRIVACY_PRESETS.find(p => p.id === id);
@@ -719,6 +729,14 @@ async function _triggerPrivacyAI() {
   const desc = (state.iosSubmitAnswers.privacyDescription || '').trim();
   if (desc.length < 20) return;
 
+  // If this exact description succeeded before, restore cached result instantly
+  if (desc === state.privacyLastSuccessDesc && state.privacyLastSuccessResult) {
+    state.iosSubmitAnswers.dataPerType = state.privacyLastSuccessResult;
+    state.privacyAIStatus = 'complete';
+    reRenderStepModal();
+    return;
+  }
+
   state.privacyAIStatus = 'loading';
   reRenderStepModal();
 
@@ -789,6 +807,8 @@ Rules:
 
     state.iosSubmitAnswers.dataPerType = newPerType;
     state.privacyAIStatus = 'complete';
+    state.privacyLastSuccessDesc   = desc;
+    state.privacyLastSuccessResult = newPerType;
   } catch (e) {
     console.warn('[Privacy AI]', e.message);
     state.privacyAIStatus = 'error';

@@ -1570,7 +1570,7 @@ function renderTaskModal() {
     <div class="task-modal-header" style="border-top-color:${p.color};">
       <div class="task-modal-context">
         <div class="task-modal-platform-icon">
-          ${platformIcon(platformId, 16, 'white')}
+          ${platformIcon(platformId, 28, 'white')}
         </div>
         <span class="task-modal-platform-name">${platLabel(platformId)}</span>
         <span class="task-modal-sep">›</span>
@@ -3457,21 +3457,39 @@ function buildAndroidContentRatingSection() {
   }
 
   /* Group android-visible questions by section and render */
-  const androidQs = CQ_QUESTIONS.filter(q => q.platforms.includes('android'));
-  const sections  = [...new Set(androidQs.map(q => q.section))];
+  const androidQs   = CQ_QUESTIONS.filter(q => q.platforms.includes('android'));
+  const sections    = [...new Set(androidQs.map(q => q.section))];
+  const showAll     = state.androidContentRatingExpanded;
+  const collapseMode = answered > 0;
 
-  let html = '';
+  const togglePill = collapseMode ? `
+    <div class="cr-toggle-bar">
+      <button class="cr-toggle-btn${!showAll ? ' cr-toggle-active' : ''}"
+              onclick="toggleAndroidContentRatingExpanded(false)">Unanswered</button>
+      <button class="cr-toggle-btn${showAll ? ' cr-toggle-active' : ''}"
+              onclick="toggleAndroidContentRatingExpanded(true)">All</button>
+    </div>` : '';
+
+  let html = togglePill;
   let firstSection = true;
 
   sections.forEach(section => {
     const visibleQs = androidQs.filter(q => q.section === section && cqIsVisible(q));
     if (!visibleQs.length) return;
 
+    const filteredQs = (collapseMode && !showAll)
+      ? visibleQs.filter(q => {
+          const ans = state.androidSubmitAnswers?.cqAnswers?.[q.id];
+          return ans === null || ans === undefined || ans === '' || (Array.isArray(ans) && ans.length === 0);
+        })
+      : visibleQs;
+    if (!filteredQs.length) return;
+
     // no divider between sections — section label underline is sufficient
     html += `<div class="ios-content-step-label">${SECTION_NAMES[section] || section}</div>`;
     firstSection = false;
 
-    visibleQs.forEach(q => {
+    filteredQs.forEach(q => {
       const wrap = q.indent > 0
         ? `<div class="ios-followup">${renderCRQuestion(q)}</div>`
         : renderCRQuestion(q);
@@ -3873,11 +3891,27 @@ function buildSteamContentRatingSection() {
       fullTip, false, yc.trim(), nc.trim(), yb, nb);
   }
 
+  // Unanswered/All toggle (shown after AI inference has run)
+  const steamShowAll     = state.steamContentRatingExpanded;
+  const steamAnsweredSet = state.steamAnsweredAtInference;
+  const steamCollapse    = steamAnsweredSet !== null;
+  const steamTogglePill  = steamCollapse ? `
+    <div class="cr-toggle-bar">
+      <button class="cr-toggle-btn${!steamShowAll ? ' cr-toggle-active' : ''}"
+              onclick="toggleSteamContentRatingExpanded(false)">Unanswered</button>
+      <button class="cr-toggle-btn${steamShowAll ? ' cr-toggle-active' : ''}"
+              onclick="toggleSteamContentRatingExpanded(true)">All</button>
+    </div>` : '';
+
   // Content categories — each item is a ynRow
-  let catHtml = '';
+  let catHtml = steamTogglePill;
   STEAM_CONTENT_CATEGORIES.forEach(grp => {
+    const items = (steamCollapse && !steamShowAll)
+      ? grp.items.filter(item => !steamAnsweredSet.has(item.id))
+      : grp.items;
+    if (!items.length) return;
     catHtml += `<div class="ios-content-step-label">${escHtml(grp.group)}</div>`;
-    grp.items.forEach(item => {
+    items.forEach(item => {
       catHtml += steamItemRow(item.id, item.label, item.label);
     });
   });
@@ -3989,7 +4023,6 @@ function buildSteamContentRatingSection() {
     </div>` : '';
 
   return `
-    <p style="font-size:12px;color:var(--text-faint);margin:0 0 10px;">Select Yes for every category that applies to your game. If nothing applies, answer No.</p>
     ${catHtml}
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Mature Content</div>
@@ -4010,12 +4043,29 @@ function buildSteamContentRatingSection() {
 function buildSteamStoreTagsSection() {
   const a = state.steamSubmitAnswers;
 
-  const _chips = (items, field, max, onclick) =>
-    `<div class="ms-chip-group">${items.map(g => {
-      const on = a[field].includes(g);
-      return `<button class="ms-chip${on ? ' is-on' : ''}"
-                      onclick="${onclick}('${field}','${escHtml(g)}',${!on},${max})">${escHtml(g)}</button>`;
-    }).join('')}</div>`;
+  const topGenreChecks = STEAM_TOP_GENRES.map(g => {
+    const checked = a.topGenres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('topGenres','${g}',this.checked,2)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
+
+  const genreChecks = STEAM_GENRES.map(g => {
+    const checked = a.genres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('genres','${g}',this.checked,2)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
+
+  const subGenreChecks = STEAM_SUB_GENRES.map(g => {
+    const checked = a.subGenres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('subGenres','${g}',this.checked,3)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
 
   const topCount   = a.topGenres.length;
   const genreCount = a.genres.length;
@@ -4026,15 +4076,15 @@ function buildSteamStoreTagsSection() {
       <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Required. Choose one or two top-level genres to categorize your title on Steam.</span></span>
     </div>
     ${topCount === 0 ? '<div class="ios-risk-note risk-HIGH" style="margin-bottom:8px;">Required — select at least one.</div>' : ''}
-    ${_chips(STEAM_TOP_GENRES, 'topGenres', 2, 'toggleSteamTag')}
+    <div class="cq-check-list">${topGenreChecks}</div>
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 2${genreCount > 0 ? ', ' + genreCount + ' selected' : ''})</span></div>
-    ${_chips(STEAM_GENRES, 'genres', 2, 'toggleSteamTag')}
+    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${genreChecks}</div>
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Sub-genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 3${subCount > 0 ? ', ' + subCount + ' selected' : ''})</span></div>
-    ${_chips(STEAM_SUB_GENRES, 'subGenres', 3, 'toggleSteamTag')}`;
+    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${subGenreChecks}</div>`;
 }
 
 /* ── Steam: Technical (PDFs 10 + 11) ───────────────── */

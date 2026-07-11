@@ -2428,41 +2428,17 @@ body {
    ─────────────────────────────────────────────────────────── */
 .card-bar {
   flex: 1;
-  height: 8px;
-  border-radius: 4px;
+  height: 3px;
+  border-radius: 2px;
   overflow: hidden;
-  /* Empty track: dim green squares on dark grid */
-  background-color: rgba(74, 222, 128, 0.10);
-  background-image:
-    repeating-linear-gradient(180deg,
-      transparent 0px, transparent 2px,
-      var(--panel)  2px, var(--panel)  3px),
-    repeating-linear-gradient(90deg,
-      transparent 0px, transparent 5px,
-      var(--panel)  5px, var(--panel)  7px);
+  background: rgba(74, 222, 128, 0.15);
 }
 
 .card-bar-fill {
   height: 100%;
-  border-radius: 0;
+  border-radius: 2px;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  background-color: var(--green);
-  background-image:
-    repeating-linear-gradient(180deg,
-      transparent 0px, transparent 2px,
-      var(--panel)  2px, var(--panel)  3px),
-    repeating-linear-gradient(90deg,
-      transparent 0px, transparent 5px,
-      var(--panel)  5px, var(--panel)  7px);
-  /* Only the middle pixel row (y 3–5px out of 0–8px) shows the fill color */
-  -webkit-mask-image: linear-gradient(to bottom,
-    transparent 0px, transparent 3px,
-    black 3px,        black 5px,
-    transparent 5px,  transparent 8px);
-  mask-image: linear-gradient(to bottom,
-    transparent 0px, transparent 3px,
-    black 3px,        black 5px,
-    transparent 5px,  transparent 8px);
+  background: var(--green);
 }
 
 /* Submit button at the end of the progress bar */
@@ -3030,10 +3006,16 @@ body {
 }
 
 .task-modal-platform-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--panel-3);
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  color: var(--text-dim);
+  color: var(--text);
+  overflow: hidden;
 }
 
 .task-modal-platform-name {
@@ -6649,10 +6631,8 @@ body.is-splash .profile-wrap        { display: none; }
 .iys-partner-tagline {
   font-size: 11px;
   color: var(--text-dim);
-  margin-top: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 3px;
+  line-height: 1.4;
 }
 .iys-partner-tag {
   font-size: 10px;
