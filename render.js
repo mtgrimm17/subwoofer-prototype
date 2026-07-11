@@ -1782,7 +1782,7 @@ function renderStepModal() {
   modal.innerHTML = `
     <div class="submit-modal-header" style="border-top-color:${p.color};">
       <div class="submit-modal-title-row">
-        <div class="submit-modal-hicon">${platformIcon(platformId, 22, 'white')}</div>
+        <div class="submit-modal-hicon">${platformIcon(platformId, 30, 'white')}</div>
         <div>
           <div class="submit-modal-title">${step?.label || ''}</div>
           <div class="submit-modal-subtitle">${p.label}</div>
@@ -2043,18 +2043,18 @@ function buildImproveSubmissionSection(platformId) {
     {
       cat: 'QA',
       p: isIos || isAndroid
-        ? { name: 'PlaytestCloud', tagline: 'Mobile playtesting on real devices with real players — ideal for pre-launch validation', url: 'https://playtestcloud.com', tag: 'Playtesting', highlight: true }
-        : { name: 'Global App Testing', tagline: 'Professional QA at scale — functional, performance, and compatibility testing', url: 'https://www.globalapptesting.com', tag: 'QA' },
+        ? { name: 'PlaytestCloud', tagline: 'Real-device playtesting with real players — ideal for pre-launch validation.', url: 'https://playtestcloud.com', highlight: true }
+        : { name: 'Global App Testing', tagline: 'Professional QA at scale — functional, performance, and compatibility testing.', url: 'https://www.globalapptesting.com' },
     },
     {
       cat: 'Press',
-      p: { name: 'Impress', tagline: 'Indie-focused PR with strong relationships at top gaming outlets — best cost/coverage ratio for small studios', url: 'https://impress.games', tag: 'Press', highlight: true },
+      p: { name: 'Impress', tagline: 'Indie PR with strong outlet relationships — best cost/coverage ratio for small studios.', url: 'https://impress.games', highlight: true },
     },
     {
       cat: 'Marketing',
       p: isIos || isAndroid
-        ? { name: 'Chartboost', tagline: 'Mobile-first UA platform with direct deal network and strong ROAS for casual and mid-core games', url: 'https://www.chartboost.com', tag: 'UA / Ads' }
-        : { name: 'Keymailer', tagline: 'Connect with content creators and streamers — efficient key distribution and campaign tracking', url: 'https://www.keymailer.co', tag: 'Influencers' },
+        ? { name: 'Chartboost', tagline: 'Mobile-first UA with direct deal network and strong ROAS for casual and mid-core games.', url: 'https://www.chartboost.com' }
+        : { name: 'Keymailer', tagline: 'Connect with creators and streamers — efficient key distribution and campaign tracking.', url: 'https://www.keymailer.co' },
     },
   ];
 
@@ -2063,14 +2063,11 @@ function buildImproveSubmissionSection(platformId) {
       <div class="iys-partner-cat-label">${escHtml(cat)}</div>
       <div class="iys-partner-cards">
         <a href="${escHtml(p.url)}" target="_blank" rel="noopener" class="iys-partner-card${p.highlight ? ' iys-partner-highlight' : ''}">
-          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+          <div style="display:flex;align-items:center;gap:8px;width:100%;margin-bottom:4px;">
             <div class="iys-partner-avatar">${escHtml(p.name[0])}</div>
-            <div class="iys-partner-info" style="min-width:0;flex:1;">
-              <div class="iys-partner-name">${escHtml(p.name)}</div>
-            </div>
-            <span class="iys-partner-tag">${escHtml(p.tag)}</span>
+            <div class="iys-partner-name">${escHtml(p.name)}</div>
           </div>
-          <div class="iys-partner-tagline" style="font-size:11px;line-height:1.5;">${escHtml(p.tagline)}</div>
+          <div class="iys-partner-tagline">${escHtml(p.tagline)}</div>
         </a>
       </div>
     </div>`).join('')}</div>`;
@@ -3479,7 +3476,7 @@ function buildAndroidContentRatingSection() {
 
     const filteredQs = (collapseMode && !showAll)
       ? visibleQs.filter(q => {
-          const ans = state.androidSubmitAnswers?.cqAnswers?.[q.id];
+          const ans = state.cqAnswers[q.id];
           return ans === null || ans === undefined || ans === '' || (Array.isArray(ans) && ans.length === 0);
         })
       : visibleQs;

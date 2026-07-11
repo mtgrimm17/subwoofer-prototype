@@ -325,6 +325,10 @@ async function openStepModal(pid, stepId) {
         delete state.platformInferenceCache[pid + ':' + stepId];
         await runInference(pid, stepId);
         state.stepModal.inferenceStatus = 'done';
+        // Collapse to unanswered view after inference
+        if (stepId === 'questionnaire') {
+          state.androidContentRatingExpanded = false;
+        }
       } catch(err) {
         state.stepModal.inferenceStatus = 'error';
         state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;
@@ -354,6 +358,13 @@ async function openStepModal(pid, stepId) {
         delete state.platformInferenceCache[pid + ':' + stepId];
         await runInference(pid, stepId);
         state.stepModal.inferenceStatus = 'done';
+        // Snapshot answered IDs so Content Rating toggle can collapse them
+        if (stepId === 'questionnaire') {
+          const sca = state.steamSubmitAnswers.steamContentAnswers || {};
+          const answered = new Set(Object.keys(sca).filter(id => sca[id] === 'yes' || sca[id] === 'no'));
+          state.steamAnsweredAtInference  = answered;
+          state.steamContentRatingExpanded = false;
+        }
       } catch(err) {
         state.stepModal.inferenceStatus = 'error';
         state.stepModal.inferenceError  = err.message === 'NO_KEY' ? 'No API key set.' : err.message;

@@ -1916,6 +1916,11 @@ const state = {
   // Whether the user has expanded the "Show answered" section manually.
   iosContentRatingExpanded: false,
 
+  // Same pattern for Android and Steam
+  androidContentRatingExpanded: false,
+  steamAnsweredAtInference: null,
+  steamContentRatingExpanded: false,
+
   // Privacy NLP AI translation status: null | 'loading' | 'complete' | 'error'
   privacyAIStatus: null,
 

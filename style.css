@@ -4150,6 +4150,18 @@ select.form-input {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   color: var(--text);
+  overflow: hidden;
+}
+.submit-modal-hicon .plat-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  display: block;
+  filter: brightness(0) invert(1);
+}
+.submit-modal-hicon svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .submit-modal-title {
@@ -6570,7 +6582,11 @@ body.is-splash .profile-wrap        { display: none; }
 }
 
 /* Partner cards */
-.iys-partner-cat { margin-bottom: 0; }
+.iys-partner-cat {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
 .iys-partner-cat:last-child { margin-bottom: 0; }
 .iys-partner-cat-label {
   font-size: 10px;
@@ -6581,21 +6597,24 @@ body.is-splash .profile-wrap        { display: none; }
   margin-bottom: 8px;
 }
 .iys-partner-cards {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 .iys-partner-card {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 0;
   padding: 12px;
   background: var(--panel-3);
   border: 1px solid var(--border);
   border-radius: 8px;
   text-decoration: none;
   transition: border-color 0.12s, background 0.12s;
+  box-sizing: border-box;
 }
 .iys-partner-card:hover {
   border-color: var(--border-hover);
