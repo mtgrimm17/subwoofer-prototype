@@ -663,7 +663,9 @@ function togglePrivacyPreset(id) {
   const pid       = state.stepModal?.platformId;
 
   if (selected.length === 0) {
-    // Nothing selected — just re-render chips, leave data-collection state alone
+    // Nothing selected — clear any description text we may have set, then re-render
+    if (state.iosSubmitAnswers)     state.iosSubmitAnswers.privacyDescription    = '';
+    if (state.androidSubmitAnswers) state.androidSubmitAnswers.androidDataDescription = '';
     reRenderStepModal();
     return;
   }

@@ -1521,16 +1521,32 @@ body {
   font-family: inherit;
   transition: border-color 0.15s, background 0.15s;
   flex-shrink: 0;
+  /* SVG icons (fill="currentColor") render at this opacity when inactive */
+  color: rgba(255,255,255,0.55);
 }
 
 .ob-plat-tile:hover:not(:disabled) {
   border-color: var(--border-hover);
   background: var(--panel-3);
+  color: rgba(255,255,255,0.75);
 }
 
 .ob-plat-tile.is-on {
   border-color: var(--text);
   background: var(--panel-3);
+  color: white;
+}
+
+/* PNG icons (psn, xbox, nintendo) rendered as <img class="plat-img"> — convert to white */
+.ob-plat-tile .plat-img {
+  filter: brightness(0) invert(1);
+  opacity: 0.55;
+}
+.ob-plat-tile:hover:not(:disabled) .plat-img {
+  opacity: 0.75;
+}
+.ob-plat-tile.is-on .plat-img {
+  opacity: 1;
 }
 
 .ob-plat-tile-cs {
@@ -2411,8 +2427,8 @@ body {
   /* Dim pixel grid for the "empty" track */
   background-color: rgba(74, 222, 128, 0.08);
   background-image:
-    repeating-linear-gradient(90deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 8px),
-    repeating-linear-gradient(180deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 6px);
+    repeating-linear-gradient(90deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 8px),
+    repeating-linear-gradient(180deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 6px);
 }
 
 .card-bar-fill {
@@ -2422,8 +2438,8 @@ body {
   /* Bright pixel grid for the filled portion */
   background-color: var(--green);
   background-image:
-    repeating-linear-gradient(90deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 8px),
-    repeating-linear-gradient(180deg, var(--bg) 0, var(--bg) 2px, transparent 2px, transparent 6px);
+    repeating-linear-gradient(90deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 8px),
+    repeating-linear-gradient(180deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 6px);
 }
 
 /* Submit button at the end of the progress bar */

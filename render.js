@@ -731,7 +731,7 @@ function buildObPlatTilesHTML() {
     return `<button class="ob-plat-tile${isOn ? ' is-on' : ''}"
                     onclick="toggleOnboardingPlatform('${id}')"
                     title="${label}">
-      ${platformIcon(id, 28, isOn ? 'white' : 'color')}
+      ${platformIcon(id, 28, 'white')}
     </button>`;
   }).join('');
   return `<div class="ob-plat-tile-row">${tiles}</div>`;
