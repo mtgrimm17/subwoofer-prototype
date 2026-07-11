@@ -1569,8 +1569,8 @@ function renderTaskModal() {
   modal.innerHTML = `
     <div class="task-modal-header" style="border-top-color:${p.color};">
       <div class="task-modal-context">
-        <div class="task-modal-platform-icon">
-          ${platformIcon(platformId, 16, 'white')}
+        <div class="task-modal-platform-icon" style="color:${p.color};">
+          ${platformIcon(platformId, 16)}
         </div>
         <span class="task-modal-platform-name">${platLabel(platformId)}</span>
         <span class="task-modal-sep">›</span>
@@ -1782,7 +1782,7 @@ function renderStepModal() {
   modal.innerHTML = `
     <div class="submit-modal-header" style="border-top-color:${p.color};">
       <div class="submit-modal-title-row">
-        <div class="submit-modal-hicon">${platformIcon(platformId, 22, 'white')}</div>
+        <div class="submit-modal-hicon" style="color:${p.color};">${platformIcon(platformId, 22)}</div>
         <div>
           <div class="submit-modal-title">${step?.label || ''}</div>
           <div class="submit-modal-subtitle">${p.label}</div>
@@ -1906,7 +1906,7 @@ function buildImproveSubmissionSection(platformId) {
 
   const spi = state.storePageInsights;
   const ana = state.improveSubmissionAnalysis;
-  const idx = state.improveSubmissionIdx || { storePage: 0 };
+  const idx = state.improveSubmissionIdx || { assets: 0, meta: 0 };
 
   // ── Shared helpers ───────────────────────────────────
   function _gradeBadge(grade) {
@@ -1945,82 +1945,106 @@ function buildImproveSubmissionSection(platformId) {
       </div>`;
   }
 
-  // ── Grade ordering helper ─────────────────────────────
-  function _worseGrade(a, b) {
-    const ORD = { D:3, C:2, B:1, A:0 };
-    if (!a) return b; if (!b) return a;
-    return (ORD[a] ?? -1) >= (ORD[b] ?? -1) ? a : b;
-  }
-
-  // ── MERGED STORE PAGE SECTION ─────────────────────────
-  // Combines: Store Page text issues (spi) + Assets + Metadata (ana) — max 5
-  const loading = (spi?.loading || !spi) && (ana?.loading || !ana);
-  const hasError = spi?.error || ana?.error;
-
-  // Build unified item list (normalised to { tag, title, body, fixedValue?, type })
-  const _spItems = (!spi?.loading && !spi?.error && spi?.issues && !spi?.done)
-    ? spi.issues.slice(spi.index || 0).map(iss => ({
-        tag: { subtitle:'Subtitle', description:'Description', title:'Title' }[iss.field] || 'Store Page',
-        title: iss.issue || iss.title || '',
-        body: iss.suggestion || iss.body || '',
-        fixedValue: iss.fixedValue,
-        type: 'sp',
-      }))
-    : [];
-  const _anaItems = (!ana?.loading && !ana?.error && ana?.items)
-    ? _filterItems(ana.items, 'store', 'asset', 'icon', 'screenshot', 'metadata', 'tag', 'keyword')
-        .map(item => ({ tag: item.area || 'Store Page', title: item.title || '', body: item.body || '', fixedValue: null, type: 'ana' }))
-    : [];
-
-  const mergedItems = [..._spItems, ..._anaItems].slice(0, 5);
-
-  // Overall grade
-  const spGrade  = (!spi?.loading && !spi?.error) ? (spi?.done || !spi?.issues?.length ? 'A' : spi.issues.length <= 1 ? 'B' : spi.issues.length <= 3 ? 'C' : 'D') : null;
-  const assGrade = ana?.scores?.assets   || null;
-  const metGrade = ana?.scores?.metadata || null;
-  const mergedGrade = _worseGrade(spGrade, _worseGrade(assGrade, metGrade));
-
-  let spPageContent = '', spPageFooter = '';
-  if (loading) {
-    spPageContent = _loadingBody();
-  } else if (hasError) {
-    spPageContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(spi?.error || ana?.error)}</div></div>`;
-    spPageFooter  = `<button class="iys-fix-btn" onclick="state.storePageInsights=null;state.improveSubmissionAnalysis=null;_autoRunImproveSubmission('${platformId}')"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
-  } else if (!mergedItems.length) {
-    spPageContent = _allGood('Store page, assets & metadata all look strong');
+  // ── STORE PAGE SECTION ────────────────────────────────
+  let spContent = '', spFooter = '', spGrade = null;
+  if (spi?.loading) {
+    spContent = _loadingBody();
+  } else if (!spi) {
+    spContent = _loadingBody(); // never ran yet (shouldn't happen post-auto-trigger)
+  } else if (spi.error) {
+    spContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(spi.error)}</div></div>`;
+    spFooter  = `<button class="iys-fix-btn" onclick="runStorePageInsights()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
+  } else if (!spi.issues?.length || spi.done) {
+    spContent = _allGood(spi.done ? 'All suggestions reviewed' : 'Store page looks strong');
+    spGrade   = 'A';
   } else {
-    const n   = mergedItems.length;
-    const i   = Math.min(idx.storePage || 0, n - 1);
-    const cur = mergedItems[i];
-    spPageContent = `
+    const n     = spi.issues.length;
+    const i     = Math.min(spi.index || 0, n - 1);
+    const issue = spi.issues[i];
+    const field = { subtitle: 'Subtitle', description: 'Description', title: 'Title' }[issue.field] || '';
+    const hasFix = !!issue.fixedValue;
+    spGrade = n <= 1 ? 'B' : n <= 3 ? 'C' : 'D';
+    spContent = `
       <div class="iys-issue-content">
-        ${cur.tag ? `<div class="iys-issue-field-tag">${escHtml(cur.tag)}</div>` : ''}
-        <div class="iys-issue-title">${escHtml(cur.title)}</div>
-        <div class="iys-issue-body">${escHtml(cur.body)}</div>
+        ${field ? `<div class="iys-issue-field-tag">${escHtml(field)}</div>` : ''}
+        <div class="iys-issue-title">${escHtml(issue.issue || issue.title || '')}</div>
+        <div class="iys-issue-body">${escHtml(issue.suggestion || issue.body || '')}</div>
       </div>`;
-    const hasNext = n > 1;
-    const hasFix  = cur.type === 'sp' && !!cur.fixedValue;
-    spPageFooter = `
+    spFooter = `
       <span class="iys-section-counter">${i + 1} / ${n}</span>
       <div class="iys-section-actions">
         ${hasFix ? `<button class="iys-fix-btn" onclick="applyStorePageFix()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Subwoofer Fix</button>` : ''}
-        ${hasNext ? `<button class="btn btn-ghost btn-sm" onclick="_nextImprovementItem('storePage')">Next</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="dismissStoreIssue()">Dismiss</button>
       </div>`;
   }
-  const spPageSection = _section('Store Page', mergedGrade, spPageContent, spPageFooter);
+  const spSection = _section('Store Page', spGrade, spContent, spFooter);
 
-  // ── LOCALIZATION SECTION ──────────────────────────────
-  const langRec  = _highestImpactUnselectedLang();
-  const langName = langRec.lang ? (OB_LANG_NAMES[langRec.lang] || langRec.lang) : null;
-  const locGrade = langRec.lang ? (langRec.total > 50_000_000 ? 'C' : 'B') : 'A';
-  const locContent = langName
-    ? `<div class="iys-issue-content">
-         <div class="iys-issue-field-tag">${escHtml(langName)}</div>
-         <div class="iys-issue-title">Localize into ${escHtml(langName)}</div>
-         <div class="iys-issue-body">~${_obFmtGamers(langRec.total)} potential players in your selected markets speak ${escHtml(langName)} as their primary language. Games localized into the local language see 30–50% more revenue on average vs. English-only releases.</div>
-       </div>`
-    : _allGood('Localization looks strong for your target markets');
-  const locSection = _section('Localization', locGrade, locContent, '');
+  // ── ASSETS SECTION ────────────────────────────────────
+  const assItems  = _filterItems(ana?.items, 'asset', 'icon', 'screenshot');
+  const assGrade  = ana?.scores?.assets || null;
+  let assContent  = '', assFooter = '';
+  if (ana?.loading) {
+    assContent = _loadingBody();
+  } else if (!ana) {
+    assContent = _loadingBody();
+  } else if (ana.error) {
+    assContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(ana.error)}</div></div>`;
+    assFooter  = `<button class="iys-fix-btn" onclick="_autoRunImproveSubmission('${platformId}')"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
+  } else if (!assItems.length) {
+    assContent = _allGood('Assets look strong');
+  } else {
+    const i = Math.min(idx.assets || 0, assItems.length - 1);
+    const t = assItems[i];
+    assContent = `
+      <div class="iys-issue-content">
+        ${t.area ? `<div class="iys-issue-field-tag">${escHtml(t.area)}</div>` : ''}
+        <div class="iys-issue-title">${escHtml(t.title || '')}</div>
+        <div class="iys-issue-body">${escHtml(t.body || '')}</div>
+      </div>`;
+    if (assItems.length > 1) {
+      assFooter = `
+        <span class="iys-section-counter">${i + 1} / ${assItems.length}</span>
+        <div class="iys-section-actions">
+          <button class="iys-fix-btn iys-fix-btn-goto" onclick="_nextImprovementItem('assets')">
+            <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Next
+          </button>
+        </div>`;
+    }
+  }
+  const assSection = _section('Assets', assGrade, assContent, assFooter);
+
+  // ── METADATA SECTION ──────────────────────────────────
+  const metItems = _filterItems(ana?.items, 'metadata', 'tag', 'keyword');
+  const metGrade = ana?.scores?.metadata || null;
+  let metContent = '', metFooter = '';
+  if (ana?.loading) {
+    metContent = _loadingBody();
+  } else if (!ana) {
+    metContent = _loadingBody();
+  } else if (ana.error) {
+    metContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(ana.error)}</div></div>`;
+  } else if (!metItems.length) {
+    metContent = _allGood('Metadata looks strong');
+  } else {
+    const i = Math.min(idx.meta || 0, metItems.length - 1);
+    const t = metItems[i];
+    metContent = `
+      <div class="iys-issue-content">
+        ${t.area ? `<div class="iys-issue-field-tag">${escHtml(t.area)}</div>` : ''}
+        <div class="iys-issue-title">${escHtml(t.title || '')}</div>
+        <div class="iys-issue-body">${escHtml(t.body || '')}</div>
+      </div>`;
+    if (metItems.length > 1) {
+      metFooter = `
+        <span class="iys-section-counter">${i + 1} / ${metItems.length}</span>
+        <div class="iys-section-actions">
+          <button class="iys-fix-btn iys-fix-btn-goto" onclick="_nextImprovementItem('meta')">
+            <img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Next
+          </button>
+        </div>`;
+    }
+  }
+  const metSection = _section('Metadata', metGrade, metContent, metFooter);
 
   // ── BINARY SECTION ────────────────────────────────────
   const binContent = `
@@ -2037,51 +2061,61 @@ function buildImproveSubmissionSection(platformId) {
       <button class="btn btn-ghost btn-sm" onclick="state.storePageInsights=null;state.improveSubmissionAnalysis=null;_autoRunImproveSubmission('${platformId}')">Re-analyze all</button>
     </div>` : '';
 
-  // ── Chunk 2: Recommended Partners — 3 columns (QA · Press · Marketing) ──
-  // One top pick per category, selected based on platform and game profile.
-  const partners = [
+  // ── Chunk 2: Partner Recommendations ─────────────────
+  const partnerCats = [
     {
-      cat: 'QA',
-      p: isIos || isAndroid
-        ? { name: 'PlaytestCloud', tagline: 'Mobile playtesting on real devices with real players — ideal for pre-launch validation', url: 'https://playtestcloud.com', tag: 'Playtesting', highlight: true }
-        : { name: 'Global App Testing', tagline: 'Professional QA at scale — functional, performance, and compatibility testing', url: 'https://www.globalapptesting.com', tag: 'QA' },
+      cat: 'QA & Playtesting',
+      items: [
+        { name: 'PlaytestCloud', tagline: 'Playtest on real devices with real players', url: 'https://playtestcloud.com', tag: 'Playtesting' },
+        { name: 'Global App Testing', tagline: 'Professional mobile QA at scale', url: 'https://www.globalapptesting.com', tag: 'QA' },
+      ],
     },
     {
-      cat: 'Press',
-      p: { name: 'Impress', tagline: 'Indie-focused PR with strong relationships at top gaming outlets — best cost/coverage ratio for small studios', url: 'https://impress.games', tag: 'Press', highlight: true },
+      cat: 'Press & PR',
+      items: [
+        { name: 'Impress', tagline: 'Indie game PR, reviews, and press coverage', url: 'https://impress.games', tag: 'Press', highlight: true },
+        { name: 'IndieGamePR', tagline: 'Dedicated PR for independent developers', url: 'https://www.indiegamepr.com', tag: 'Press' },
+      ],
     },
     {
-      cat: 'Marketing',
-      p: isIos || isAndroid
-        ? { name: 'Chartboost', tagline: 'Mobile-first UA platform with direct deal network and strong ROAS for casual and mid-core games', url: 'https://www.chartboost.com', tag: 'UA / Ads' }
-        : { name: 'Keymailer', tagline: 'Connect with content creators and streamers — efficient key distribution and campaign tracking', url: 'https://www.keymailer.co', tag: 'Influencers' },
+      cat: 'Analytics & ASO',
+      items: [
+        { name: 'AppFollow', tagline: 'Ratings, reviews, and app store intelligence', url: 'https://appfollow.io', tag: 'ASO' },
+        { name: 'Sensor Tower', tagline: 'App store analytics and market intelligence', url: 'https://sensortower.com', tag: 'Analytics' },
+      ],
     },
+    ...(isIos || isAndroid ? [{
+      cat: 'Monetization',
+      items: [
+        { name: 'RevenueCat', tagline: 'In-app subscription infrastructure for mobile', url: 'https://www.revenuecat.com', tag: 'Subscriptions' },
+      ],
+    }] : []),
   ];
 
-  const partnerHTML = `<div class="iys-partner-row">${partners.map(({ cat, p }) => `
+  const partnerHTML = partnerCats.map(cat => `
     <div class="iys-partner-cat">
-      <div class="iys-partner-cat-label">${escHtml(cat)}</div>
+      <div class="iys-partner-cat-label">${escHtml(cat.cat)}</div>
       <div class="iys-partner-cards">
-        <a href="${escHtml(p.url)}" target="_blank" rel="noopener" class="iys-partner-card${p.highlight ? ' iys-partner-highlight' : ''}">
-          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+        ${cat.items.map(p => `
+          <a href="${escHtml(p.url)}" target="_blank" rel="noopener" class="iys-partner-card${p.highlight ? ' iys-partner-highlight' : ''}">
             <div class="iys-partner-avatar">${escHtml(p.name[0])}</div>
-            <div class="iys-partner-info" style="min-width:0;flex:1;">
+            <div class="iys-partner-info">
               <div class="iys-partner-name">${escHtml(p.name)}</div>
+              <div class="iys-partner-tagline">${escHtml(p.tagline)}</div>
             </div>
             <span class="iys-partner-tag">${escHtml(p.tag)}</span>
-          </div>
-          <div class="iys-partner-tagline" style="font-size:11px;line-height:1.5;">${escHtml(p.tagline)}</div>
-        </a>
+          </a>`).join('')}
       </div>
-    </div>`).join('')}</div>`;
+    </div>`).join('');
 
   return `
     <div class="iys-wrap">
       <div class="iys-chunk">
         <div class="iys-chunk-label">Subwoofer Guidance</div>
         <div class="iys-sections-grid">
-          ${spPageSection}
-          ${locSection}
+          ${spSection}
+          ${assSection}
+          ${metSection}
           ${binSection}
         </div>
         ${reanalyzeRow}
@@ -4010,31 +4044,48 @@ function buildSteamContentRatingSection() {
 function buildSteamStoreTagsSection() {
   const a = state.steamSubmitAnswers;
 
-  const _chips = (items, field, max, onclick) =>
-    `<div class="ms-chip-group">${items.map(g => {
-      const on = a[field].includes(g);
-      return `<button class="ms-chip${on ? ' is-on' : ''}"
-                      onclick="${onclick}('${field}','${escHtml(g)}',${!on},${max})">${escHtml(g)}</button>`;
-    }).join('')}</div>`;
+  const topGenreChecks = STEAM_TOP_GENRES.map(g => {
+    const checked = a.topGenres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('topGenres','${g}',this.checked,2)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
 
-  const topCount   = a.topGenres.length;
+  const genreChecks = STEAM_GENRES.map(g => {
+    const checked = a.genres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('genres','${g}',this.checked,2)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
+
+  const subGenreChecks = STEAM_SUB_GENRES.map(g => {
+    const checked = a.subGenres.includes(g);
+    return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''}
+             onchange="toggleSteamTag('subGenres','${g}',this.checked,3)">
+      <span>${escHtml(g)}</span></label>`;
+  }).join('');
+
+  const topCount = a.topGenres.length;
   const genreCount = a.genres.length;
-  const subCount   = a.subGenres.length;
+  const subCount = a.subGenres.length;
 
   return `
     <div class="ios-content-step-label" style="margin-top:0;">Top-Level Genre
       <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Required. Choose one or two top-level genres to categorize your title on Steam.</span></span>
     </div>
     ${topCount === 0 ? '<div class="ios-risk-note risk-HIGH" style="margin-bottom:8px;">Required — select at least one.</div>' : ''}
-    ${_chips(STEAM_TOP_GENRES, 'topGenres', 2, 'toggleSteamTag')}
+    <div class="cq-check-list">${topGenreChecks}</div>
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 2${genreCount > 0 ? ', ' + genreCount + ' selected' : ''})</span></div>
-    ${_chips(STEAM_GENRES, 'genres', 2, 'toggleSteamTag')}
+    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${genreChecks}</div>
 
     <div class="ios-q-divider"></div>
     <div class="ios-content-step-label">Sub-genre <span style="font-weight:400;text-transform:none;font-size:11px;letter-spacing:0;">(Optional — up to 3${subCount > 0 ? ', ' + subCount + ' selected' : ''})</span></div>
-    ${_chips(STEAM_SUB_GENRES, 'subGenres', 3, 'toggleSteamTag')}`;
+    <div class="cq-check-list" style="max-height:200px;overflow-y:auto;">${subGenreChecks}</div>`;
 }
 
 /* ── Steam: Technical (PDFs 10 + 11) ───────────────── */
@@ -4060,35 +4111,34 @@ function buildSteamTechnicalSection() {
   );
 
   const gamepadBlock = a.inputSupport && a.inputSupport !== 'keyboard_only' ? `
-    <div class="cond-block">
-      <div class="ios-content-step-label" style="margin-top:0;">Controller Support</div>
-      ${ynRow('Full Xbox Controller support', a.xboxFullSupport,
-        "answerSteamField('xboxFullSupport','yes')",
-        "answerSteamField('xboxFullSupport','no')",
-        'Player can launch, configure, play, and exit using only an Xbox controller. Game displays correct glyphs and any text prompts open an on-screen keyboard.')}
+    <div class="ios-q-divider"></div>
+    <div class="ios-content-step-label">Controller Support</div>
+    ${ynRow('Full Xbox Controller support', a.xboxFullSupport,
+      "answerSteamField('xboxFullSupport','yes')",
+      "answerSteamField('xboxFullSupport','no')",
+      'Player can launch, configure, play, and exit using only an Xbox controller. Game displays correct glyphs and any text prompts open an on-screen keyboard.')}
 
-      <div style="margin-top:12px;">
-        <div class="form-label" style="margin-bottom:6px;">PlayStation Controller support <span style="color:var(--text-faint);font-weight:400;">(select all that apply)</span></div>
-        <div class="ms-chip-group">${[
-          {id:'ps_dualshock_usb',   label:'DualShock (USB)'},
-          {id:'ps_dualshock_bt',    label:'DualShock (USB + BT)'},
-          {id:'ps_dualsense_usb',   label:'DualSense (USB)'},
-          {id:'ps_dualsense_bt',    label:'DualSense (USB + BT)'},
-          {id:'ps_none',            label:'No PS support'},
-        ].map(c => {
-          const on = a.psControllers.includes(c.id);
-          return `<button class="ms-chip${on ? ' is-on' : ''}"
-                          onclick="toggleSteamPS('${c.id}', ${!on})">${escHtml(c.label)}</button>`;
-        }).join('')}</div>
-      </div>
-
-      <div style="margin-top:12px;">
-        ${ynRow('Full Steam Input API integration', a.steamInputAPI,
-          "answerSteamField('steamInputAPI','yes')",
-          "answerSteamField('steamInputAPI','no')",
-          'Game fully integrates the Steam Input API, implements action bindings, queries action origins for correct glyph display, and allows button remapping through the Steam configurator.')}
-      </div>
+    <div style="margin-top:10px;">
+      <div class="form-label" style="margin-bottom:6px;">PlayStation Controller support <span style="color:var(--text-faint);font-weight:400;">(select all that apply)</span></div>
+      <div class="cq-check-list">${[
+        {id:'ps_dualshock_usb',   label:'DualShock Controller (USB)'},
+        {id:'ps_dualshock_bt',    label:'DualShock Controller (USB + Bluetooth)'},
+        {id:'ps_dualsense_usb',   label:'DualSense Controller (USB)'},
+        {id:'ps_dualsense_bt',    label:'DualSense Controller (USB + Bluetooth)'},
+        {id:'ps_none',            label:'No PlayStation controller support'},
+      ].map(c => {
+        const checked = a.psControllers.includes(c.id);
+        return `<label class="cq-check-row${checked ? ' is-checked' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''}
+                 onchange="toggleSteamPS('${c.id}', this.checked)">
+          <span>${escHtml(c.label)}</span></label>`;
+      }).join('')}</div>
     </div>
+
+    ${ynRow('Full Steam Input API integration', a.steamInputAPI,
+      "answerSteamField('steamInputAPI','yes')",
+      "answerSteamField('steamInputAPI','no')",
+      'Game fully integrates the Steam Input API, implements action bindings, queries action origins for correct glyph display, and allows button remapping through the Steam configurator.')}
   ` : '';
 
   const accessChecks = STEAM_ACCESSIBILITY_FEATURES.map(f => {

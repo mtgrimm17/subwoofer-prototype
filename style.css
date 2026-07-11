@@ -2419,50 +2419,28 @@ body {
   gap: 10px;
 }
 
-/* ─── Pixel-art progress bar ──────────────────────────────────
-   8px tall | 3 rows of 2px pixels | 1px gap between rows (= exactly 8px)
-   Horizontal: 5px pixel + 2px gap = 7px repeat
-   Gaps are ALWAYS the panel color — never filled by the progress fill.
-   The fill is masked so only the CENTER pixel row (y=3–5) shows green;
-   the top and bottom rows remain dim — creating a "floating middle" look.
-   ─────────────────────────────────────────────────────────── */
+/* Pixelated progress bar — grid of small squares */
 .card-bar {
   flex: 1;
-  height: 8px;
-  border-radius: 4px;
+  height: 10px;
+  border-radius: 0;
   overflow: hidden;
-  /* Empty track: dim green squares on dark grid */
-  background-color: rgba(74, 222, 128, 0.10);
+  /* Dim pixel grid for the "empty" track */
+  background-color: rgba(74, 222, 128, 0.08);
   background-image:
-    repeating-linear-gradient(180deg,
-      transparent 0px, transparent 2px,
-      var(--panel)  2px, var(--panel)  3px),
-    repeating-linear-gradient(90deg,
-      transparent 0px, transparent 5px,
-      var(--panel)  5px, var(--panel)  7px);
+    repeating-linear-gradient(90deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 8px),
+    repeating-linear-gradient(180deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 6px);
 }
 
 .card-bar-fill {
   height: 100%;
   border-radius: 0;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Bright pixel grid for the filled portion */
   background-color: var(--green);
   background-image:
-    repeating-linear-gradient(180deg,
-      transparent 0px, transparent 2px,
-      var(--panel)  2px, var(--panel)  3px),
-    repeating-linear-gradient(90deg,
-      transparent 0px, transparent 5px,
-      var(--panel)  5px, var(--panel)  7px);
-  /* Only the middle pixel row (y 3–5px out of 0–8px) shows the fill color */
-  -webkit-mask-image: linear-gradient(to bottom,
-    transparent 0px, transparent 3px,
-    black 3px,        black 5px,
-    transparent 5px,  transparent 8px);
-  mask-image: linear-gradient(to bottom,
-    transparent 0px, transparent 3px,
-    black 3px,        black 5px,
-    transparent 5px,  transparent 8px);
+    repeating-linear-gradient(90deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 8px),
+    repeating-linear-gradient(180deg, var(--panel) 0, var(--panel) 2px, transparent 2px, transparent 6px);
 }
 
 /* Submit button at the end of the progress bar */
@@ -2569,38 +2547,17 @@ body {
 
 /* ── Questionnaire sub-section headers ─────────────── */
 .qs-section-divided {
-  margin-top: 32px;
-  padding-top: 0;
-  border-top: none;
-}
-/* Hard divider line before each non-first section */
-.qs-section-divided::before {
-  content: '';
-  display: block;
-  height: 1px;
-  background: linear-gradient(to right, var(--border-hover), var(--border), transparent);
-  margin-bottom: 24px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }
 .qs-section-header {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-faint);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-/* Left accent bar on section headers */
-.qs-section-header::before {
-  content: '';
-  display: inline-block;
-  width: 3px;
-  height: 12px;
-  border-radius: 2px;
-  background: var(--orange);
-  flex-shrink: 0;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 14px;
 }
 
 /* Loading shimmer placeholders while inference runs */
@@ -5742,57 +5699,6 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   color: #4da3ff;
 }
 
-/* ─── Multi-select chips (Steam genres/tags) ─────────────────
-   Used instead of white checkboxes — matches the yes/no chip aesthetic. */
-.ms-chip-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 2px;
-}
-.ms-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
-  line-height: 1;
-}
-.ms-chip:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-}
-.ms-chip.is-on {
-  background: rgba(74, 222, 128, 0.12);
-  border-color: rgba(74, 222, 128, 0.5);
-  color: var(--green);
-}
-.ms-chip.is-on::before {
-  content: '✓';
-  font-size: 10px;
-  font-weight: 700;
-}
-
-/* ─── Conditional sub-question block ─────────────────────────
-   Visual indentation for questions that only appear when a
-   parent question has a specific answer. */
-.cond-block {
-  margin-top: 12px;
-  margin-left: 0;
-  padding: 14px 14px 14px 16px;
-  border-left: 2px solid var(--border);
-  background: rgba(255,255,255,0.02);
-  border-radius: 0 6px 6px 0;
-}
-
 /* ═══════════════════════════════════════════════════
    ANDROID DATA SAFETY
    ═══════════════════════════════════════════════════ */
@@ -6580,15 +6486,8 @@ body.is-splash .profile-wrap        { display: none; }
   line-height: 1.55;
 }
 
-/* Partner section — 3 columns side by side */
-.iys-partner-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
 /* Partner cards */
-.iys-partner-cat { margin-bottom: 0; }
+.iys-partner-cat { margin-bottom: 16px; }
 .iys-partner-cat:last-child { margin-bottom: 0; }
 .iys-partner-cat-label {
   font-size: 10px;
@@ -6605,10 +6504,9 @@ body.is-splash .profile-wrap        { display: none; }
 }
 .iys-partner-card {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 12px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   background: var(--panel-3);
   border: 1px solid var(--border);
   border-radius: 8px;
