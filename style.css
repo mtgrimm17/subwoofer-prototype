@@ -4483,6 +4483,30 @@ select.form-input {
   padding: 1px 5px;
   border-radius: 3px;
 }
+.csd-sources {
+  padding: 8px 12px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--orange) 15%, transparent);
+}
+.csd-sources-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 4px;
+}
+.csd-sources-list {
+  margin: 0;
+  padding: 0 0 0 16px;
+  list-style: disc;
+}
+.csd-sources-list li {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  padding: 1px 0;
+}
 .csd-body {
   padding: 8px 12px;
   font-size: 11px;

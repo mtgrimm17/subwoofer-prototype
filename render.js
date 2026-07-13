@@ -1417,7 +1417,7 @@ function buildSubmitStepCard(pid, stepCount, locked, submitDone) {
   const selTrack = (state.selectedTracks || {})[pid] || tracks[tracks.length - 1].id;
 
   // Track dropdown is always visible so the user can pre-select a track.
-  // The Submit button is disabled (and styled accordingly) while steps are incomplete.
+  // The rest of the card is the submit action — no separate button needed.
   const trackSelect = `
     <select class="submit-track-select"
             id="track-sel-${pid}"
@@ -1426,14 +1426,7 @@ function buildSubmitStepCard(pid, stepCount, locked, submitDone) {
       ${tracks.map(tr => `<option value="${tr.id}"${selTrack === tr.id ? ' selected' : ''}>${escHtml(tr.label)}</option>`).join('')}
     </select>`;
 
-  const submitBtn = `
-    <button class="submit-track-btn${locked ? ' submit-track-btn-locked' : ''}"
-            ${locked ? 'disabled' : ''}
-            onclick="event.stopPropagation(); ${locked ? '' : `confirmSubmit('${pid}')`}">
-      Submit →
-    </button>`;
-
-  // When not locked the whole card is clickable (excluding the dropdown).
+  // When not locked the whole card (except dropdown) is clickable.
   const cardClick = !locked ? `onclick="confirmSubmit('${pid}')"` : '';
 
   return `
@@ -1444,7 +1437,6 @@ function buildSubmitStepCard(pid, stepCount, locked, submitDone) {
         <div class="ios-step-name">Submit</div>
       </div>
       ${trackSelect}
-      ${submitBtn}
     </div>`;
 }
 
@@ -1717,7 +1709,6 @@ function renderStepModal() {
         <div class="inf-footer-note">
           <span class="inf-footer-icon">✦</span>
           Subwoofer pre-filled ${infAns} of ${infTotal} questions — please review ALL answers before submitting
-          ${state.lastInferencePrompt ? '<button class="see-prompt-btn" onclick="showInferencePrompt()">See Prompt</button>' : ''}
         </div>`;
     }
   }
@@ -2646,15 +2637,20 @@ function buildQuestionnaireSection(platformId) {
   let debugSummaryBlock = '';
   if (typeof buildNaturalLanguageSummary === 'function') {
     const summary = buildNaturalLanguageSummary();
-    if (summary) {
-      const safe = summary.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const sources = (typeof buildContextSources === 'function') ? buildContextSources() : [];
+    if (summary || sources.length) {
+      const safe = (summary || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const seePromptBtn = state.lastInferencePrompt
         ? '<button class="see-prompt-btn" onclick="showInferencePrompt()">See Prompt</button>'
+        : '';
+      const sourcesHtml = sources.length
+        ? `<div class="csd-sources"><span class="csd-sources-label">This prompt was constructed using:</span><ul class="csd-sources-list">${sources.map(s => `<li>${s}</li>`).join('')}</ul></div>`
         : '';
       debugSummaryBlock = `
         <div class="content-summary-debug">
           <div class="csd-header">🔍 Content Profile Summary <span class="csd-tag">DEBUG</span>${seePromptBtn}</div>
-          <div class="csd-body">${safe}</div>
+          ${sourcesHtml}
+          ${safe ? `<div class="csd-body">${safe}</div>` : ''}
         </div>`;
     }
   }

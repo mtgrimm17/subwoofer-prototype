@@ -631,6 +631,58 @@ function _extractPlatformContext(pid) {
 /* ── Natural language game summary ──────────────────────────── */
 // Generates a compact prose paragraph from all known game state so
 // the LLM has an easy-to-reason-about narrative rather than raw K/V pairs.
+// Returns a human-readable list of data sources that went into the prompt.
+// Shown at the top of the debug block so it's easy to verify context coverage.
+function buildContextSources() {
+  const sources = [];
+
+  // Onboarding info — always present if user completed onboarding
+  const fd = state.formData;
+  const obFields = [fd.title && 'title', fd.description && 'description', fd.genre && 'genre',
+                    fd.price && 'price'].filter(Boolean);
+  if (obFields.length) {
+    sources.push(`Onboarding info entered by the user (${obFields.join(', ')})`);
+  }
+
+  // Uploaded screenshots
+  const shots = (state.uploads?.screenshots || []).length;
+  if (shots > 0) {
+    sources.push(`${shots} uploaded gameplay screenshot${shots > 1 ? 's' : ''}`);
+  }
+
+  // iOS questionnaire — check if any intensity or yn fields have been answered
+  const iosQs = [...(typeof IOS_INTENSITY_QUESTIONS !== 'undefined' ? IOS_INTENSITY_QUESTIONS : []),
+                 ...(typeof IOS_CONTENT_YN_QUESTIONS !== 'undefined' ? IOS_CONTENT_YN_QUESTIONS : [])];
+  const iosAnsweredCount = iosQs.filter(q => {
+    const v = (state.iosSubmitAnswers || {})[q.id];
+    return v !== null && v !== undefined;
+  }).length;
+  if (iosAnsweredCount > 0) {
+    const label = iosAnsweredCount === iosQs.length ? 'completed' : 'partially completed';
+    sources.push(`A ${label} iOS questionnaire (${iosAnsweredCount}/${iosQs.length} answers)`);
+  }
+
+  // CQ / IARC answers (filled during Android questionnaire step)
+  const cqCount = Object.values(state.cqAnswers || {})
+    .filter(v => v !== null && v !== undefined && v !== '').length;
+  if (cqCount > 0) {
+    sources.push(`Android IARC content questionnaire (${cqCount} answer${cqCount > 1 ? 's' : ''})`);
+  }
+
+  // Steam questionnaire
+  const steamSCA = (state.steamSubmitAnswers || {}).steamContentAnswers || {};
+  const steamCount = Object.values(steamSCA).filter(v => v === 'yes' || v === 'no').length;
+  if (steamCount > 0) {
+    const totalSteam = (typeof STEAM_CONTENT_CATEGORIES !== 'undefined')
+      ? STEAM_CONTENT_CATEGORIES.flatMap(g => g.items).length : 0;
+    const label = totalSteam && steamCount === totalSteam ? 'completed' : 'partially completed';
+    const suffix = totalSteam ? `${steamCount}/${totalSteam} answers` : `${steamCount} answer${steamCount > 1 ? 's' : ''}`;
+    sources.push(`A ${label} Steam questionnaire (${suffix})`);
+  }
+
+  return sources;
+}
+
 // Called at the top of buildSharedContext() and shown in the debug UI.
 
 function buildNaturalLanguageSummary() {
