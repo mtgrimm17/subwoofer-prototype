@@ -6182,155 +6182,172 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
    SPLASH SCREEN
    ============================================================ */
 
+/* ============================================================
+   SPLASH SCREEN — Shipmate design (v1.99)
+   All pixel values are in design-space; .splash-scene zooms them
+   to fit the viewport. The topbar sign-in button is handled by the
+   existing body.is-splash rules at the bottom of this block.
+   ============================================================ */
+
+/* Full-height canvas below the topbar */
 .splash-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: calc(100vh - 53px); /* 53px = topbar height */
+  position: fixed;
+  inset: 53px 0 0 0;        /* 53px = topbar height */
   overflow-y: auto;
-  padding: 40px 24px 48px;
+  overflow-x: hidden;
   background: var(--bg);
-}
-
-.splash-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
-  width: 100%;
-  max-width: 900px;
-  text-align: center;
+  z-index: 200;
 }
 
-/* ── Badge ── */
-.splash-badge {
-  display: inline-flex;
+/* Scaled design canvas: designed at 1552 px wide */
+.splash-scene {
+  zoom: 0.62;               /* 1552 × 0.62 ≈ 962 px — fits most laptop screens */
+  width: 1552px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--green);
-  text-transform: uppercase;
+  padding: 80px 0 120px;
 }
 
-.splash-badge-dot {
-  font-size: 9px;
-  animation: splashPulse 2s ease-in-out infinite;
+/* ── Hero text ── */
+.splash-hero {
+  text-align: center;
+  margin-bottom: 60px;
 }
 
-@keyframes splashPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
-}
-
-/* ── Headline ── */
 .splash-headline {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: clamp(32px, 5vw, 56px);
+  font-size: 110px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
   color: var(--text);
-  letter-spacing: -0.02em;
-  margin: 0;
+  margin: 0 0 28px;
 }
 
 .splash-accent {
   color: var(--green);
 }
 
-/* ── Subtitle ── */
 .splash-sub {
-  font-size: 14px;
-  line-height: 1.7;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 40px;
+  line-height: 1.4;
   color: var(--text-dim);
-  max-width: 560px;
+  margin: 0;
 }
 
-/* ── Feature cards ── */
-.splash-cards {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  width: 100%;
+/* ── Pill wrap: position:relative so octopus can hang off the top ── */
+.splash-pill-wrap {
+  position: relative;
+  width: 1420px;
+}
+
+/* ── The three-card pill ── */
+.splash-pill {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  border-radius: 28px;
   border: 1px solid var(--border);
-  border-radius: 12px;
   overflow: hidden;
-  margin-top: 4px;
+  background: var(--border);  /* shows as thin dividers between cards */
 }
 
+/* ── Step cards ── */
 .splash-card {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-  padding: 28px 28px 32px;
+  gap: 14px;
+  padding: 48px 44px 52px;
   background: var(--panel);
   text-align: left;
+  min-height: 300px;
 }
 
-.splash-card-divider {
-  width: 1px;
-  background: var(--border);
+.splash-card-icon {
+  width: 52px;
+  height: 52px;
+  opacity: 0.9;
+  margin-bottom: 4px;
+  color: var(--text-dim);
   flex-shrink: 0;
 }
 
 .splash-card-step {
-  font-size: 10px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.14em;
   color: var(--text-faint);
   text-transform: uppercase;
-}
-
-.splash-card-icon {
-  margin: 4px 0 2px;
-  opacity: 0.9;
+  margin: 0;
 }
 
 .splash-card-title {
-  font-size: 16px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
   line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  margin: 0;
 }
 
-.splash-card-desc {
-  font-size: 12px;
-  line-height: 1.65;
+.splash-card-body {
+  font-size: 18px;
+  line-height: 1.6;
   color: var(--text-dim);
+  margin: 0;
 }
 
-/* ── CTA ── */
-.splash-cta {
+/* ── Step images in splash cards ── */
+.splash-step-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+}
+
+/* ── CTA row below the pill ── */
+.splash-cta-row {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-top: 4px;
+  gap: 28px;
+  margin-top: 56px;
 }
 
 .splash-get-started {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 16px;
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   color: #0a0a0a;
   background: var(--green);
   border: none;
-  border-radius: 8px;
-  padding: 14px 40px;
+  border-radius: 14px;
+  padding: 22px 72px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 18px;
   transition: opacity 0.15s, transform 0.12s;
+}
+
+.splash-get-started svg {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
 }
 
 .splash-get-started:hover {
   opacity: 0.88;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .splash-get-started:active {
@@ -6341,37 +6358,35 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
 .splash-platforms {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 14px;
 }
 
 .splash-plat-label {
-  font-size: 11px;
+  font-size: 18px;
   color: var(--text-faint);
   letter-spacing: 0.04em;
-  margin-right: 2px;
+  margin-right: 4px;
 }
 
 .splash-plat-icon {
-  height: 16px;
-  width: 16px;
+  height: 24px;
+  width: 24px;
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.45);
 }
 
 .splash-plat-more {
-  font-size: 11px;
+  font-size: 18px;
   color: var(--text-faint);
   letter-spacing: 0.04em;
-  margin-left: 2px;
+  margin-left: 4px;
 }
 
 /* ── Credibility line ── */
 .splash-credibility {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 10px;
 }
 
 .splash-cred-link {
@@ -6384,25 +6399,25 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
   transition: opacity 0.15s;
 }
 
-.splash-cred-link:hover {
-  opacity: 1;
-}
+.splash-cred-link:hover { opacity: 1; }
 
 .splash-cred-heart {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
 }
 
 .splash-cred-text {
-  font-size: 11px;
+  font-size: 17px;
   color: var(--text-faint);
   letter-spacing: 0.02em;
   line-height: 1.4;
+  max-width: 560px;
+  text-align: center;
 }
 
 /* ── Topbar Sign In button (splash only) ── */
 .splash-signin-btn {
-  display: none; /* hidden by default */
+  display: none;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 12px;
   font-weight: 600;
@@ -6424,14 +6439,71 @@ thead .prv-meta-col { background: var(--panel-2) !important; }
 body.is-splash .splash-signin-btn  { display: flex; align-items: center; }
 body.is-splash .profile-wrap        { display: none; }
 
-/* Step images in splash cards */
-.splash-step-img {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  display: block;
-  color: var(--accent, #5af078); /* SVG pixel art icons inherit this */
+/* ─────────────────────────────────────────────────────────────
+   OCTOPUS — idle float, tentacle sway, mouse-tracked pupils
+   (all values are in design-space, scaled by .splash-scene zoom)
+   ───────────────────────────────────────────────────────────── */
+.octo {
+  position: absolute;
+  top: -180px;
+  right: 30px;
+  width: 500px;
+  height: 320px;
+  pointer-events: none;
 }
+
+.octo-body   { z-index: 0; }
+.octo-tentacle { z-index: 2; }
+
+.octo-layer, .octo-sublayer {
+  position: absolute;
+}
+.octo-sublayer { inset: 0; }
+
+.octo-layer svg, .octo-sublayer svg,
+.octo-layer img, .octo-sublayer img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.octo-bob { position: absolute; inset: 0; }
+
+.octo .pupil { will-change: transform; }
+
+.octo-body {
+  will-change: transform;
+  transform-origin: 50% 76%;
+}
+
+#octo-mouth-o, #octo-smile-path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .octo-bob {
+    animation: octo-float 4.2s ease-in-out infinite;
+  }
+  .octo-tentacle {
+    transform-origin: var(--origin);
+    animation: octo-sway var(--dur, 6s) ease-in-out var(--delay, 0s) infinite;
+  }
+}
+
+@keyframes octo-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes octo-sway {
+  0%, 100% { transform: rotate(0deg); }
+  50%       { transform: rotate(2.4deg); }
+}
+
+
 
 /* ============================================================
    INFERENCE LOADING SCREEN  (v1.70)
