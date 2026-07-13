@@ -1921,6 +1921,9 @@ const state = {
 
   // Full prompt sent in the last unified inference call — shown by "See Prompt" debug button.
   lastInferencePrompt: null,
+
+  // Per-platform selected submission track (pid → trackId). Defaults to 'production'.
+  selectedTracks: {},
   androidContentRatingExpanded: false,
   steamAnsweredAtInference: null,
   steamContentRatingExpanded: false,

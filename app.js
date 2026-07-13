@@ -410,48 +410,28 @@ function submitOverlayClick(e) {
   if (e.target === document.getElementById('submit-overlay')) closeStepModal();
 }
 
-// Update the iOS active card progress bar + step counts + submit button without full re-render
+// Update the iOS active card step completion states without full re-render
 function updateIOSCard() {
   if (!state.activePlatforms.has('ios')) return;
-  const counts = platformStepCount('ios');
-  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
+  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-  const barFill = document.getElementById('bar-fill-ios');
-  if (barFill) barFill.style.width = pct + '%';
-
-  const stepCountEl = document.getElementById('step-count-ios');
-  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
-
-  // Update each step card: gray circle when incomplete, green checkmark when done
   PLATFORMS.ios.steps.forEach((step, i) => {
     const card = document.getElementById(`ios-step-card-${step.id}`);
     if (!card) return;
     const done = isIOSSectionComplete(step.id);
     card.classList.toggle('is-complete', done);
-
     const numEl = card.querySelector('.ios-step-num');
     if (numEl) {
       numEl.classList.toggle('is-done', done);
       numEl.classList.remove('is-risk-warn', 'is-risk-high');
-      numEl.innerHTML = done
-        ? `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-        : String(i + 1);
+      numEl.innerHTML = done ? checkSVG : String(i + 1);
     }
   });
 
-  // Submit button
-  const submitBtn = document.getElementById('submit-btn-ios');
-  if (submitBtn) {
-    const allDone = counts.allRequired;
-    submitBtn.classList.toggle('is-locked', !allDone);
-    if (allDone) {
-      submitBtn.removeAttribute('disabled');
-      submitBtn.setAttribute('onclick', "finalSubmit('ios')");
-    } else {
-      submitBtn.setAttribute('disabled', '');
-      submitBtn.removeAttribute('onclick');
-    }
-  }
+  // Update submit step card lock state
+  const counts = platformStepCount('ios');
+  const submitCard = document.getElementById('ios-step-card-submit');
+  if (submitCard) submitCard.classList.toggle('submit-step-locked', !counts.allRequired);
 }
 
 /* ── Legacy submit modal (non-iOS platforms) ─────────── */
@@ -972,6 +952,21 @@ function confirmAndSubmit(platformId) {
 
 // Opens the track-selection submit modal for platforms that have defined tracks
 // (ios / android / steam). For platforms without tracks, submits directly.
+/* Persist selected track from the inline card dropdown (no modal needed) */
+function selectTrack(pid, trackId) {
+  if (!state.selectedTracks) state.selectedTracks = {};
+  state.selectedTracks[pid] = trackId;
+  // No re-render needed — the select element already reflects the new value
+}
+
+/* Confirm and execute the submit from the inline step card */
+function confirmSubmit(pid) {
+  if (!state.selectedTracks) state.selectedTracks = {};
+  const trackId = state.selectedTracks[pid]
+    || (PLATFORM_TRACKS[pid] || [{ id: 'production' }]).slice(-1)[0].id;
+  _doFinalSubmit(pid, trackId);
+}
+
 function openTrackSubmitModal(platformId) {
   const tracks = PLATFORM_TRACKS[platformId];
   if (!tracks || !tracks.length) {
@@ -2104,6 +2099,33 @@ Respond ONLY with valid JSON — an array of objects, no extra text, no markdown
   renderStepModal();
 }
 
+/* Build the merged store-page suggestion list (max 5) from current analysis state.
+   Used by both the render function and applyStorePageFix so they share one source. */
+function _getCurrentMergedStoreItems() {
+  const spi = state.storePageInsights;
+  const ana = state.improveSubmissionAnalysis;
+
+  const spItems = (!spi?.loading && !spi?.error && spi?.issues)
+    ? spi.issues.map(iss => ({
+        tag: { subtitle:'Subtitle', description:'Description', title:'Title' }[iss.field] || 'Store Page',
+        title: iss.issue || iss.title || '',
+        body:  iss.suggestion || iss.body || '',
+        fixedValue: iss.fixedValue || null,
+        field: iss.field || null,
+        type:  'sp',
+      }))
+    : [];
+
+  const anaItems = (!ana?.loading && !ana?.error && ana?.items)
+    ? (ana.items || [])
+        .filter(t => ['store','asset','icon','screenshot','metadata','tag','keyword']
+          .some(k => (t.area || '').toLowerCase().includes(k)))
+        .map(item => ({ tag: item.area || 'Store Page', title: item.title || '', body: item.body || '', type: 'ana' }))
+    : [];
+
+  return [...spItems, ...anaItems].slice(0, 5);
+}
+
 /* Auto-trigger both analyses when the Improve Your Submission step opens */
 function _autoRunImproveSubmission(pid) {
   const needsSP = !state.storePageInsights || !!state.storePageInsights.error;
@@ -2121,55 +2143,37 @@ function _autoRunImproveSubmission(pid) {
   if (needsAI) runImproveSubmissionAnalysis(pid);
 }
 
-/* Advance to next store page issue (after Fix it or Dismiss) */
-function _advanceStoreIssue() {
-  const ins = state.storePageInsights;
-  if (!ins?.issues) return;
-  const next = (ins.index || 0) + 1;
-  if (next >= ins.issues.length) {
-    ins.done = true;
-  } else {
-    ins.index = next;
+/* Apply the current store page fix, then advance */
+function applyStorePageFix() {
+  if (!state.improveSubmissionIdx) state.improveSubmissionIdx = { storePage: 0 };
+  const items = _getCurrentMergedStoreItems();
+  const i   = state.improveSubmissionIdx.storePage || 0;
+  const cur = items[i];
+  if (!cur?.fixedValue || cur.type !== 'sp') return;
+
+  if (cur.field === 'description') {
+    state.formData.description = cur.fixedValue;
+    const el = document.getElementById('ob-desc');
+    if (el) { el.value = cur.fixedValue; charCount('ob-desc-count', cur.fixedValue, 4000); }
+  } else if (cur.field === 'subtitle') {
+    state.formData.subtitle = cur.fixedValue;
+    const el = document.getElementById('ob-subtitle');
+    if (el) { el.value = cur.fixedValue; charCount('ob-subtitle-count', cur.fixedValue, 30); }
+  } else if (cur.field === 'title') {
+    state.formData.title = cur.fixedValue;
+    const el = document.getElementById('ob-title');
+    if (el) { el.value = cur.fixedValue; charCount('ob-title-count', cur.fixedValue, 30); }
   }
+
+  state.improveSubmissionIdx.storePage = i + 1;
   renderStepModal();
 }
 
-/* Apply the current store page fix, then advance */
-function applyStorePageFix() {
-  const ins = state.storePageInsights;
-  if (!ins?.issues) return;
-  const issue = ins.issues[ins.index || 0];
-  if (!issue?.fixedValue) return;
-
-  if (issue.field === 'description') {
-    state.formData.description = issue.fixedValue;
-    const el = document.getElementById('ob-desc');
-    if (el) { el.value = issue.fixedValue; charCount('ob-desc-count', issue.fixedValue, 4000); }
-  } else if (issue.field === 'subtitle') {
-    state.formData.subtitle = issue.fixedValue;
-    const el = document.getElementById('ob-subtitle');
-    if (el) { el.value = issue.fixedValue; charCount('ob-subtitle-count', issue.fixedValue, 30); }
-  } else if (issue.field === 'title') {
-    state.formData.title = issue.fixedValue;
-    const el = document.getElementById('ob-title');
-    if (el) { el.value = issue.fixedValue; charCount('ob-title-count', issue.fixedValue, 30); }
-  }
-
-  _advanceStoreIssue();
-}
-
-/* Skip the current store page issue without applying */
-function dismissStoreIssue() {
-  _advanceStoreIssue();
-}
-
-/* Advance the merged Store Page cycling index */
+/* Advance to next item without applying a fix */
 function _nextImprovementItem(section) {
   if (!state.improveSubmissionIdx) state.improveSubmissionIdx = { storePage: 0 };
   if (section === 'storePage') {
-    // The merged list size is recomputed in the render function (max 5).
-    // We advance mod 5 as a safe upper bound; render clamps to actual length.
-    state.improveSubmissionIdx.storePage = ((state.improveSubmissionIdx.storePage || 0) + 1) % 5;
+    state.improveSubmissionIdx.storePage = (state.improveSubmissionIdx.storePage || 0) + 1;
   }
   renderStepModal();
 }
@@ -2953,41 +2957,23 @@ function seedOnboardingToAndroid() {
 /* Update the Android card in the dashboard after changes */
 function updateAndroidCard() {
   if (!state.activePlatforms.has('android')) return;
-  const counts = platformStepCount('android');
-  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
-
-  const barFill = document.getElementById('bar-fill-android');
-  if (barFill) barFill.style.width = pct + '%';
-
-  const stepCountEl = document.getElementById('step-count-android');
-  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
+  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
   PLATFORMS.android.steps.forEach((step, i) => {
     const card = document.getElementById(`android-step-card-${step.id}`);
     if (!card) return;
     const done = isAndroidSectionComplete(step.id);
     card.classList.toggle('is-complete', done);
-
     const numEl = card.querySelector('.ios-step-num');
     if (numEl) {
       numEl.classList.toggle('is-done', done);
-      const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
       numEl.innerHTML = done ? checkSVG : String(i + 1);
     }
   });
 
-  const submitBtn = document.getElementById('submit-btn-android');
-  if (submitBtn) {
-    const allDone = counts.allRequired;
-    submitBtn.classList.toggle('is-locked', !allDone);
-    if (allDone) {
-      submitBtn.removeAttribute('disabled');
-      submitBtn.setAttribute('onclick', "finalSubmit('android')");
-    } else {
-      submitBtn.setAttribute('disabled', '');
-      submitBtn.setAttribute('onclick', '');
-    }
-  }
+  const counts = platformStepCount('android');
+  const submitCard = document.getElementById('android-step-card-submit');
+  if (submitCard) submitCard.classList.toggle('submit-step-locked', !counts.allRequired);
 }
 
 /* Re-render Data Safety modal body preserving scroll */
@@ -3180,15 +3166,8 @@ function reRenderSteamStepModal() {
 
 function updateSteamCard() {
   if (!state.activePlatforms.has('steam')) return;
-  const counts = platformStepCount('steam');
-  const pct    = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
-
-  const barFill = document.getElementById('bar-fill-steam');
-  if (barFill) barFill.style.width = pct + '%';
-  const stepCountEl = document.getElementById('step-count-steam');
-  if (stepCountEl) stepCountEl.textContent = `${counts.complete} / ${counts.total} steps`;
-
   const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
   PLATFORMS.steam.steps.forEach((step, i) => {
     const card = document.getElementById(`steam-step-card-${step.id}`);
     if (!card) return;
@@ -3202,18 +3181,9 @@ function updateSteamCard() {
     }
   });
 
-  const submitBtn = document.getElementById('submit-btn-steam');
-  if (submitBtn) {
-    const allDone = counts.allRequired;
-    submitBtn.classList.toggle('is-locked', !allDone);
-    if (allDone) {
-      submitBtn.removeAttribute('disabled');
-      submitBtn.setAttribute('onclick', "finalSubmit('steam')");
-    } else {
-      submitBtn.setAttribute('disabled', '');
-      submitBtn.setAttribute('onclick', '');
-    }
-  }
+  const counts = platformStepCount('steam');
+  const submitCard = document.getElementById('steam-step-card-submit');
+  if (submitCard) submitCard.classList.toggle('submit-step-locked', !counts.allRequired);
 }
 
 /* Toggle/answer helpers */

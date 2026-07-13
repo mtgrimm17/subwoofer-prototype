@@ -1341,16 +1341,6 @@ function renderDashboard() {
   }
 
   el.innerHTML = h;
-
-  // Animate active platform progress bars from 0% → actual width after first paint
-  requestAnimationFrame(() => {
-    for (const pid of active) {
-      const counts = platformStepCount(pid);
-      const pct = counts.total ? Math.round((counts.complete / counts.total) * 100) : 0;
-      const barFill = document.getElementById(`bar-fill-${pid}`);
-      if (barFill) barFill.style.width = pct + '%';
-    }
-  });
 }
 
 // Track selector + drift-visibility status pills for platforms that support
@@ -1384,7 +1374,7 @@ function buildActiveCard(pid) {
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
-  const submitDone = counts.submitDone;
+  const submitDone = state.platformStepStatus?.[pid]?.['submit'] === 'complete';
 
   const steps = p.steps.filter(s => !s.isSubmit).map(step => {
     const done = state.platformStepStatus[pid][step.id] === 'complete';
@@ -1396,6 +1386,8 @@ function buildActiveCard(pid) {
       </div>`;
   }).join('');
 
+  const submitStepCard = buildSubmitStepCard(pid, p.steps.length, locked, submitDone);
+
   return `
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
@@ -1406,19 +1398,44 @@ function buildActiveCard(pid) {
           </div>
         </div>
       </div>
-      <div class="card-bar-wrap">
-        <div class="card-bar">
-          <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
-        </div>
-        <button class="card-submit-btn ${submitDone ? 'is-done' : locked ? 'is-locked' : ''}"
-                id="submit-btn-${pid}"
-                onclick="${submitDone || locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? t('btn.locked_title') : submitDone ? t('btn.submitted_title') : t('track.submit.title', {platform: platLabel(pid)})}"
-                ${locked && !submitDone ? 'disabled' : ''}>
-          ${submitDone ? '✓' : t('btn.submit')}
-        </button>
-      </div>
       <div class="card-tasks">${steps}</div>
+      <div class="ios-step-cards">${submitStepCard}</div>
+    </div>`;
+}
+
+/* ── Submit step card (shared across all platform card builders) ─────────────
+   Shows as the last step in every platform card.
+   • locked=true  → grayed-out row, no track controls
+   • locked=false → row is active with inline track dropdown + Submit button
+   ─────────────────────────────────────────────────────────────────────────── */
+function buildSubmitStepCard(pid, stepCount, locked, submitDone) {
+  const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const num = stepCount + 1;
+  const numClass = 'ios-step-num' + (submitDone ? ' is-done' : '');
+
+  const tracks = PLATFORM_TRACKS[pid] || [{ id: 'production', label: 'Production' }];
+  const selTrack = (state.selectedTracks || {})[pid] || tracks[tracks.length - 1].id;
+
+  const trackControls = !locked ? `
+    <select class="submit-track-select"
+            id="track-sel-${pid}"
+            onclick="event.stopPropagation()"
+            onchange="selectTrack('${pid}', this.value)">
+      ${tracks.map(tr => `<option value="${tr.id}"${selTrack === tr.id ? ' selected' : ''}>${escHtml(tr.label)}</option>`).join('')}
+    </select>
+    <button class="submit-track-btn"
+            onclick="event.stopPropagation(); confirmSubmit('${pid}')">
+      Submit →
+    </button>` : '';
+
+  return `
+    <div class="ios-step-card submit-step-card ${submitDone ? 'is-complete' : ''} ${locked ? 'submit-step-locked' : ''}"
+         id="${pid}-step-card-submit">
+      <div class="${numClass}">${submitDone ? checkSVG : num}</div>
+      <div class="ios-step-info">
+        <div class="ios-step-name">Submit</div>
+      </div>
+      ${trackControls}
     </div>`;
 }
 
@@ -1426,6 +1443,7 @@ function buildIOSActiveCard(pid) {
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
+  const submitDone = state.platformStepStatus?.[pid]?.['submit'] === 'complete';
 
   const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -1446,6 +1464,8 @@ function buildIOSActiveCard(pid) {
       </div>`;
   }).join('');
 
+  const submitStepCard = buildSubmitStepCard(pid, p.steps.length, locked, submitDone);
+
   return `
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
@@ -1457,19 +1477,7 @@ function buildIOSActiveCard(pid) {
         </div>
       </div>
       ${buildReleasePills(pid)}
-      <div class="card-bar-wrap">
-        <div class="card-bar">
-          <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
-        </div>
-        <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
-                id="submit-btn-${pid}"
-                onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? t('btn.locked_title') : t('btn.submit_to_appstore')}"
-                ${locked ? 'disabled' : ''}>
-          ${t('btn.submit')}
-        </button>
-      </div>
-      <div class="ios-step-cards">${stepCards}</div>
+      <div class="ios-step-cards">${stepCards}${submitStepCard}</div>
     </div>`;
 }
 
@@ -1477,6 +1485,7 @@ function buildAndroidActiveCard(pid) {
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
+  const submitDone = state.platformStepStatus?.[pid]?.['submit'] === 'complete';
 
   const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -1497,6 +1506,8 @@ function buildAndroidActiveCard(pid) {
       </div>`;
   }).join('');
 
+  const submitStepCard = buildSubmitStepCard(pid, p.steps.length, locked, submitDone);
+
   return `
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
@@ -1508,19 +1519,7 @@ function buildAndroidActiveCard(pid) {
         </div>
       </div>
       ${buildReleasePills(pid)}
-      <div class="card-bar-wrap">
-        <div class="card-bar">
-          <div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div>
-        </div>
-        <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
-                id="submit-btn-${pid}"
-                onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? t('btn.locked_title') : t('track.submit.title', {platform: platLabel(pid)})}"
-                ${locked ? 'disabled' : ''}>
-          ${t('btn.submit')}
-        </button>
-      </div>
-      <div class="ios-step-cards">${stepCards}</div>
+      <div class="ios-step-cards">${stepCards}${submitStepCard}</div>
     </div>`;
 }
 
@@ -1955,29 +1954,13 @@ function buildImproveSubmissionSection(platformId) {
   }
 
   // ── MERGED STORE PAGE SECTION ─────────────────────────
-  // Combines: Store Page text issues (spi) + Assets + Metadata (ana) — max 5
-  const loading = (spi?.loading || !spi) && (ana?.loading || !ana);
+  // Combines: Store Page text issues (spi) + Assets + Metadata (ana) — max 5 total.
+  // _getCurrentMergedStoreItems() is defined in app.js and shared with applyStorePageFix().
+  const loading  = (spi?.loading || !spi) && (ana?.loading || !ana);
   const hasError = spi?.error || ana?.error;
 
-  // Build unified item list (normalised to { tag, title, body, fixedValue?, type })
-  const _spItems = (!spi?.loading && !spi?.error && spi?.issues && !spi?.done)
-    ? spi.issues.slice(spi.index || 0).map(iss => ({
-        tag: { subtitle:'Subtitle', description:'Description', title:'Title' }[iss.field] || 'Store Page',
-        title: iss.issue || iss.title || '',
-        body: iss.suggestion || iss.body || '',
-        fixedValue: iss.fixedValue,
-        type: 'sp',
-      }))
-    : [];
-  const _anaItems = (!ana?.loading && !ana?.error && ana?.items)
-    ? _filterItems(ana.items, 'store', 'asset', 'icon', 'screenshot', 'metadata', 'tag', 'keyword')
-        .map(item => ({ tag: item.area || 'Store Page', title: item.title || '', body: item.body || '', fixedValue: null, type: 'ana' }))
-    : [];
-
-  const mergedItems = [..._spItems, ..._anaItems].slice(0, 5);
-
-  // Overall grade
-  const spGrade  = (!spi?.loading && !spi?.error) ? (spi?.done || !spi?.issues?.length ? 'A' : spi.issues.length <= 1 ? 'B' : spi.issues.length <= 3 ? 'C' : 'D') : null;
+  // Overall grade (based on raw count, not position)
+  const spGrade  = (!spi?.loading && !spi?.error) ? (!spi?.issues?.length ? 'A' : spi.issues.length <= 1 ? 'B' : spi.issues.length <= 3 ? 'C' : 'D') : null;
   const assGrade = ana?.scores?.assets   || null;
   const metGrade = ana?.scores?.metadata || null;
   const mergedGrade = _worseGrade(spGrade, _worseGrade(assGrade, metGrade));
@@ -1988,26 +1971,32 @@ function buildImproveSubmissionSection(platformId) {
   } else if (hasError) {
     spPageContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(spi?.error || ana?.error)}</div></div>`;
     spPageFooter  = `<button class="iys-fix-btn" onclick="state.storePageInsights=null;state.improveSubmissionAnalysis=null;_autoRunImproveSubmission('${platformId}')"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
-  } else if (!mergedItems.length) {
-    spPageContent = _allGood('Store page, assets & metadata all look strong');
   } else {
-    const n   = mergedItems.length;
-    const i   = Math.min(idx.storePage || 0, n - 1);
-    const cur = mergedItems[i];
-    spPageContent = `
-      <div class="iys-issue-content">
-        ${cur.tag ? `<div class="iys-issue-field-tag">${escHtml(cur.tag)}</div>` : ''}
-        <div class="iys-issue-title">${escHtml(cur.title)}</div>
-        <div class="iys-issue-body">${escHtml(cur.body)}</div>
-      </div>`;
-    const hasNext = n > 1;
-    const hasFix  = cur.type === 'sp' && !!cur.fixedValue;
-    spPageFooter = `
-      <span class="iys-section-counter">${i + 1} / ${n}</span>
-      <div class="iys-section-actions">
-        ${hasFix ? `<button class="iys-fix-btn" onclick="applyStorePageFix()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Subwoofer Fix</button>` : ''}
-        ${hasNext ? `<button class="btn btn-ghost btn-sm" onclick="_nextImprovementItem('storePage')">Next</button>` : ''}
-      </div>`;
+    // Use shared helper so the counter always reflects the same list as applyStorePageFix()
+    const mergedItems = (typeof _getCurrentMergedStoreItems === 'function')
+      ? _getCurrentMergedStoreItems() : [];
+    const n = mergedItems.length;
+    const i = idx.storePage || 0;
+
+    if (!n || i >= n) {
+      spPageContent = _allGood('Store page, assets & metadata all look strong');
+    } else {
+      const cur = mergedItems[i];
+      spPageContent = `
+        <div class="iys-issue-content">
+          ${cur.tag ? `<div class="iys-issue-field-tag">${escHtml(cur.tag)}</div>` : ''}
+          <div class="iys-issue-title">${escHtml(cur.title)}</div>
+          <div class="iys-issue-body">${escHtml(cur.body)}</div>
+        </div>`;
+      const hasFix  = cur.type === 'sp' && !!cur.fixedValue;
+      const hasNext = i < n - 1;
+      spPageFooter = `
+        <span class="iys-section-counter">${i + 1} / ${n}</span>
+        <div class="iys-section-actions">
+          ${hasFix ? `<button class="iys-fix-btn" onclick="applyStorePageFix()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Subwoofer Fix</button>` : ''}
+          ${hasNext ? `<button class="btn btn-ghost btn-sm" onclick="_nextImprovementItem('storePage')">Next</button>` : ''}
+        </div>`;
+    }
   }
   const spPageSection = _section('Store Page', mergedGrade, spPageContent, spPageFooter);
 
@@ -2650,9 +2639,12 @@ function buildQuestionnaireSection(platformId) {
     const summary = buildNaturalLanguageSummary();
     if (summary) {
       const safe = summary.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const seePromptBtn = state.lastInferencePrompt
+        ? '<button class="see-prompt-btn" onclick="showInferencePrompt()">See Prompt</button>'
+        : '';
       debugSummaryBlock = `
         <div class="content-summary-debug">
-          <div class="csd-header">🔍 Content Profile Summary <span class="csd-tag">DEBUG</span></div>
+          <div class="csd-header">🔍 Content Profile Summary <span class="csd-tag">DEBUG</span>${seePromptBtn}</div>
           <div class="csd-body">${safe}</div>
         </div>`;
     }
@@ -3889,6 +3881,7 @@ function buildSteamActiveCard(pid) {
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
+  const submitDone = state.platformStepStatus?.[pid]?.['submit'] === 'complete';
   const checkSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
   const stepCards = p.steps.map((step, i) => {
@@ -3908,6 +3901,8 @@ function buildSteamActiveCard(pid) {
       </div>`;
   }).join('');
 
+  const submitStepCard = buildSubmitStepCard(pid, p.steps.length, locked, submitDone);
+
   return `
     <div class="active-card" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
@@ -3919,15 +3914,7 @@ function buildSteamActiveCard(pid) {
         </div>
       </div>
       ${buildReleasePills(pid)}
-      <div class="card-bar-wrap">
-        <div class="card-bar"><div class="card-bar-fill" id="bar-fill-${pid}" style="width:0%;"></div></div>
-        <button class="card-submit-btn ${locked ? 'is-locked' : ''}"
-                id="submit-btn-${pid}"
-                onclick="${locked ? '' : `openTrackSubmitModal('${pid}')`}"
-                title="${locked ? t('btn.locked_title') : t('track.submit.title', {platform: platLabel(pid)})}"
-                ${locked ? 'disabled' : ''}>${t('btn.submit')}</button>
-      </div>
-      <div class="ios-step-cards">${stepCards}</div>
+      <div class="ios-step-cards">${stepCards}${submitStepCard}</div>
     </div>`;
 }
 

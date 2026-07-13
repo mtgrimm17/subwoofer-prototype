@@ -2497,6 +2497,48 @@ body {
 .ios-step-card.is-complete { opacity: 0.6; }
 .ios-step-card.is-complete:hover { opacity: 0.8; }
 
+/* ── Submit step card ───────────────────────────────────────── */
+.submit-step-card { cursor: default; }
+.submit-step-card:hover { background: transparent; }
+.submit-step-card.submit-step-locked {
+  opacity: 0.35;
+  pointer-events: none;
+}
+/* Track dropdown inside submit step */
+.submit-track-select {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-inset);
+  color: var(--text);
+  cursor: pointer;
+  max-width: 130px;
+  flex-shrink: 0;
+}
+.submit-track-select:focus { outline: none; border-color: var(--green); }
+/* Submit button inside submit step */
+.submit-track-btn {
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--green);
+  background: var(--green-soft, rgba(74,222,128,0.12));
+  color: var(--green);
+  cursor: pointer;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.submit-track-btn:hover {
+  background: rgba(74,222,128,0.25);
+  box-shadow: 0 0 10px rgba(74,222,128,0.2);
+}
+
 .ios-step-num {
   width: 20px; height: 20px;
   border-radius: 50%;
@@ -4354,15 +4396,16 @@ select.form-input {
   box-sizing: border-box;
 }
 .prompt-debug-modal {
-  background: var(--bg-panel);
+  background: var(--bg, #13131a);
   border: 1px solid var(--border);
   border-radius: 10px;
   width: 100%;
   max-width: 820px;
-  max-height: 85vh;
+  height: 80vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
 }
 .prompt-debug-header {
   display: flex;
