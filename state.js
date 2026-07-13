@@ -1922,6 +1922,10 @@ const state = {
   // Full prompt sent in the last unified inference call — shown by "See Prompt" debug button.
   lastInferencePrompt: null,
 
+  // Context sources snapshot taken immediately before the last inference call.
+  // Stored pre-call so the debug block shows what actually went IN, not post-inference state.
+  lastInferenceSources: null,
+
   // Per-platform selected submission track (pid → trackId). Defaults to 'production'.
   selectedTracks: {},
   androidContentRatingExpanded: false,

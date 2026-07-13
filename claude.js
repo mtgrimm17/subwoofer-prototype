@@ -1172,6 +1172,11 @@ async function inferAllQuestionnaires() {
   const prompt     = buildUnifiedInferencePrompt();
   const scrshots   = _buildScreenshotContent();
 
+  // Snapshot context sources NOW — before the API call mutates state with answers.
+  // The debug block displays this snapshot so it reflects actual inference inputs,
+  // not the post-inference state (which would falsely show its own outputs as sources).
+  state.lastInferenceSources = buildContextSources();
+
   // Store full prompt for "See Prompt" debug button
   state.lastInferencePrompt = (scrshots.length
     ? `[${scrshots.length} screenshot(s) included in API call]\n\n`

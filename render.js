@@ -2634,17 +2634,22 @@ function iosIntensityRow(label, fieldId, tooltip) {
 /* ── Questionnaire: combined Content Rating + Data + Business ─ */
 function buildQuestionnaireSection(platformId) {
   // ── Debug: natural language content summary (temporary — won't ship) ──────
+  // Sources use the pre-inference snapshot (state.lastInferenceSources) so they show
+  // what actually went INTO the prompt, not what inference produced as output.
   let debugSummaryBlock = '';
   if (typeof buildNaturalLanguageSummary === 'function') {
     const summary = buildNaturalLanguageSummary();
-    const sources = (typeof buildContextSources === 'function') ? buildContextSources() : [];
+    // Use the stored pre-inference snapshot; fall back to live only before first inference run
+    const sources = state.lastInferenceSources !== null
+      ? state.lastInferenceSources
+      : (typeof buildContextSources === 'function' ? buildContextSources() : []);
     if (summary || sources.length) {
       const safe = (summary || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const seePromptBtn = state.lastInferencePrompt
         ? '<button class="see-prompt-btn" onclick="showInferencePrompt()">See Prompt</button>'
         : '';
       const sourcesHtml = sources.length
-        ? `<div class="csd-sources"><span class="csd-sources-label">This prompt was constructed using:</span><ul class="csd-sources-list">${sources.map(s => `<li>${s}</li>`).join('')}</ul></div>`
+        ? `<div class="csd-sources"><span class="csd-sources-label">This prompt was constructed using:</span><ul class="csd-sources-list">${sources.map(s => `<li>${escHtml(s)}</li>`).join('')}</ul></div>`
         : '';
       debugSummaryBlock = `
         <div class="content-summary-debug">
