@@ -650,15 +650,16 @@ function buildContextSources() {
     sources.push(`${shots} uploaded gameplay screenshot${shots > 1 ? 's' : ''}`);
   }
 
-  // iOS questionnaire — check if any intensity or yn fields have been answered
+  // iOS questionnaire — only count IDs still in the current question lists
   const iosQs = [...(typeof IOS_INTENSITY_QUESTIONS !== 'undefined' ? IOS_INTENSITY_QUESTIONS : []),
                  ...(typeof IOS_CONTENT_YN_QUESTIONS !== 'undefined' ? IOS_CONTENT_YN_QUESTIONS : [])];
+  const iosAnswers = state.iosSubmitAnswers || {};
   const iosAnsweredCount = iosQs.filter(q => {
-    const v = (state.iosSubmitAnswers || {})[q.id];
+    const v = iosAnswers[q.id];
     return v !== null && v !== undefined;
   }).length;
   if (iosAnsweredCount > 0) {
-    const label = iosAnsweredCount === iosQs.length ? 'completed' : 'partially completed';
+    const label = iosAnsweredCount >= iosQs.length ? 'completed' : 'partially completed';
     sources.push(`A ${label} iOS questionnaire (${iosAnsweredCount}/${iosQs.length} answers)`);
   }
 
@@ -669,13 +670,19 @@ function buildContextSources() {
     sources.push(`Android IARC content questionnaire (${cqCount} answer${cqCount > 1 ? 's' : ''})`);
   }
 
-  // Steam questionnaire
+  // Steam questionnaire — only count IDs still present in the current category list
+  // (stale keys from removed categories would otherwise inflate the count past the total)
   const steamSCA = (state.steamSubmitAnswers || {}).steamContentAnswers || {};
-  const steamCount = Object.values(steamSCA).filter(v => v === 'yes' || v === 'no').length;
+  const validSteamIds = new Set(
+    (typeof STEAM_CONTENT_CATEGORIES !== 'undefined')
+      ? STEAM_CONTENT_CATEGORIES.flatMap(g => g.items.map(i => i.id))
+      : []
+  );
+  const totalSteam = validSteamIds.size;
+  const steamCount = Object.entries(steamSCA)
+    .filter(([id, v]) => validSteamIds.has(id) && (v === 'yes' || v === 'no')).length;
   if (steamCount > 0) {
-    const totalSteam = (typeof STEAM_CONTENT_CATEGORIES !== 'undefined')
-      ? STEAM_CONTENT_CATEGORIES.flatMap(g => g.items).length : 0;
-    const label = totalSteam && steamCount === totalSteam ? 'completed' : 'partially completed';
+    const label = totalSteam && steamCount >= totalSteam ? 'completed' : 'partially completed';
     const suffix = totalSteam ? `${steamCount}/${totalSteam} answers` : `${steamCount} answer${steamCount > 1 ? 's' : ''}`;
     sources.push(`A ${label} Steam questionnaire (${suffix})`);
   }
