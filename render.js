@@ -1416,26 +1416,35 @@ function buildSubmitStepCard(pid, stepCount, locked, submitDone) {
   const tracks = PLATFORM_TRACKS[pid] || [{ id: 'production', label: 'Production' }];
   const selTrack = (state.selectedTracks || {})[pid] || tracks[tracks.length - 1].id;
 
-  const trackControls = !locked ? `
+  // Track dropdown is always visible so the user can pre-select a track.
+  // The Submit button is disabled (and styled accordingly) while steps are incomplete.
+  const trackSelect = `
     <select class="submit-track-select"
             id="track-sel-${pid}"
             onclick="event.stopPropagation()"
             onchange="selectTrack('${pid}', this.value)">
       ${tracks.map(tr => `<option value="${tr.id}"${selTrack === tr.id ? ' selected' : ''}>${escHtml(tr.label)}</option>`).join('')}
-    </select>
-    <button class="submit-track-btn"
-            onclick="event.stopPropagation(); confirmSubmit('${pid}')">
+    </select>`;
+
+  const submitBtn = `
+    <button class="submit-track-btn${locked ? ' submit-track-btn-locked' : ''}"
+            ${locked ? 'disabled' : ''}
+            onclick="event.stopPropagation(); ${locked ? '' : `confirmSubmit('${pid}')`}">
       Submit →
-    </button>` : '';
+    </button>`;
+
+  // When not locked the whole card is clickable (excluding the dropdown).
+  const cardClick = !locked ? `onclick="confirmSubmit('${pid}')"` : '';
 
   return `
-    <div class="ios-step-card submit-step-card ${submitDone ? 'is-complete' : ''} ${locked ? 'submit-step-locked' : ''}"
-         id="${pid}-step-card-submit">
+    <div class="ios-step-card submit-step-card ${submitDone ? 'is-complete' : ''} ${locked ? 'submit-step-locked' : 'submit-step-ready'}"
+         id="${pid}-step-card-submit" ${cardClick}>
       <div class="${numClass}">${submitDone ? checkSVG : num}</div>
       <div class="ios-step-info">
         <div class="ios-step-name">Submit</div>
       </div>
-      ${trackControls}
+      ${trackSelect}
+      ${submitBtn}
     </div>`;
 }
 

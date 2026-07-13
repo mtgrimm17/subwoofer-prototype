@@ -2499,11 +2499,12 @@ body {
 
 /* ── Submit step card ───────────────────────────────────────── */
 .submit-step-card { cursor: default; }
-.submit-step-card:hover { background: transparent; }
-.submit-step-card.submit-step-locked {
-  opacity: 0.35;
-  pointer-events: none;
-}
+/* Locked: reduced opacity but dropdown is still interactive */
+.submit-step-card.submit-step-locked { opacity: 0.45; }
+.submit-step-card.submit-step-locked:hover { background: transparent; }
+/* Ready: card is clickable */
+.submit-step-card.submit-step-ready { cursor: pointer; }
+.submit-step-card.submit-step-ready:hover { background: rgba(255,255,255,0.03); }
 /* Track dropdown inside submit step */
 .submit-track-select {
   font-family: inherit;
@@ -2537,6 +2538,14 @@ body {
 .submit-track-btn:hover {
   background: rgba(74,222,128,0.25);
   box-shadow: 0 0 10px rgba(74,222,128,0.2);
+}
+.submit-track-btn.submit-track-btn-locked,
+.submit-track-btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--border);
+  background: transparent;
+  color: var(--text-faint);
 }
 
 .ios-step-num {

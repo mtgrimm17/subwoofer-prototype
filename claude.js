@@ -634,9 +634,8 @@ function _extractPlatformContext(pid) {
 // Called at the top of buildSharedContext() and shown in the debug UI.
 
 function buildNaturalLanguageSummary() {
-  const fd  = state.formData;
-  const qa  = state.questionAnswers;
-  const a   = state.iosSubmitAnswers;
+  const fd = state.formData;
+  const a  = state.iosSubmitAnswers;
 
   const parts = [];
 
@@ -660,61 +659,57 @@ function buildNaturalLanguageSummary() {
     parts.push(`Targeting: ${pids.map(p => names[p] || p).join(', ')}.`);
   }
 
-  // ── Synthesize content profile from onboarding + iOS answers ─────────────
-  // Determine what content IS present (positive flags only)
-  const hasViolence = qa.violence === 'yes' ||
-    ['cartoonViolence','realisticViolence','extendedViolence','gunsWeapons']
-      .some(id => a[id] && a[id] !== 'none');
-  const hasSexual   = qa.sexualContent === 'yes' ||
-    ['sexualContent','graphicSexual','matureSuggestive'].some(id => a[id] && a[id] !== 'none');
-  const hasLanguage = qa.strongLanguage === 'yes' || (a.profanity && a.profanity !== 'none');
-  const hasGambling = a.simulatedGambling && a.simulatedGambling !== 'none';
-  const hasHorror   = a.horrorFear && a.horrorFear !== 'none';
-  const hasDrugs    = a.substancesAlcohol && a.substancesAlcohol !== 'none';
-  const hasIAP      = qa.inAppPurchases === 'yes' || a.hasIAP === 'yes';
-  const hasChat     = a.messagingChat === 'yes';
-  const hasUGC      = a.userGenContent === 'yes';
-  const hasAds      = a.advertising === 'yes';
-  const hasInternet = a.unrestrictedInternet === 'yes';
-
-  const contentFlags = [];
-  if (hasViolence) contentFlags.push('violence or combat');
-  if (hasSexual)   contentFlags.push('sexual or mature content');
-  if (hasLanguage) contentFlags.push('strong language or profanity');
-  if (hasGambling) contentFlags.push('simulated gambling');
-  if (hasHorror)   contentFlags.push('horror or fear themes');
-  if (hasDrugs)    contentFlags.push('drug or alcohol references');
-
+  // ── Content profile from iOS questionnaire answers ────────────────────────
+  // The iOS intensity questions (none/infrequent/frequent) are the most specific
+  // content signals we have. Only emit positive (non-"none") ratings.
   const anyIosAnswered = [...IOS_INTENSITY_QUESTIONS, ...IOS_CONTENT_YN_QUESTIONS]
     .some(q => a[q.id] !== null && a[q.id] !== undefined);
 
-  if (contentFlags.length) {
-    parts.push(`Content flags: ${contentFlags.join(', ')}.`);
-  } else if (anyIosAnswered || qa.violence === 'no' || qa.sexualContent === 'no') {
-    parts.push('Content review: no significant mature content flagged.');
-  }
+  if (anyIosAnswered) {
+    // High-level content flags derived from iOS answers
+    const hasViolence = ['cartoonViolence','realisticViolence','extendedViolence','gunsWeapons']
+      .some(id => a[id] && a[id] !== 'none');
+    const hasSexual   = ['sexualContent','graphicSexual','matureSuggestive']
+      .some(id => a[id] && a[id] !== 'none');
+    const hasLanguage = a.profanity && a.profanity !== 'none';
+    const hasGambling = a.simulatedGambling && a.simulatedGambling !== 'none';
+    const hasHorror   = a.horrorFear && a.horrorFear !== 'none';
+    const hasDrugs    = a.substancesAlcohol && a.substancesAlcohol !== 'none';
 
-  // Features
-  const features = [];
-  if (hasIAP)      features.push('in-app purchases');
-  if (hasChat)     features.push('messaging or chat');
-  if (hasUGC)      features.push('user-generated content');
-  if (hasAds)      features.push('advertising');
-  if (hasInternet) features.push('unrestricted internet access');
-  if (features.length) parts.push(`Features: ${features.join(', ')}.`);
+    const contentFlags = [];
+    if (hasViolence) contentFlags.push('violence or combat');
+    if (hasSexual)   contentFlags.push('sexual or mature content');
+    if (hasLanguage) contentFlags.push('strong language or profanity');
+    if (hasGambling) contentFlags.push('simulated gambling');
+    if (hasHorror)   contentFlags.push('horror or fear themes');
+    if (hasDrugs)    contentFlags.push('drug or alcohol references');
 
-  // ── iOS intensity detail for non-"none" items ─────────────────────────────
-  // These are the most specific signals we have — describe them fully.
-  const intensityItems = IOS_INTENSITY_QUESTIONS
-    .filter(q => a[q.id] && a[q.id] !== 'none')
-    .map(q => `${q.label} (${a[q.id]})`);
-  if (intensityItems.length) {
-    parts.push(`iOS intensity ratings: ${intensityItems.join('; ')}.`);
+    if (contentFlags.length) {
+      parts.push(`Content flags (from iOS questionnaire): ${contentFlags.join(', ')}.`);
+    } else {
+      parts.push('iOS questionnaire: no significant mature content flagged.');
+    }
+
+    // Features from iOS yn answers
+    const features = [];
+    if (a.hasIAP === 'yes')            features.push('in-app purchases');
+    if (a.messagingChat === 'yes')      features.push('messaging or chat');
+    if (a.userGenContent === 'yes')     features.push('user-generated content');
+    if (a.advertising === 'yes')        features.push('advertising');
+    if (a.unrestrictedInternet === 'yes') features.push('unrestricted internet access');
+    if (features.length) parts.push(`Features: ${features.join(', ')}.`);
+
+    // Specific intensity ratings for any non-"none" items
+    const intensityItems = IOS_INTENSITY_QUESTIONS
+      .filter(q => a[q.id] && a[q.id] !== 'none')
+      .map(q => `${q.label} (${a[q.id]})`);
+    if (intensityItems.length) {
+      parts.push(`iOS intensity detail: ${intensityItems.join('; ')}.`);
+    }
   }
 
   // Note: full CQ question/answer data is included separately in buildSharedContext()
-  // as CONTENT QUESTIONNAIRE ANSWERS. We don't echo it here because the question
-  // text is long and doesn't truncate cleanly — the raw data is more useful as-is.
+  // as CONTENT QUESTIONNAIRE ANSWERS — not echoed here to avoid truncation issues.
 
   return parts.join(' ');
 }
@@ -726,7 +721,6 @@ function buildNaturalLanguageSummary() {
 
 function buildSharedContext() {
   const fd  = state.formData;
-  const qa  = state.questionAnswers;
   const cq  = state.cqAnswers;
   const parts = [];
 
@@ -738,15 +732,6 @@ function buildSharedContext() {
   parts.push(`GAME TITLE: ${fd.title || '(not provided)'}`);
   parts.push(`DESCRIPTION: ${fd.description || '(none provided)'}`);
   if (fd.genre) parts.push(`GENRE: ${fd.genre}`);
-
-  // ── Onboarding compliance answers ────────────────────────────
-  const qaMap = { violence:'Violence or combat', sexualContent:'Sexual or mature content',
-                  strongLanguage:'Strong language', dataCollection:'Data collection',
-                  inAppPurchases:'In-app purchases' };
-  const qaLines = Object.entries(qaMap)
-    .filter(([k]) => qa[k] !== null)
-    .map(([k, label]) => `  ${label}: ${qa[k]}`);
-  if (qaLines.length) parts.push(`ONBOARDING COMPLIANCE:\n${qaLines.join('\n')}`);
 
   // ── CQ/IARC answers (platform-agnostic shared questionnaire) ─
   // These are gathered independently of active-platform iteration because
