@@ -1474,6 +1474,7 @@ function buildIOSActiveCard(pid) {
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${platLabel(pid)}</div>
+            ${buildBuildDropdown(pid)}
           </div>
         </div>
       </div>
@@ -1516,6 +1517,7 @@ function buildAndroidActiveCard(pid) {
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${platLabel(pid)}</div>
+            ${buildBuildDropdown(pid)}
           </div>
         </div>
       </div>
@@ -1752,6 +1754,7 @@ function renderStepModal() {
       </div>`;
   } else if (platformId === 'android') {
     if (stepId === 'questionnaire')           body = buildQuestionnaireSection(platformId);
+    else if (stepId === 'screenshots')        body = buildScreenshotsSection(platformId);
     else if (stepId === 'storePreview')       body = buildAndroidStorePreviewSection();
     else if (stepId === 'improveSubmission')  body = buildImproveSubmissionSection(platformId);
     // Legacy individual step fallbacks (for backward-compat with saved state)
@@ -1760,6 +1763,7 @@ function renderStepModal() {
     else if (stepId === 'business')           body = buildAndroidBusinessSection();
   } else if (platformId === 'steam') {
     if (stepId === 'questionnaire')           body = buildQuestionnaireSection(platformId);
+    else if (stepId === 'screenshots')        body = buildScreenshotsSection(platformId);
     else if (stepId === 'storePreview')       body = buildSteamStorePreviewSection();
     else if (stepId === 'improveSubmission')  body = buildImproveSubmissionSection(platformId);
     // Legacy fallbacks
@@ -1767,6 +1771,7 @@ function renderStepModal() {
     else if (stepId === 'storeTags')          body = buildSteamStoreTagsSection();
     else if (stepId === 'technical')          body = buildSteamTechnicalSection();
   } else if (stepId === 'questionnaire')      body = buildQuestionnaireSection(platformId);
+  else if (stepId === 'screenshots')          body = buildScreenshotsSection(platformId);
   else if (stepId === 'distribution')         body = buildDistributionSection();
   else if (stepId === 'storePreview')         body = buildStorePreviewSection();
   else if (stepId === 'improveSubmission')    body = buildImproveSubmissionSection(platformId);
@@ -3920,6 +3925,7 @@ function buildSteamActiveCard(pid) {
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
           <div>
             <div class="active-card-name">${platLabel(pid)}</div>
+            ${buildBuildDropdown(pid)}
           </div>
         </div>
       </div>
@@ -4267,5 +4273,96 @@ function buildSteamStorePreviewSection() {
       </div>
       ${screenshotStrip}
       <div style="font-size:12px;color:#8f98a0;margin-top:10px;line-height:1.5;">${descShort}</div>
+    </div>`;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   BUILD DROPDOWN  (platform card header)
+   ══════════════════════════════════════════════════════ */
+function buildBuildDropdown(pid) {
+  const build  = state.platformBuilds?.[pid] || null;
+  const accept = pid === 'ios'     ? '.ipa'
+               : pid === 'android' ? '.apk,.aab'
+               :                     '.exe,.zip';
+  const noBuild = !build;
+  const uploadSVG = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.75"><path d="M8 11V2M4 5l4-4 4 4M2 13v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const checkSVG = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;color:var(--accent-green,#2FDC80)"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `
+    <div class="build-pill ${noBuild ? 'no-build' : 'has-build'}"
+         onclick="document.getElementById('build-file-${pid}').click()" title="${noBuild ? 'Upload build' : 'Change build'}">
+      <input type="file" id="build-file-${pid}" accept="${accept}" hidden
+             onchange="handleBuildUpload('${pid}', this.files)">
+      ${noBuild ? uploadSVG : checkSVG}
+      <span class="build-pill-label">${noBuild ? 'Upload Build' : escHtml(build.name)}</span>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   SCREENSHOTS STEP  (per-platform, inside step modal)
+   ══════════════════════════════════════════════════════ */
+function buildScreenshotsSection(pid) {
+  const onboardingShots = state.uploads?.screenshots || [];
+  const ps = state.platformScreenshots?.[pid] || { selected: [], custom: [] };
+  const selectedSet = new Set(ps.selected);
+
+  const checkMark = `<div class="shot-check">✓</div>`;
+
+  // Onboarding screenshots row
+  let onboardingHtml;
+  if (onboardingShots.length > 0) {
+    onboardingHtml = onboardingShots.map(s => {
+      const src = _screenshotSrc(s);
+      const sel = selectedSet.has(s.id);
+      return `
+        <div class="shot-thumb${sel ? ' is-selected' : ''}"
+             onclick="togglePlatformScreenshot('${pid}','${s.id}')" title="${escHtml(s.name)}">
+          <img src="${src}" alt="${escHtml(s.name)}">
+          ${sel ? checkMark : ''}
+        </div>`;
+    }).join('');
+  } else {
+    onboardingHtml = `<p class="shot-empty-msg">No screenshots in your uploads yet — add them under Assets during onboarding.</p>`;
+  }
+
+  // Platform-specific custom uploads
+  let customHtml = '';
+  if (ps.custom && ps.custom.length > 0) {
+    customHtml = `
+      <div class="shot-group-label">Platform-specific uploads</div>
+      <div class="shot-grid">
+        ${ps.custom.map(s => `
+          <div class="shot-thumb is-selected is-custom" title="${escHtml(s.name)}">
+            <img src="${s.dataUrl}" alt="${escHtml(s.name)}">
+            ${checkMark}
+            <button class="shot-remove" onclick="removePlatformScreenshot('${pid}','${s.id}')" title="Remove">×</button>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  const total = ps.selected.length + (ps.custom?.length || 0);
+
+  return `
+    <div class="screenshots-step">
+      <p class="shot-intro">
+        Select screenshots to include with your ${platLabel(pid)} submission.
+        ${total > 0 ? `<strong>${total} selected.</strong>` : ''}
+      </p>
+
+      <div class="shot-group-label">From your uploads</div>
+      <div class="shot-grid" id="shot-grid-${pid}">${onboardingHtml}</div>
+
+      ${customHtml}
+
+      <div class="shot-actions">
+        <label class="btn btn-ghost btn-sm shot-upload-btn" style="cursor:pointer;">
+          <input type="file" accept="image/*" multiple hidden
+                 onchange="handlePlatformScreenshotFiles('${pid}', this.files)">
+          + Upload New
+        </label>
+        <a href="screenshot-tool.html" target="_blank" class="btn btn-ghost btn-sm">
+          Crop &amp; Adjust ↗
+        </a>
+      </div>
     </div>`;
 }

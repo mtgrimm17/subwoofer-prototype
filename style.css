@@ -2174,6 +2174,43 @@ body {
   line-height: 1.2;
 }
 
+/* ── Build Upload Pill ───────────────────────────────── */
+.build-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+  max-width: 160px;
+}
+.build-pill .build-pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.build-pill.no-build {
+  border: 1.5px solid var(--danger, #FF3D61);
+  color: var(--danger, #FF3D61);
+  background: rgba(255, 61, 97, 0.08);
+}
+.build-pill.no-build:hover {
+  background: rgba(255, 61, 97, 0.15);
+}
+.build-pill.has-build {
+  border: 1.5px solid rgba(47, 220, 128, 0.5);
+  color: rgba(47, 220, 128, 0.9);
+  background: rgba(47, 220, 128, 0.08);
+}
+.build-pill.has-build:hover {
+  background: rgba(47, 220, 128, 0.15);
+}
+
 .active-card-progress-label {
   font-size: 11px;
   color: var(--text-faint);
@@ -6825,4 +6862,119 @@ body.is-splash .profile-wrap        { display: none; }
   padding: 4px 8px;
   background: var(--green-soft);
   border-radius: 5px;
+}
+
+/* ══════════════════════════════════════════════════════
+   SCREENSHOTS STEP
+   ══════════════════════════════════════════════════════ */
+.screenshots-step {
+  padding: 2px 0 8px;
+}
+.shot-intro {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.shot-intro strong {
+  color: var(--text);
+}
+.shot-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+.shot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.shot-thumb {
+  position: relative;
+  width: 88px;
+  height: 66px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  background: #000;
+  flex-shrink: 0;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.shot-thumb:hover {
+  border-color: var(--border-hover, #3a3a3a);
+  transform: scale(1.03);
+}
+.shot-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+.shot-thumb.is-selected {
+  border-color: var(--green, #2FDC80);
+}
+.shot-thumb.is-selected:hover {
+  border-color: var(--green, #2FDC80);
+}
+.shot-check {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--green, #2FDC80);
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.shot-remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.shot-thumb:hover .shot-remove {
+  opacity: 1;
+}
+.shot-empty-msg {
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 8px 0;
+  line-height: 1.5;
+}
+.shot-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.shot-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

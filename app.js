@@ -3346,3 +3346,81 @@ function showInferencePrompt() {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 }
+
+/* ══════════════════════════════════════════════════════
+   BUILD UPLOAD  (per-platform binary)
+   ══════════════════════════════════════════════════════ */
+function handleBuildUpload(pid, files) {
+  const file = files?.[0];
+  if (!file) return;
+  state.platformBuilds = state.platformBuilds || { ios: null, android: null, steam: null };
+  state.platformBuilds[pid] = { name: file.name, size: file.size };
+  // Re-render the active card to reflect the new build
+  const card = document.getElementById('active-card-' + pid);
+  if (card) {
+    if (pid === 'ios')     card.outerHTML = buildIOSActiveCard(pid);
+    else if (pid === 'android') card.outerHTML = buildAndroidActiveCard(pid);
+    else if (pid === 'steam')   card.outerHTML = buildSteamActiveCard(pid);
+  } else {
+    renderDash();
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   SCREENSHOT STEP  (per-platform selection + uploads)
+   ══════════════════════════════════════════════════════ */
+
+// Toggle selection of an onboarding screenshot for a platform
+function togglePlatformScreenshot(pid, shotId) {
+  if (!state.platformScreenshots) state.platformScreenshots = { ios:{selected:[],custom:[]}, android:{selected:[],custom:[]}, steam:{selected:[],custom:[]} };
+  const ps = state.platformScreenshots[pid];
+  const idx = ps.selected.indexOf(shotId);
+  if (idx >= 0) {
+    ps.selected.splice(idx, 1);
+  } else {
+    ps.selected.push(shotId);
+  }
+  // Re-render just the screenshot step body in the open modal
+  const body = document.getElementById('step-modal-body');
+  if (body) {
+    const inner = body.querySelector('.ios-step-body-content');
+    if (inner) inner.innerHTML = buildScreenshotsSection(pid);
+  }
+  // Also update the step card complete state
+  const cardEl = document.getElementById((pid === 'ios' ? 'ios' : pid) + '-step-card-screenshots');
+  if (cardEl) renderDash();
+}
+
+// Handle new platform-specific screenshot file uploads
+function handlePlatformScreenshotFiles(pid, files) {
+  if (!files || !files.length) return;
+  if (!state.platformScreenshots) state.platformScreenshots = { ios:{selected:[],custom:[]}, android:{selected:[],custom:[]}, steam:{selected:[],custom:[]} };
+  const ps = state.platformScreenshots[pid];
+  Array.from(files).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const id = 'pshot-' + pid + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
+      ps.custom = ps.custom || [];
+      ps.custom.push({ id, name: file.name, dataUrl: ev.target.result });
+      // Re-render modal body
+      const body = document.getElementById('step-modal-body');
+      if (body) {
+        const inner = body.querySelector('.ios-step-body-content');
+        if (inner) inner.innerHTML = buildScreenshotsSection(pid);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Remove a platform-specific custom screenshot
+function removePlatformScreenshot(pid, shotId) {
+  if (!state.platformScreenshots?.[pid]) return;
+  state.platformScreenshots[pid].custom = (state.platformScreenshots[pid].custom || []).filter(s => s.id !== shotId);
+  const body = document.getElementById('step-modal-body');
+  if (body) {
+    const inner = body.querySelector('.ios-step-body-content');
+    if (inner) inner.innerHTML = buildScreenshotsSection(pid);
+  }
+}
