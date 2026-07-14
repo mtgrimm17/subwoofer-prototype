@@ -440,14 +440,53 @@
     .platforms { margin-top: 36px; }
     footer { padding-left: 24px; padding-right: 24px; }
   }
+
+  /* ─── Splash → Onboarding transition ─────────────────────────────── */
+  @keyframes octo-swim-away {
+    0%   { transform: translate(0,    0)    scale(1)    rotate(0deg);   opacity: 1; }
+    15%  { transform: translate(50px, -35px) scale(1.08) rotate(-8deg);  opacity: 1; }
+    55%  { transform: translate(180px,-190px) scale(0.55) rotate(-22deg); opacity: 0.7; }
+    100% { transform: translate(340px,-400px) scale(0.1)  rotate(-40deg); opacity: 0; }
+  }
+  .octo-exit {
+    animation: octo-swim-away 0.72s cubic-bezier(.4,0,1,1) forwards !important;
+    pointer-events: none;
+  }
+  /* Override any other animations on children when parent exits */
+  .octo-exit .octo-bob      { animation: none !important; }
+  .octo-exit .octo-tentacle { animation: none !important; }
+  .octo-exit .octo-body     { animation: none !important; transform: none !important; }
+
+  .water-fill {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(160deg, #06101f 0%, #0b1e3a 60%, #0d2040 100%);
+    clip-path: circle(0% at 82% 36%);
+    z-index: 2000;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .water-fill.expanding {
+    animation: water-expand 0.95s cubic-bezier(.35,0,.1,1) forwards;
+  }
+  @keyframes water-expand {
+    0%   { clip-path: circle(0%   at 82% 36%); opacity: 0.9; }
+    40%  { clip-path: circle(60%  at 82% 36%); opacity: 1; }
+    100% { clip-path: circle(160% at 82% 36%); opacity: 1; }
+  }
+  @keyframes bubble-rise {
+    0%   { transform: translateY(0)      scale(0.4); opacity: 0; }
+    12%  { opacity: 1; }
+    88%  { opacity: 0.7; transform: translateY(-95vh) scale(1.1); }
+    100% { transform: translateY(-110vh) scale(1.2); opacity: 0; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand" style="display:flex;align-items:center;gap:10px;">
-    <img src="Assets/logo.png" alt="" style="height:20px;width:20px;object-fit:contain;" onerror="this.style.display='none'">
-    Subwoofer
+  <div class="brand">
+    Shipmate
   </div>
   <button class="user-chip" style="cursor:pointer;background:none;border:1px solid rgba(255,255,255,0.18);border-radius:8px;padding:6px 16px;color:rgba(255,255,255,0.7);font-size:13px;font-weight:600;letter-spacing:0.04em;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='#fff';this.style.borderColor='rgba(255,255,255,0.45)'" onmouseout="this.style.color='rgba(255,255,255,0.7)';this.style.borderColor='rgba(255,255,255,0.18)'" onclick="window.parent.signInFromSplash()">Sign In</button>
 </header>
@@ -1022,7 +1061,7 @@ Confidence</h3>
   </section>
 
   <div class="cta-row">
-    <button class="cta" onclick="window.parent.startFromSplash()">
+    <button class="cta" onclick="launchTransition()">
       GET STARTED
       <svg viewBox="0 0 39 37" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;"><g transform="matrix(1.35728,0,0,1.35728,3.33555,7.91632)"><path d="M17.903,6.787L14.775,3.936L12.588,1.709C12.51,1.631 12.451,1.538 12.412,1.431C12.373,1.323 12.354,1.211 12.354,1.094C12.354,0.853 12.435,0.653 12.598,0.493C12.76,0.334 12.962,0.254 13.203,0.254C13.32,0.254 13.433,0.277 13.54,0.322C13.647,0.368 13.753,0.443 13.857,0.547L20.332,7.002C20.527,7.191 20.625,7.409 20.625,7.656C20.625,7.904 20.527,8.122 20.332,8.311L13.838,14.785C13.649,14.967 13.438,15.059 13.203,15.059C12.962,15.059 12.76,14.979 12.598,14.819C12.435,14.66 12.354,14.46 12.354,14.219C12.354,14.102 12.373,13.989 12.412,13.882C12.451,13.774 12.51,13.682 12.588,13.604L14.775,11.377L17.911,8.525L3.35,8.525C3.096,8.525 2.889,8.444 2.729,8.281C2.57,8.118 2.49,7.91 2.49,7.656C2.49,7.402 2.57,7.194 2.729,7.031C2.889,6.868 3.096,6.787 3.35,6.787L17.903,6.787Z" style="fill:currentColor;"/></g></svg>
     </button>
@@ -1363,6 +1402,58 @@ Confidence</h3>
     });
   })();
 </script>
+
+
+  <script>
+  function launchTransition() {
+    const octoEl   = document.querySelector('.octo');
+    const fillEl   = document.createElement('div');
+
+    // ── 1. Octopus swims away ──────────────────────────────────────────
+    if (octoEl) {
+      // Freeze the rAF eye-tracking so body doesn't fight the exit
+      octoEl.classList.add('octo-exit');
+    }
+
+    // ── 2. Spawn trailing bubbles before water fills ───────────────────
+    (function spawnBubbles() {
+      const N = 55;
+      for (let i = 0; i < N; i++) {
+        setTimeout(function() {
+          const b    = document.createElement('div');
+          const size = 4 + Math.random() * 14;
+          const x    = 10 + Math.random() * 80;          // % from left
+          const dur  = 900 + Math.random() * 1400;
+          const dly  = Math.random() * 900;
+          const op   = (0.25 + Math.random() * 0.6).toFixed(2);
+          b.style.cssText =
+            'position:absolute;left:' + x + '%;bottom:-' + (size + 4) + 'px;' +
+            'width:' + size + 'px;height:' + size + 'px;' +
+            'border-radius:' + Math.round(size * 0.28) + 'px;' +
+            'background:rgba(255,255,255,' + op + ');' +
+            'animation:bubble-rise ' + dur + 'ms ease-out ' + dly + 'ms both;';
+          fillEl.appendChild(b);
+        }, i * 12);
+      }
+    })();
+
+    // ── 3. Water floods in from octopus position ───────────────────────
+    fillEl.className = 'water-fill';
+    document.body.appendChild(fillEl);
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        fillEl.classList.add('expanding');
+      });
+    });
+
+    // ── 4. Hand off to parent once screen is fully covered ─────────────
+    setTimeout(function() {
+      if (window.parent && window.parent.startSplashTransition) {
+        window.parent.startSplashTransition();
+      }
+    }, 980);
+  }
+  </script>
 
 </body>
 </html>

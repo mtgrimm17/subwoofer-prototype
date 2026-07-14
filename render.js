@@ -262,7 +262,7 @@ function buildDistributionTab() {
 
         <div class="sw-tip-box" style="margin-bottom:10px;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.distribution.regions') || 'Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.'}</span>
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Shipmate Tip:</strong> ${t('tip.distribution.regions') || 'Gamer behavior varies significantly between regions. A successful launch carefully considers localization, culturalization, purchase behavior, and market fit in each region.'}</span>
         </div>
 
         <div id="ob-country-list-wrap">${buildObCountryChips()}</div>
@@ -276,7 +276,7 @@ function buildDistributionTab() {
 
         <div class="sw-tip-box" style="margin-bottom:12px;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-          <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.distribution.languages') || 'On average, games see 30–50% more revenue in markets where they support the local language vs. English-only releases. The highest-impact localization for your selected markets is highlighted below.'}</span>
+          <span class="sw-tip-text"><strong class="sw-tip-bold">Shipmate Tip:</strong> ${t('tip.distribution.languages') || 'On average, games see 30–50% more revenue in markets where they support the local language vs. English-only releases. The highest-impact localization for your selected markets is highlighted below.'}</span>
         </div>
 
         <div id="ob-lang-list-wrap">${buildObLangList()}</div>
@@ -630,7 +630,7 @@ function _legacyScenarioWidget_unused() {
         <div class="sw-tip-box" style="margin-bottom:0;">
           <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
           <div class="sw-tip-text">
-            <div><strong class="sw-tip-bold">Subwoofer Tip:</strong> We found this on ${escHtml(ls.source || 'the store')}.</div>
+            <div><strong class="sw-tip-bold">Shipmate Tip:</strong> We found this on ${escHtml(ls.source || 'the store')}.</div>
             <div class="ob-live-found-desc" style="margin-top:6px;">${escHtml(ls.description || '')}</div>
             <div class="ob-live-found-actions" style="margin-top:8px;">
               <button class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="confirmGameImport()">That&rsquo;s mine!</button>
@@ -785,7 +785,7 @@ function buildObLangList() {
   const count    = selected.size;
   const primaryName = OB_LANG_NAMES[primary] || primary;
 
-  // Find the highest-impact unselected lang for the Subwoofer tip
+  // Find the highest-impact unselected lang for the Shipmate tip
   const { lang: tipLang, total: tipTotal } = _highestImpactUnselectedLang();
 
   // Primary language dropdown items
@@ -810,7 +810,7 @@ function buildObLangList() {
     const isOn = selected.has(lang);
     const isTipVisible = lang === tipLang && !isOn && tipTotal > 0;
     const tipBadge = isTipVisible
-      ? `<span class="sw-tip-chip-badge tooltip-anchor" data-tip="${t('tip.lang.reach', { lang: OB_LANG_NAMES[lang], total: tipTotal }) || ('Subwoofer Tip: adding ' + OB_LANG_NAMES[lang] + ' support could reach ~' + tipTotal + 'M gamers in their native language across your selected countries.')}" onclick="event.stopPropagation()">!</span>`
+      ? `<span class="sw-tip-chip-badge tooltip-anchor" data-tip="${t('tip.lang.reach', { lang: OB_LANG_NAMES[lang], total: tipTotal }) || ('Shipmate Tip: adding ' + OB_LANG_NAMES[lang] + ' support could reach ~' + tipTotal + 'M gamers in their native language across your selected countries.')}" onclick="event.stopPropagation()">!</span>`
       : '';
     return `
       <button class="loc-chip${isOn ? ' is-on' : ''}${isTipVisible ? ' has-sw-tip' : ''}"
@@ -1708,7 +1708,7 @@ function renderStepModal() {
       inferenceFooterNote = `
         <div class="inf-footer-note">
           <span class="inf-footer-icon">✦</span>
-          Subwoofer pre-filled ${infAns} of ${infTotal} questions — please review ALL answers before submitting
+          Shipmate pre-filled ${infAns} of ${infTotal} questions — please review ALL answers before submitting
         </div>`;
     }
   }
@@ -1725,7 +1725,7 @@ function renderStepModal() {
           <div class="inf-ring inf-ring-3"></div>
           <img src="Assets/SubwooferIcon_Orange.png" class="inf-logo" onerror="this.style.display='none'">
         </div>
-        <div class="inf-headline">Subwoofer is working…</div>
+        <div class="inf-headline">Shipmate is working…</div>
         <div class="inf-steps">
           ${msgs.map((m, i) => `<div class="inf-step" style="animation-delay:${i * 1.3}s"><div class="inf-dot"></div><span>${m}</span></div>`).join('')}
         </div>
@@ -1745,7 +1745,7 @@ function renderStepModal() {
           <div class="inf-ring inf-ring-3"></div>
           <img src="Assets/SubwooferIcon_Orange.png" class="inf-logo" onerror="this.style.display='none'">
         </div>
-        <div class="inf-headline">Subwoofer is working…</div>
+        <div class="inf-headline">Shipmate is working…</div>
         <div class="inf-steps">
           ${iaMsgs.map((m, i) => `<div class="inf-step" style="animation-delay:${i * 1.3}s"><div class="inf-dot"></div><span>${m}</span></div>`).join('')}
         </div>
@@ -1816,7 +1816,7 @@ function buildStoreInsightsPanel() {
     <div class="sp-insights-panel sp-insights-idle">
       <div class="sp-insights-badge">
         <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
-        <span>Subwoofer AI</span>
+        <span>Shipmate AI</span>
       </div>
       <p class="sp-insights-prompt">Get an AI-powered evaluation of your store page listing with one-click fixes.</p>
       <button class="btn btn-primary sp-ins-btn" onclick="runStorePageInsights()">Analyze my listing →</button>
@@ -1827,7 +1827,7 @@ function buildStoreInsightsPanel() {
     <div class="sp-insights-panel sp-insights-loading">
       <div class="sp-insights-badge">
         <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
-        <span>Subwoofer AI</span>
+        <span>Shipmate AI</span>
       </div>
       <div class="sp-ins-spinner-row"><span class="ai-spinner"></span> Evaluating your listing…</div>
     </div>`;
@@ -1837,7 +1837,7 @@ function buildStoreInsightsPanel() {
     <div class="sp-insights-panel sp-insights-error">
       <div class="sp-insights-badge">
         <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
-        <span>Subwoofer AI</span>
+        <span>Shipmate AI</span>
       </div>
       <div class="sp-ins-error-msg">${escHtml(ins.error)}</div>
       <div class="sp-ins-footer-row">
@@ -1851,7 +1851,7 @@ function buildStoreInsightsPanel() {
     <div class="sp-insights-panel sp-insights-done">
       <div class="sp-insights-badge">
         <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
-        <span>Subwoofer AI</span>
+        <span>Shipmate AI</span>
       </div>
       <div class="sp-ins-applied">
         <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><circle cx="8" cy="8" r="7" stroke="var(--green)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1874,7 +1874,7 @@ function buildStoreInsightsPanel() {
       <div class="sp-insights-panel sp-insights-result">
         <div class="sp-insights-badge">
           <img src="Assets/SubwooferIcon_Orange.png" class="sp-ins-logo" onerror="this.style.display='none'">
-          <span>Subwoofer AI</span>
+          <span>Shipmate AI</span>
           <span class="sp-ins-field-tag">${escHtml(fieldLabel)}</span>
           ${progress}
         </div>
@@ -1993,7 +1993,7 @@ function buildImproveSubmissionSection(platformId) {
       spPageFooter = `
         <span class="iys-section-counter">${i + 1} / ${n}</span>
         <div class="iys-section-actions">
-          ${hasFix ? `<button class="iys-fix-btn" onclick="applyStorePageFix()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Subwoofer Fix</button>` : ''}
+          ${hasFix ? `<button class="iys-fix-btn" onclick="applyStorePageFix()"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Shipmate Fix</button>` : ''}
           ${hasNext ? `<button class="btn btn-ghost btn-sm" onclick="_nextImprovementItem('storePage')">Next</button>` : ''}
         </div>`;
     }
@@ -2017,7 +2017,7 @@ function buildImproveSubmissionSection(platformId) {
   const binContent = `
     <div class="iys-issue-content">
       <div class="iys-issue-title">Pending binary upload</div>
-      <div class="iys-issue-body">Subwoofer will scan for undeclared SDKs, missing privacy manifests, deprecated APIs, and permission mismatches.</div>
+      <div class="iys-issue-body">Shipmate will scan for undeclared SDKs, missing privacy manifests, deprecated APIs, and permission mismatches.</div>
     </div>`;
   const binSection = _section('Binary', 'N/A', binContent, '');
 
@@ -2066,7 +2066,7 @@ function buildImproveSubmissionSection(platformId) {
   return `
     <div class="iys-wrap">
       <div class="iys-chunk">
-        <div class="iys-chunk-label">Subwoofer Guidance</div>
+        <div class="iys-chunk-label">Shipmate Guidance</div>
         <div class="iys-sections-grid">
           ${spPageSection}
           ${locSection}
@@ -2719,7 +2719,7 @@ function buildPrivacySection() {
     collectBlock = `
       <div class="prv-nlp-wrap">
         <label class="form-label">${t('ios.privacy.desc.label') || 'Describe your data collection'}
-          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${t('ios.privacy.desc.tooltip') || 'Describe every data type your app collects and why. Subwoofer will translate this into the required Apple privacy label selections.'}</span></span>
+          <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">${t('ios.privacy.desc.tooltip') || 'Describe every data type your app collects and why. Shipmate will translate this into the required Apple privacy label selections.'}</span></span>
         </label>
         <textarea class="form-input prv-nlp-textarea"
                   placeholder="${t('ios.privacy.desc.placeholder') || 'e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network.'}"
@@ -3077,7 +3077,7 @@ function buildBusinessSection() {
       <label class="form-label">Price (USD)
         <span class="tooltip-anchor">
           <span class="tooltip-icon">?</span>
-          <span class="tooltip-body">Your base price for iOS. Leave blank or enter 0 for free. Subwoofer will convert to local currencies across all regions.</span>
+          <span class="tooltip-body">Your base price for iOS. Leave blank or enter 0 for free. Shipmate will convert to local currencies across all regions.</span>
         </span>
       </label>
       <input class="form-input" id="ios-price" type="text" placeholder="4.99 (or 0 for free)"
@@ -3753,13 +3753,13 @@ function buildAndroidDataSafetySection() {
     <div class="sw-tip-box" style="margin-top:6px;margin-bottom:4px;">
       <div class="sw-tip-box-row">
         <img src="Assets/SubwooferIcon_Orange.png" class="sw-tip-logo" alt="">
-        <span class="sw-tip-text"><strong class="sw-tip-bold">Subwoofer Tip:</strong> ${t('tip.ios.kids_audience') || 'Many developers select this by mistake — choose Yes only if children under 13 are your primary intended audience.'}</span>
+        <span class="sw-tip-text"><strong class="sw-tip-bold">Shipmate Tip:</strong> ${t('tip.ios.kids_audience') || 'Many developers select this by mistake — choose Yes only if children under 13 are your primary intended audience.'}</span>
       </div>
     </div>
     ${familiesWarning}
     <div class="prv-nlp-wrap" style="margin-top:2px;">
       <label class="form-label">Describe your data collection and sharing
-        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects or shares and why. Subwoofer will translate this into the required Google Play Data Safety selections.</span></span>
+        <span class="tooltip-anchor"><span class="tooltip-icon">?</span><span class="tooltip-body">Describe every data type your app collects or shares and why. Shipmate will translate this into the required Google Play Data Safety selections.</span></span>
       </label>
       <textarea class="form-input prv-nlp-textarea"
                 placeholder="e.g. We collect email addresses for account creation, device crash reports to fix bugs, and advertising IDs to serve relevant ads through our ad network."

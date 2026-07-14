@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subwoofer</title>
+  <title>Shipmate</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.00">
+  <link rel="stylesheet" href="style.css?v=2.01">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 </head>
@@ -20,7 +20,7 @@
     <div class="ob-modal" id="ob-modal">
 
       <div class="ob-header">
-        <img src="Assets/logo.png" alt="Subwoofer" class="ob-logo"
+        <img src="Assets/logo.png" alt="Shipmate" class="ob-logo"
              onerror="this.style.display='none'">
         <div class="ob-headline">Let's get your game ready</div>
         <div class="ob-subline">We'll collect the essentials once — then you focus on each platform.</div>
@@ -96,7 +96,7 @@
   ═══════════════════════════════════════════════════ -->
   <header class="topbar" id="topbar">
     <div class="logo">
-      <img src="Assets/logo.png" alt="Subwoofer" class="topbar-logo"
+      <img src="Assets/logo.png" alt="Shipmate" class="topbar-logo"
            onerror="this.style.display='none'; document.getElementById('topbar-logo-fallback').style.display='flex'">
       <span id="topbar-logo-fallback" style="display:none;align-items:center;gap:8px;">
         <svg class="logo-grid" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -117,7 +117,7 @@
             <rect x="30" y="50" width="6" height="6" rx="1.5"/><rect x="40" y="50" width="6" height="6" rx="1.5"/>
           </g>
         </svg>
-        <span>Subwoofer</span>
+        <span>Shipmate</span>
       </span>
     </div>
     <div class="topbar-right">
@@ -153,9 +153,9 @@
   <!-- SPLASH SCREEN (iframe -> splash.html) -->
   <iframe
     id="splash-screen"
-    src="splash.html?v=2.00"
+    src="splash.html?v=2.01"
     style="position:fixed;inset:0;width:100%;height:100%;border:none;z-index:9999;"
-    title="Subwoofer splash"
+    title="Shipmate splash"
   ></iframe>
 
   <!-- ═══════════════════════════════════════════════════
@@ -221,13 +221,13 @@
   <div id="g-tip" class="g-tip"></div>
 
   <!-- Version badge -->
-  <div class="build-badge">v2.00</div>
+  <div class="build-badge">v2.01</div>
 
   <!-- AI disclaimer -->
   <div class="ai-disclaimer">Please review all inferred answers before submitting</div>
 
-  <script src="locale.js?v=2.00"></script>
-  <script src="state.js?v=2.00"></script>
+  <script src="locale.js?v=2.01"></script>
+  <script src="state.js?v=2.01"></script>
   <script>
     const CONFIG = {
       CLAUDE_API_KEY:     '__CLAUDE_API_KEY__',
@@ -235,9 +235,12 @@
       IGDB_CLIENT_SECRET: '__IGDB_CLIENT_SECRET__',
     };
   </script>
-  <script src="claude.js?v=2.00"></script>
-  <script src="render.js?v=2.00"></script>
-  <script src="app.js?v=2.00"></script>
+  <script src="claude.js?v=2.01"></script>
+  <script src="render.js?v=2.01"></script>
+  <script src="app.js?v=2.01"></script>
 
+
+  <!-- Water transition overlay: shown while iframe closes, then drains to reveal onboarding -->
+  <div id="water-overlay" class="water-overlay hidden" aria-hidden="true"></div>
 </body>
 </html>

@@ -29,6 +29,56 @@ function hideSplash() {
 }
 
 /** "Get Started" button — always goes to onboarding for new users */
+function startSplashTransition() {
+  const overlay = document.getElementById('water-overlay');
+
+  // 1. Show water overlay — seamless continuation of the iframe water fill
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    spawnWaterBubbles(overlay);
+  }
+
+  // 2. Hide iframe + open onboarding (content is behind the overlay)
+  startFromSplash();
+
+  // 3. Drain the water after a short hold (reveals onboarding beneath)
+  setTimeout(function() {
+    if (overlay) overlay.classList.add('draining');
+  }, 380);
+
+  // 4. Clean up overlay after animation completes
+  setTimeout(function() {
+    if (overlay) {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('draining');
+      overlay.innerHTML = '';
+    }
+  }, 1800);
+}
+
+function spawnWaterBubbles(container) {
+  var N = 50;
+  for (var i = 0; i < N; i++) {
+    (function(i) {
+      setTimeout(function() {
+        var b    = document.createElement('div');
+        var size = 4 + Math.random() * 13;
+        var x    = 5  + Math.random() * 90;
+        var dur  = 1000 + Math.random() * 1200;
+        var dly  = Math.random() * 700;
+        var op   = (0.2 + Math.random() * 0.55).toFixed(2);
+        b.style.cssText =
+          'position:absolute;left:' + x + '%;bottom:-' + (size + 4) + 'px;' +
+          'width:' + size + 'px;height:' + size + 'px;' +
+          'border-radius:' + Math.round(size * 0.28) + 'px;' +
+          'background:rgba(255,255,255,' + op + ');' +
+          'animation:water-bubble-rise ' + dur + 'ms ease-out ' + dly + 'ms both;';
+        container.appendChild(b);
+      }, i * 10);
+    })(i);
+  }
+}
+
 function startFromSplash() {
   hideSplash();
   showOnboarding();

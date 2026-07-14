@@ -6215,6 +6215,34 @@ body.is-splash .profile-wrap        { display: none; }
 }
 
 
+/* ─── Water transition overlay (parent side of splash→onboarding) ─────
+   Shown the moment the iframe's water fill covers the screen.
+   Drains upward to reveal the onboarding modal beneath.
+──────────────────────────────────────────────────────────────────────── */
+.water-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, #06101f 0%, #0b1e3a 60%, #0d2040 100%);
+  z-index: 10000;          /* above everything, including the iframe */
+  overflow: hidden;
+}
+
+.water-overlay.draining {
+  animation: water-drain 1.1s cubic-bezier(.4, 0, .35, 1) forwards;
+}
+
+@keyframes water-drain {
+  0%   { transform: translateY(0);     }
+  100% { transform: translateY(-100%); }
+}
+
+@keyframes water-bubble-rise {
+  0%   { transform: translateY(0)       scale(0.4); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 0.65; }
+  100% { transform: translateY(-110vh)  scale(1.2); opacity: 0; }
+}
+
 /* ============================================================
    INFERENCE LOADING SCREEN  (v1.70)
    ============================================================ */
