@@ -1710,7 +1710,7 @@ function renderStepModal() {
       inferenceFooterNote = `
         <div class="inf-footer-note">
           <span class="inf-footer-icon">✦</span>
-          Shipmate pre-filled ${infAns} of ${infTotal} questions — please review ALL answers before submitting
+          <span>Shipmate pre-filled ${infAns} of ${infTotal} questions —<br>Please review ALL answers before submitting</span>
         </div>`;
     }
   }
