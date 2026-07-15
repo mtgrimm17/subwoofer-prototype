@@ -3987,26 +3987,35 @@ function buildSteamContentRatingSection() {
     { id: 'adult_sexual',  label: 'Adult only sexual content',            tip: 'Explicit or graphic sexual content for adults only — auto-selects all preceding categories' },
   ];
 
-  let matureHtml = MATURE_OPTS.map(opt => steamItemRow(opt.id, opt.label, opt.tip)).join('');
+  // Apply the same Unanswered/All filter to Mature Content rows
+  const filteredMatureOpts = (steamCollapse && !steamShowAll)
+    ? MATURE_OPTS.filter(opt => !steamAnsweredSet?.has(opt.id))
+    : MATURE_OPTS;
+  let matureHtml = filteredMatureOpts.map(opt => steamItemRow(opt.id, opt.label, opt.tip)).join('');
 
-  // Violent tag sub-rows (if freq_violence = yes)
-  const violentSub = sca['freq_violence'] === 'yes' ? `
+  // Track which mature parent rows are actually visible (not filtered out)
+  const freqViolenceVisible = !steamCollapse || steamShowAll || !steamAnsweredSet?.has('freq_violence');
+  const freqNudityVisible   = !steamCollapse || steamShowAll || !steamAnsweredSet?.has('freq_nudity');
+  const genMatureVisible    = !steamCollapse || steamShowAll || !steamAnsweredSet?.has('gen_mature');
+
+  // Violent tag sub-rows (if freq_violence = yes AND parent row is visible)
+  const violentSub = (sca['freq_violence'] === 'yes' && freqViolenceVisible) ? `
     <div class="ios-followup">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:4px;">Specify for store tags:</div>
       ${steamItemRow('violent_tag', 'Violent', 'Adds the "Violent" store tag to your game')}
       ${steamItemRow('gore_tag',    'Gore',    'Adds the "Gore" store tag to your game')}
     </div>` : '';
 
-  // Nudity tag sub-rows (if freq_nudity = yes)
-  const nuditySub = sca['freq_nudity'] === 'yes' ? `
+  // Nudity tag sub-rows (if freq_nudity = yes AND parent row is visible)
+  const nuditySub = (sca['freq_nudity'] === 'yes' && freqNudityVisible) ? `
     <div class="ios-followup">
       <div style="font-size:12px;color:var(--text-faint);margin-bottom:4px;">Specify for store tags:</div>
       ${steamItemRow('nudity_tag',         'Nudity',         'Adds the "Nudity" store tag to your game')}
       ${steamItemRow('sexual_content_tag', 'Sexual Content', 'Adds the "Sexual Content" store tag to your game')}
     </div>` : '';
 
-  // Mature text fields (if gen_mature = yes)
-  const matureFieldBlock = sca['gen_mature'] === 'yes' ? `
+  // Mature text fields (if gen_mature = yes AND parent row is visible)
+  const matureFieldBlock = (sca['gen_mature'] === 'yes' && genMatureVisible) ? `
     <div class="ios-followup">
       <div class="form-group" style="margin-bottom:10px;">
         <label class="form-label">What should customers know about the mature content?
