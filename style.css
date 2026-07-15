@@ -2556,13 +2556,13 @@ body {
 /* Locked: reduced opacity but dropdown is still interactive */
 .submit-step-card.submit-step-locked { opacity: 0.45; }
 .submit-step-card.submit-step-locked:hover { background: transparent; }
-/* Ready: card is clickable + green border signals all steps done */
+/* Ready: card is clickable + green inset shadow signals all steps done.
+   Uses box-shadow (not border) so it's not clipped by .active-card overflow:hidden */
 .submit-step-card.submit-step-ready {
   cursor: pointer;
-  border: 1.5px solid rgba(47, 220, 128, 0.55);
-  border-radius: 8px;
+  box-shadow: inset 0 0 0 1.5px rgba(47, 220, 128, 0.6);
 }
-.submit-step-card.submit-step-ready:hover { background: rgba(255,255,255,0.03); }
+.submit-step-card.submit-step-ready:hover { background: rgba(47, 220, 128, 0.04); }
 /* Track dropdown inside submit step */
 .submit-track-select {
   font-family: inherit;
@@ -2578,6 +2578,12 @@ body {
   flex-shrink: 0;
 }
 .submit-track-select:focus { outline: none; border-color: var(--green); }
+.submit-track-select.no-track { color: var(--text-faint); }
+@keyframes pulse-error {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,61,97,0); }
+  40%      { box-shadow: 0 0 0 3px rgba(255,61,97,0.5); }
+}
+.submit-track-select.pulse-error { animation: pulse-error 0.6s ease; }
 /* Submit button inside submit step */
 .submit-track-btn {
   flex-shrink: 0;
@@ -2866,6 +2872,37 @@ body {
 .ias-privacy-pending { padding: 14px; }
 .ias-privacy-pending-msg { font-size: 12px; color: var(--text-faint); font-style: italic; }
 .ias-privacy-footer { font-size: 11px; color: var(--text-faint); line-height: 1.4; margin-top: 4px; }
+
+/* ── Nutrition-label style privacy card (new multi-bucket format) ── */
+.ias-nl-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--panel-3);
+  margin-bottom: 10px;
+}
+.ias-nl-bucket {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.ias-nl-bucket:last-child { border-bottom: none; }
+.ias-nl-bucket-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+.ias-nl-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.ias-nl-tag {
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 7px;
+}
+.ias-nl-tag-more { color: var(--text-faint); }
 
 /* Info grid */
 .ias-info-grid { display: flex; flex-direction: column; }

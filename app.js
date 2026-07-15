@@ -962,8 +962,13 @@ function selectTrack(pid, trackId) {
 /* Confirm and execute the submit from the inline step card */
 function confirmSubmit(pid) {
   if (!state.selectedTracks) state.selectedTracks = {};
-  const trackId = state.selectedTracks[pid]
-    || (PLATFORM_TRACKS[pid] || [{ id: 'production' }]).slice(-1)[0].id;
+  const trackId = state.selectedTracks[pid] || null;
+  if (!trackId) {
+    // Pulse the dropdown to signal the user must choose a track first
+    const sel = document.getElementById('track-sel-' + pid);
+    if (sel) { sel.classList.add('pulse-error'); setTimeout(() => sel.classList.remove('pulse-error'), 600); }
+    return;
+  }
   _doFinalSubmit(pid, trackId);
 }
 

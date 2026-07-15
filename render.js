@@ -1414,15 +1414,17 @@ function buildSubmitStepCard(pid, stepCount, locked, submitDone) {
   const numClass = 'ios-step-num' + (submitDone ? ' is-done' : '');
 
   const tracks = PLATFORM_TRACKS[pid] || [{ id: 'production', label: 'Production' }];
-  const selTrack = (state.selectedTracks || {})[pid] || tracks[tracks.length - 1].id;
+  // null until the user explicitly selects one — forces an intentional choice
+  const selTrack = (state.selectedTracks || {})[pid] ?? null;
 
   // Track dropdown is always visible so the user can pre-select a track.
   // The rest of the card is the submit action — no separate button needed.
   const trackSelect = `
-    <select class="submit-track-select"
+    <select class="submit-track-select ${!selTrack ? 'no-track' : ''}"
             id="track-sel-${pid}"
             onclick="event.stopPropagation()"
             onchange="selectTrack('${pid}', this.value)">
+      <option value="" disabled ${!selTrack ? 'selected' : ''}>Choose Track</option>
       ${tracks.map(tr => `<option value="${tr.id}"${selTrack === tr.id ? ' selected' : ''}>${escHtml(tr.label)}</option>`).join('')}
     </select>`;
 
@@ -1964,8 +1966,16 @@ function buildImproveSubmissionSection(platformId) {
   const loading  = (spi?.loading || !spi) && (ana?.loading || !ana);
   const hasError = spi?.error || ana?.error;
 
-  // Overall grade (based on raw count, not position)
-  const spGrade  = (!spi?.loading && !spi?.error) ? (!spi?.issues?.length ? 'A' : spi.issues.length <= 1 ? 'B' : spi.issues.length <= 3 ? 'C' : 'D') : null;
+  // Compute merged items first so the grade reflects fixes already applied
+  const mergedItems = (typeof _getCurrentMergedStoreItems === 'function')
+    ? _getCurrentMergedStoreItems() : [];
+  const idxNow  = idx.storePage || 0;
+  const remaining = Math.max(0, mergedItems.length - idxNow);
+
+  // Grade reflects REMAINING issues (drops as the user applies Shipmate Fixes)
+  const spGrade  = (!spi?.loading && !spi?.error)
+    ? (remaining === 0 ? 'A' : remaining === 1 ? 'B' : remaining <= 3 ? 'C' : 'D')
+    : null;
   const assGrade = ana?.scores?.assets   || null;
   const metGrade = ana?.scores?.metadata || null;
   const mergedGrade = _worseGrade(spGrade, _worseGrade(assGrade, metGrade));
@@ -1977,11 +1987,8 @@ function buildImproveSubmissionSection(platformId) {
     spPageContent = `<div class="iys-issue-content"><div class="iys-issue-title">Analysis failed</div><div class="iys-issue-body">${escHtml(spi?.error || ana?.error)}</div></div>`;
     spPageFooter  = `<button class="iys-fix-btn" onclick="state.storePageInsights=null;state.improveSubmissionAnalysis=null;_autoRunImproveSubmission('${platformId}')"><img src="Assets/SubwooferIcon_Orange.png" onerror="this.style.display='none'">Retry</button>`;
   } else {
-    // Use shared helper so the counter always reflects the same list as applyStorePageFix()
-    const mergedItems = (typeof _getCurrentMergedStoreItems === 'function')
-      ? _getCurrentMergedStoreItems() : [];
     const n = mergedItems.length;
-    const i = idx.storePage || 0;
+    const i = idxNow;
 
     if (!n || i >= n) {
       spPageContent = _allGood('Store page, assets & metadata all look strong');
@@ -2125,7 +2132,7 @@ function buildStorePreviewSection() {
     return hasAdult ? '17+' : hasTeen ? '12+' : '4+';
   })();
 
-  // Privacy section content
+  // Privacy section content — mirrors Apple's actual Nutrition Label format
   const privacyHtml = (function() {
     if (a.collectsData === 'no') {
       return `
@@ -2138,25 +2145,57 @@ function buildStorePreviewSection() {
           <div class="ias-privacy-clean-sub">The developer does not collect any data from this app.</div>
         </div>`;
     }
+
     const dataPerType = a.dataPerType || {};
     const typeEntries = Object.entries(dataPerType);
-    if (a.collectsData === 'yes' && typeEntries.length > 0) {
-      const hasTracking = typeEntries.some(([, t]) => t.tracking === 'yes');
-      const label = hasTracking ? 'Data Used to Track You' : 'Data Linked to You';
-      const shown = typeEntries.slice(0, 4);
-      const extra = typeEntries.length - 4;
+
+    if (a.collectsData !== 'yes' || typeEntries.length === 0) {
       return `
-        <div class="ias-privacy-card ias-privacy-data">
-          <div class="ias-privacy-data-label">${label}</div>
-          <div class="ias-privacy-data-types">${shown.map(([id]) =>
-            `<span class="ias-privacy-tag">${escHtml(id.replace(/_/g, ' '))}</span>`
-          ).join('')}${extra > 0 ? `<span class="ias-privacy-tag ias-privacy-tag-more">+${extra} more</span>` : ''}</div>
+        <div class="ias-privacy-card ias-privacy-pending">
+          <div class="ias-privacy-pending-msg">Complete the Data Privacy step to populate this section.</div>
         </div>`;
     }
-    return `
-      <div class="ias-privacy-card ias-privacy-pending">
-        <div class="ias-privacy-pending-msg">Complete the Data Privacy step to populate this section.</div>
-      </div>`;
+
+    // Split collected types into Apple's three buckets
+    const tracking  = []; // tracking === 'yes'
+    const linked    = []; // identity === 'yes' AND tracking !== 'yes'
+    const notLinked = []; // neither tracking nor identity linked
+
+    typeEntries.forEach(([id, td]) => {
+      if (td.tracking === 'yes')       tracking.push(id);
+      else if (td.identity === 'yes')  linked.push(id);
+      else                             notLinked.push(id);
+    });
+
+    // Get unique Apple group names for a list of typeIds
+    function _groups(ids) {
+      const seen = new Set();
+      return ids.map(id => IOS_DATA_TYPE_LOOKUP[id]?.group || id.replace(/_/g,' ')).filter(g => {
+        if (seen.has(g)) return false; seen.add(g); return true;
+      });
+    }
+
+    // Render one label bucket
+    function _bucket(label, ids) {
+      if (!ids.length) return '';
+      const groups = _groups(ids);
+      const shown  = groups.slice(0, 4);
+      const extra  = groups.length - 4;
+      return `
+        <div class="ias-nl-bucket">
+          <div class="ias-nl-bucket-label">${label}</div>
+          <div class="ias-nl-tags">
+            ${shown.map(g => `<span class="ias-nl-tag">${escHtml(g)}</span>`).join('')}
+            ${extra > 0 ? `<span class="ias-nl-tag ias-nl-tag-more">+${extra} more</span>` : ''}
+          </div>
+        </div>`;
+    }
+
+    const bucketsHtml = _bucket('Data Used to Track You', tracking)
+                      + _bucket('Data Linked to You',     linked)
+                      + _bucket('Data Not Linked to You', notLinked);
+
+    return `<div class="ias-nl-card">${bucketsHtml}</div>`;
   })();
 
   // What's New section
