@@ -1005,7 +1005,37 @@ function _doFinalSubmit(platformId, trackId) {
     ver.platformReleases[platformId].push(rel);
   }
   state.platformStepStatus[platformId]['submit'] = 'complete';
-  renderDashboard();
+
+  // Card-flip animation: rotate out → swap content → rotate in
+  if (!state.platformFlipped) state.platformFlipped = {};
+  const card = document.getElementById('active-card-' + platformId);
+  const flipData = { track: trackId, time: Date.now() };
+
+  function _applyFlip() {
+    state.platformFlipped[platformId] = flipData;
+    renderDashboard();
+    // Flip-in: start from -90deg, ease to 0deg
+    const newCard = document.getElementById('active-card-' + platformId);
+    if (newCard) {
+      newCard.style.transform = 'perspective(700px) rotateY(-90deg)';
+      newCard.style.transition = 'none';
+      // Double rAF ensures the starting state is painted before the transition begins
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        newCard.style.transition = 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        newCard.style.transform  = 'perspective(700px) rotateY(0deg)';
+        setTimeout(() => { newCard.style.transition = ''; newCard.style.transform = ''; }, 340);
+      }));
+    }
+  }
+
+  if (card) {
+    // Flip-out: rotate to 90deg, then swap
+    card.style.transition = 'transform 0.28s cubic-bezier(0.55, 0, 1, 0.45)';
+    card.style.transform  = 'perspective(700px) rotateY(90deg)';
+    setTimeout(_applyFlip, 290);
+  } else {
+    _applyFlip();
+  }
 }
 
 // Legacy alias kept for any paths that still call finalSubmit directly.

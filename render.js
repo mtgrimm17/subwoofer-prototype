@@ -1443,6 +1443,7 @@ function buildSubmitStepCard(pid, stepCount, locked, submitDone) {
 }
 
 function buildIOSActiveCard(pid) {
+  if (state.platformFlipped?.[pid]) return buildSubmittedCard(pid, state.platformFlipped[pid]);
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
@@ -1470,7 +1471,7 @@ function buildIOSActiveCard(pid) {
   const submitStepCard = buildSubmitStepCard(pid, p.steps.length, locked, submitDone);
 
   return `
-    <div class="active-card" id="active-card-${pid}">
+    <div class="active-card ${!locked ? 'submit-ready' : ''}" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
@@ -1486,6 +1487,7 @@ function buildIOSActiveCard(pid) {
 }
 
 function buildAndroidActiveCard(pid) {
+  if (state.platformFlipped?.[pid]) return buildSubmittedCard(pid, state.platformFlipped[pid]);
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
@@ -1513,7 +1515,7 @@ function buildAndroidActiveCard(pid) {
   const submitStepCard = buildSubmitStepCard(pid, p.steps.length, locked, submitDone);
 
   return `
-    <div class="active-card" id="active-card-${pid}">
+    <div class="active-card ${!locked ? 'submit-ready' : ''}" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
@@ -2677,33 +2679,6 @@ function iosIntensityRow(label, fieldId, tooltip) {
 /* ── Privacy ─────────────────────────────────────────── */
 /* ── Questionnaire: combined Content Rating + Data + Business ─ */
 function buildQuestionnaireSection(platformId) {
-  // ── Debug: natural language content summary (temporary — won't ship) ──────
-  // Sources use the pre-inference snapshot (state.lastInferenceSources) so they show
-  // what actually went INTO the prompt, not what inference produced as output.
-  let debugSummaryBlock = '';
-  if (typeof buildNaturalLanguageSummary === 'function') {
-    const summary = buildNaturalLanguageSummary();
-    // Use the stored pre-inference snapshot; fall back to live only before first inference run
-    const sources = state.lastInferenceSources !== null
-      ? state.lastInferenceSources
-      : (typeof buildContextSources === 'function' ? buildContextSources() : []);
-    if (summary || sources.length) {
-      const safe = (summary || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const seePromptBtn = state.lastInferencePrompt
-        ? '<button class="see-prompt-btn" onclick="showInferencePrompt()">See Prompt</button>'
-        : '';
-      const sourcesHtml = sources.length
-        ? `<div class="csd-sources"><span class="csd-sources-label">This prompt was constructed using:</span><ul class="csd-sources-list">${sources.map(s => `<li>${escHtml(s)}</li>`).join('')}</ul></div>`
-        : '';
-      debugSummaryBlock = `
-        <div class="content-summary-debug">
-          <div class="csd-header">🔍 Content Profile Summary <span class="csd-tag">DEBUG</span>${seePromptBtn}</div>
-          ${sourcesHtml}
-          ${safe ? `<div class="csd-body">${safe}</div>` : ''}
-        </div>`;
-    }
-  }
-
   const sections = [];
 
   if (platformId === 'ios') {
@@ -2720,7 +2695,7 @@ function buildQuestionnaireSection(platformId) {
     sections.push({ label: 'Technical',       body: buildSteamTechnicalSection() });
   }
 
-  return debugSummaryBlock + sections.map((s, i) => `
+  return sections.map((s, i) => `
     <div class="qs-section${i > 0 ? ' qs-section-divided' : ''}">
       <div class="qs-section-header">${s.label}</div>
       ${s.body}
@@ -3062,6 +3037,12 @@ function computeIOSAgeRating() {
 function buildExportComplianceSection() {
   const a = state.iosSubmitAnswers;
 
+  // Respect the Unanswered/All filter — hide this section when usesEncryption is answered
+  const answered     = state.iosAnsweredAtInference;
+  const collapseMode = answered !== null;
+  const showAll      = state.iosContentRatingExpanded;
+  if (collapseMode && !showAll && answered.has('usesEncryption')) return '';
+
   let followUp = '';
   if (a.usesEncryption === 'yes') {
     followUp = `<div class="ios-followup">
@@ -3092,6 +3073,13 @@ function buildExportComplianceSection() {
 /* ── Business ────────────────────────────────────────── */
 function buildBusinessSection() {
   const a = state.iosSubmitAnswers;
+
+  // Unanswered/All filter — hide hasIAP row when it's already been answered by AI
+  const bsAnswered    = state.iosAnsweredAtInference;
+  const bsCollapse    = bsAnswered !== null;
+  const bsShowAll     = state.iosContentRatingExpanded;
+  const hideIAP       = bsCollapse && !bsShowAll && bsAnswered?.has('hasIAP');
+
   const IAP_TYPES = [
     { id: 'consumable',     label: 'Consumable',         desc: 'Coins, lives, boosts' },
     { id: 'non-consumable', label: 'Non-consumable',     desc: 'Unlock levels, remove ads' },
@@ -3129,9 +3117,9 @@ function buildBusinessSection() {
              oninput="syncField('price', this.value)"
              onblur="roundPrice(this)">
     </div>
-    ${iosYNRow('Does your app include in-app purchases?', 'hasIAP',
+    ${hideIAP ? '' : iosYNRow('Does your app include in-app purchases?', 'hasIAP',
       'Includes any paid upgrades, cosmetics, virtual currency, or subscriptions.')}
-    ${iapFollowUp}
+    ${hideIAP ? '' : iapFollowUp}
     <div class="form-group" style="margin-top:14px;">
       <label class="form-label">Tax Category
         <span class="tooltip-anchor">
@@ -3932,6 +3920,7 @@ function buildAndroidDataMatrix(a) {
    ═══════════════════════════════════════════════════ */
 
 function buildSteamActiveCard(pid) {
+  if (state.platformFlipped?.[pid]) return buildSubmittedCard(pid, state.platformFlipped[pid]);
   const p      = PLATFORMS[pid];
   const counts = platformStepCount(pid);
   const locked = !counts.allRequired;
@@ -3958,7 +3947,7 @@ function buildSteamActiveCard(pid) {
   const submitStepCard = buildSubmitStepCard(pid, p.steps.length, locked, submitDone);
 
   return `
-    <div class="active-card" id="active-card-${pid}">
+    <div class="active-card ${!locked ? 'submit-ready' : ''}" id="active-card-${pid}">
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
@@ -4411,6 +4400,42 @@ function buildScreenshotsSection(pid) {
         <a href="screenshot-tool.html" target="_blank" class="btn btn-ghost btn-sm">
           Crop &amp; Adjust ↗
         </a>
+      </div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   SUBMITTED CARD  (shown after successful submission — "back" of the platform card)
+   ══════════════════════════════════════════════════════ */
+function buildSubmittedCard(pid, flipData) {
+  const trackId    = (flipData && typeof flipData === 'object') ? flipData.track : (flipData || '');
+  const tracks     = PLATFORM_TRACKS[pid] || [];
+  const track      = tracks.find(t => t.id === trackId);
+  const trackLabel = track ? track.label : trackId;
+  const ts         = (flipData && flipData.time)
+    ? new Date(flipData.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
+
+  return `
+    <div class="active-card submitted-card" id="active-card-${pid}">
+      <div class="active-card-head" style="border-bottom:none;">
+        <div class="active-card-platform">
+          <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
+          <div class="active-card-name">${platLabel(pid)}</div>
+        </div>
+      </div>
+      <div class="submitted-body">
+        <div class="submitted-status-row">
+          <span class="submitted-status-dot"></span>
+          <div class="submitted-status-text">
+            <div class="submitted-status-label">Current Status</div>
+            <div class="submitted-status-value">Waiting for Review</div>
+          </div>
+        </div>
+        <div class="submitted-meta">
+          ${trackLabel ? `<span class="submitted-track-chip">${escHtml(trackLabel)}</span>` : ''}
+          ${ts ? `<span class="submitted-ts">${ts}</span>` : ''}
+        </div>
       </div>
     </div>`;
 }

@@ -1954,6 +1954,9 @@ const state = {
 
   // Per-platform selected submission track (pid → trackId). Defaults to 'production'.
   selectedTracks: {},
+
+  // Per-platform flip state: null = not submitted; { track, time } = submitted + card flipped
+  platformFlipped: {},
   androidContentRatingExpanded: false,
   steamAnsweredAtInference: null,
   steamContentRatingExpanded: false,
