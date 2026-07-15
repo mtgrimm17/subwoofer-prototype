@@ -1472,7 +1472,7 @@ function buildIOSActiveCard(pid) {
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
-          <div>
+          <div class="active-card-name-row">
             <div class="active-card-name">${platLabel(pid)}</div>
             ${buildBuildDropdown(pid)}
           </div>
@@ -1515,7 +1515,7 @@ function buildAndroidActiveCard(pid) {
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
-          <div>
+          <div class="active-card-name-row">
             <div class="active-card-name">${platLabel(pid)}</div>
             ${buildBuildDropdown(pid)}
           </div>
@@ -3923,7 +3923,7 @@ function buildSteamActiveCard(pid) {
       <div class="active-card-head" onclick="deactivatePlatform('${pid}')" title="Click to deactivate" style="cursor:pointer;">
         <div class="active-card-platform">
           <div class="active-card-icon">${platformIcon(pid, 28, 'white')}</div>
-          <div>
+          <div class="active-card-name-row">
             <div class="active-card-name">${platLabel(pid)}</div>
             ${buildBuildDropdown(pid)}
           </div>
@@ -4286,11 +4286,11 @@ function buildBuildDropdown(pid) {
                : pid === 'android' ? '.apk,.aab'
                :                     '.exe,.zip';
   const noBuild = !build;
-  const uploadSVG = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.75"><path d="M8 11V2M4 5l4-4 4 4M2 13v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const uploadSVG = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:0.6"><path d="M8 11V2M4 5l4-4 4 4M2 13v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const checkSVG = `<svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;color:var(--accent-green,#2FDC80)"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   return `
     <div class="build-pill ${noBuild ? 'no-build' : 'has-build'}"
-         onclick="document.getElementById('build-file-${pid}').click()" title="${noBuild ? 'Upload build' : 'Change build'}">
+         onclick="event.stopPropagation();document.getElementById('build-file-${pid}').click()" title="${noBuild ? 'Upload build' : 'Change build'}">
       <input type="file" id="build-file-${pid}" accept="${accept}" hidden
              onchange="handleBuildUpload('${pid}', this.files)">
       ${noBuild ? uploadSVG : checkSVG}

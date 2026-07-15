@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>subsub — one shot, every store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --panel-2: #1c1c1c;
+    --panel-3: #242424;
+    --border: #2a2a2a;
+    --border-hover: #3a3a3a;
+    --text: #f5f5f5;
+    --text-dim: #a0a0a0;
+    --text-faint: #666;
+    --green: #4ade80;
+    --green-soft: #4ade8033;
+    --orange: #fb923c;
+    --blue: #50A8FB;
+    --magenta: #FF3D61;
+    --magenta-soft: #FF3D6133;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 1300px; margin: 0 auto; padding: 20px 40px 120px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 8px 0 28px; }
+  .logo { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px; }
+  .logo small { color: var(--text-faint); font-weight: 500; font-size: 11px; letter-spacing: 1px; }
+  .privacy-tag {
+    font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px;
+  }
+  .privacy-tag .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+  .source-bar {
+    display: flex; align-items: center; gap: 8px; padding: 6px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px;
+  }
+  .source-slot {
+    flex: 1; display: flex; align-items: center; gap: 14px;
+    height: 56px; padding: 0 18px; border-radius: 8px;
+    background: rgba(255,255,255,0.03); border: 1px dashed var(--border); cursor: pointer;
+    transition: border-color 0.15s, background 0.15s; color: var(--text-dim);
+  }
+  .source-slot:hover, .source-slot.drag { border-color: var(--green); background: var(--green-soft); color: var(--text); }
+  .source-slot .plus { font-size: 22px; font-weight: 600; color: var(--green); }
+  .source-slot .slot-main { flex: 1; }
+  .source-slot .slot-title { font-weight: 700; font-size: 14px; color: var(--text); }
+  .source-slot .slot-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .src-btn {
+    height: 44px; padding: 0 18px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600;
+    background: rgba(255,255,255,0.03); border: 1px solid transparent; color: var(--text-dim); cursor: pointer;
+    transition: all 0.15s; display: none; align-items: center; gap: 8px;
+  }
+  .src-btn:hover { background: var(--panel-2); border-color: var(--border); color: var(--text); }
+  .src-btn.show { display: inline-flex; }
+  .src-btn.primary { background: var(--green); color: #0a0a0a; }
+  .src-btn.primary:hover { background: #6ee79a; border-color: transparent; }
+  .src-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Thumbnail strip */
+  .ui-alert {
+    display: none; align-items: flex-start; gap: 14px; margin-bottom: 20px;
+    padding: 14px 16px; border-radius: 12px;
+    background: linear-gradient(0deg, var(--magenta-soft), var(--magenta-soft)), var(--panel);
+    border: 1px solid var(--magenta);
+  }
+  .ui-alert.show { display: flex; }
+  .ui-alert-face { font-size: 26px; line-height: 1; flex-shrink: 0; }
+  .ui-alert-body { flex: 1; }
+  .ui-alert-title { font-weight: 700; font-size: 13px; color: var(--magenta); margin-bottom: 4px; }
+  .ui-alert-text { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .ui-alert-close { cursor: pointer; color: var(--text-faint); font-size: 20px; line-height: 1; padding: 0 4px; flex-shrink: 0; }
+  .ui-alert-close:hover { color: var(--text); }
+  .thumb-item.ui-flag::after {
+    content: '🙁'; position: absolute; bottom: 2px; right: 3px; font-size: 12px;
+    background: rgba(0,0,0,0.6); border-radius: 4px; padding: 0 2px;
+  }
+  .thumbs { display: none; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .thumbs.show { display: flex; }
+  .thumb-item {
+    position: relative; width: 74px; height: 58px; border-radius: 8px; overflow: hidden;
+    border: 2px solid var(--border); cursor: pointer; background: #000; flex-shrink: 0; transition: border-color 0.15s;
+  }
+  .thumb-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb-item.active { border-color: var(--green); }
+  .thumb-item .idx {
+    position: absolute; top: 3px; left: 4px; font-size: 10px; font-weight: 700;
+    background: rgba(0,0,0,0.6); padding: 1px 5px; border-radius: 4px;
+  }
+  .thumb-item .rm {
+    position: absolute; top: 2px; right: 3px; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(0,0,0,0.65); color: #fff; font-size: 12px; line-height: 16px; text-align: center;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .thumb-item:hover .rm { opacity: 1; }
+  .thumb-add {
+    width: 74px; height: 58px; border-radius: 8px; border: 1px dashed var(--border);
+    display: grid; place-items: center; cursor: pointer; color: var(--green); font-size: 22px; flex-shrink: 0;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .thumb-add:hover { border-color: var(--green); background: var(--green-soft); }
+  .thumb-count { font-size: 11px; color: var(--text-faint); margin-left: 4px; }
+
+  .stage { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 28px; }
+  @media (min-width: 900px) { .stage { grid-template-columns: 1.6fr 1fr; align-items: start; } }
+  .stage.hidden { display: none; }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+  }
+  .card-title { font-weight: 600; font-size: 13px; }
+  .card-meta { font-size: 11px; color: var(--text-faint); }
+
+  .canvas-wrap { position: relative; background: #000; }
+  #preview { display: block; width: 100%; height: auto; }
+  #overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .ctrl-body { padding: 18px; display: flex; flex-direction: column; gap: 18px; }
+
+  /* Orientation segmented toggle */
+  .seg-label { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+  .seg { display: flex; background: var(--panel-3); border-radius: 8px; padding: 3px; gap: 3px; }
+  .seg button {
+    flex: 1; font-family: inherit; font-size: 12px; font-weight: 600; padding: 8px 0; border: none;
+    border-radius: 6px; background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.15s;
+  }
+  .seg button.active { background: var(--green); color: #0a0a0a; }
+  .seg-auto { font-size: 11px; color: var(--text-faint); margin-top: 8px; }
+
+  .slider-label { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 10px; }
+  .slider-label .val { color: var(--text-dim); font-size: 12px; }
+  input[type=range] { width: 100%; accent-color: var(--green); }
+  .warn { display: none; font-size: 12px; color: var(--orange); line-height: 1.5; border-left: 2px solid var(--orange); padding-left: 12px; }
+  .warn.show { display: block; }
+  .pos-locked { display: none; font-size: 12px; color: var(--text-dim); line-height: 1.5; border-left: 2px solid var(--border-hover); padding-left: 12px; }
+  .pos-locked.show { display: block; }
+
+  .fmt-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+  .fmt-row:first-of-type { border-top: none; }
+  .fmt-icon { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; display: grid; place-items: center; background: var(--panel-3); font-weight: 700; font-size: 13px; }
+  .fmt-main { flex: 1; min-width: 0; }
+  .fmt-name { font-weight: 600; font-size: 13px; }
+  .fmt-dim { font-family: 'JetBrains Mono'; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .switch { flex-shrink: 0; position: relative; width: 46px; height: 26px; border-radius: 13px; border: none; padding: 0; background: rgba(255,255,255,0.08); cursor: pointer; transition: background 0.2s; }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+  .switch.on { background: var(--green); }
+  .switch.on::after { transform: translateX(20px); }
+
+  .section-label { font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-faint); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .previews { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .previews:empty { display: none; }
+  .pv { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.15s; }
+  .pv:hover { border-color: var(--border-hover); }
+  .pv.soft { border-color: var(--magenta); }
+  .pv-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .pv-zoom { font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .pv.soft .pv-zoom { color: var(--magenta); }
+  .pv-warn { display: none; font-size: 11px; color: var(--magenta); padding: 0 14px 10px; line-height: 1.4; }
+  .pv.soft .pv-warn { display: block; }
+  .pv-zoom-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px 4px; }
+  .pv-zoom-ico { font-size: 15px; color: var(--text-faint); width: 12px; text-align: center; user-select: none; }
+  .pv-zoom-slider { flex: 1; accent-color: var(--green); }
+  .pv.soft .pv-zoom-slider { accent-color: var(--magenta); }
+  .pv-icon { width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; background: var(--panel-3); font-weight: 700; font-size: 12px; flex-shrink: 0; }
+  .pv-meta { flex: 1; min-width: 0; }
+  .pv-name { font-weight: 600; font-size: 13px; }
+  .pv-dim { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--text-dim); }
+  .pv-recenter { font-size: 11px; color: var(--text-faint); cursor: pointer; user-select: none; border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; transition: all 0.15s; }
+  .pv-recenter:hover { color: var(--text); border-color: var(--border-hover); }
+  .pv-canvas-box { background: #000; border-top: 1px solid var(--border); display: grid; place-items: center; padding: 12px; }
+  .pv-img { display: block; max-width: 100%; max-height: 320px; touch-action: none; }
+  .pv-foot { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .pv-drag-hint { font-size: 11px; color: var(--text-faint); }
+  .pv-dl { font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-dim); background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; cursor: pointer; transition: all 0.15s; }
+  .pv-dl:hover { color: var(--text); border-color: var(--border-hover); background: var(--panel-2); }
+
+  footer { margin-top: 40px; font-size: 11px; color: var(--text-faint); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="logo">subsub <small>PROTOTYPE</small></div>
+    <div class="privacy-tag"><span class="dot"></span> Processed in your browser</div>
+  </div>
+
+  <div class="source-bar">
+    <div class="source-slot" id="slot">
+      <span class="plus" id="slot-plus">+</span>
+      <span class="slot-main">
+        <span class="slot-title" id="slot-title">Drop one or more screenshots</span>
+        <span class="slot-sub" id="slot-sub">3000×2400 recommended · multiple files ok</span>
+      </span>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+    </div>
+    <button class="src-btn primary" id="save-frame" disabled>Save current frame</button>
+  </div>
+
+  <div class="ui-alert" id="ui-alert">
+    <span class="ui-alert-face">🙁</span>
+    <div class="ui-alert-body">
+      <div class="ui-alert-title" id="ui-alert-title"></div>
+      <div class="ui-alert-text">Screenshots with game UI (HUD, buttons, minimaps, text) don't crop cleanly across store sizes — expect cut-off or off-center results. For best output, use clean captures with the interface hidden.</div>
+    </div>
+    <span class="ui-alert-close" id="ui-alert-close">×</span>
+  </div>
+
+  <div class="thumbs" id="thumbs"></div>
+
+  <div class="stage hidden" id="stage">
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Crop preview</span>
+        <span class="card-meta" id="stage-meta"></span>
+      </div>
+      <div class="canvas-wrap">
+        <img id="preview" alt="">
+        <canvas id="overlay"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="card-title">Framing &amp; formats</span></div>
+      <div class="ctrl-body">
+        <div>
+          <div class="seg-label">Orientation</div>
+          <div class="seg" id="seg">
+            <button data-o="landscape">Landscape</button>
+            <button data-o="portrait">Portrait</button>
+          </div>
+          <div class="seg-auto" id="seg-auto"></div>
+        </div>
+        <div id="pos-block">
+          <div class="slider-label"><span>Vertical position</span><span class="val" id="pos-val">Center</span></div>
+          <input type="range" id="pos" min="0" max="100" value="50">
+        </div>
+        <div class="pos-locked" id="pos-locked">Framing is fixed for this source ratio — the slider only applies to a 3000×2400 source.</div>
+        <div class="warn" id="warn"></div>
+        <div id="fmt-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label" id="pv-label" style="display:none">Outputs · current screenshot</div>
+  <div class="previews" id="previews"></div>
+
+  <footer>
+    Center crop + two-step downscale for sharpness. Orientation is global and auto-detected from your first screenshot. Frames stay in memory for the submission pipeline — no download needed. Prototype; always check each store's current requirements.
+  </footer>
+</div>
+
+<script>
+// Base (landscape) dimensions. Portrait swaps w/h.
+const FORMATS = [
+  { id:'iphone',  name:'iPhone · App Store', short:'iP',  baseW:2796, baseH:1290, tint:'#FF3D61', on:true },
+  { id:'ipad',    name:'iPad · App Store',   short:'iPd', baseW:2752, baseH:2064, tint:'#4ade80', on:true },
+  { id:'android', name:'Android · Play',     short:'An',  baseW:1920, baseH:1080, tint:'#50A8FB', on:true },
+  { id:'steam',   name:'Steam',              short:'St',  baseW:1920, baseH:1080, tint:'#fb923c', on:true },
+];
+
+const state = {
+  shots: [],          // { img, name, offsets:{fmtId:{x,y}} }
+  active: -1,
+  orientation: 'landscape',
+  formatsOn: { iphone:true, ipad:true, android:true, steam:true },
+};
+const $ = s => document.querySelector(s);
+const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+// Resolve a format's target dimensions given current orientation
+function dims(f) {
+  return state.orientation === 'portrait'
+    ? { w: f.baseH, h: f.baseW }
+    : { w: f.baseW, h: f.baseH };
+}
+function ratioOf(f) { const d = dims(f); return d.w / d.h; }
+
+// ---- Format toggle rows ----
+const list = $('#fmt-list');
+function buildFmtRows() {
+  list.innerHTML = '';
+  FORMATS.forEach(f => {
+    const d = dims(f);
+    const row = document.createElement('div');
+    row.className = 'fmt-row';
+    row.innerHTML = `
+      <span class="fmt-icon" style="color:${f.tint}">${f.short}</span>
+      <span class="fmt-main">
+        <div class="fmt-name">${f.name}</div>
+        <div class="fmt-dim">${d.w}×${d.h} · ${(d.w/d.h).toFixed(3)}:1</div>
+      </span>
+      <button class="switch ${state.formatsOn[f.id]?'on':''}" data-id="${f.id}"></button>`;
+    list.appendChild(row);
+  });
+}
+list.addEventListener('click', e => {
+  const btn = e.target.closest('.switch'); if (!btn) return;
+  const id = btn.dataset.id;
+  state.formatsOn[id] = !state.formatsOn[id];
+  btn.classList.toggle('on', state.formatsOn[id]);
+  draw();
+});
+
+// ---- Orientation segmented control ----
+const seg = $('#seg');
+seg.addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  setOrientation(btn.dataset.o, false);
+});
+function setOrientation(o, isAuto) {
+  state.orientation = o;
+  [...seg.children].forEach(b => b.classList.toggle('active', b.dataset.o === o));
+  $('#seg-auto').textContent = isAuto ? `Auto-detected from your first screenshot (${o}).` : '';
+  buildFmtRows();
+  draw();
+}
+
+// ---- File input (multiple) ----
+const slot = $('#slot'), fileInput = $('#file');
+slot.addEventListener('click', () => fileInput.click());
+slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag'); });
+slot.addEventListener('dragleave', () => slot.classList.remove('drag'));
+slot.addEventListener('drop', e => {
+  e.preventDefault(); slot.classList.remove('drag');
+  addFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e => { addFiles(e.target.files); fileInput.value = ''; });
+
+function addFiles(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  let loaded = 0;
+  const wasEmpty = state.shots.length === 0;
+  files.forEach(file => {
+    const img = new Image();
+    img.onload = () => {
+      const offsets = {};
+      FORMATS.forEach(f => offsets[f.id] = { x:0, y:0, zoom:1 });
+      const uiScore = detectUI(img);
+      state.shots.push({ img, name: file.name, offsets, uiScore, uiFlag: uiScore >= UI_THRESHOLD });
+      loaded++;
+      if (loaded === files.length) {
+        if (wasEmpty) {
+          const first = state.shots[0].img;
+          setOrientation(first.naturalWidth >= first.naturalHeight ? 'landscape' : 'portrait', true);
+          state.active = 0;
+        }
+        onShotsChanged();
+        updateUIAlert();
+      }
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// --- Heuristic game-UI detector (Canvas only, orientative) ---
+// Calibrated against real game HUD, not synthetic panels. Two signals:
+//  1) long straight edges (HUD panel/card borders spanning rows or columns)
+//  2) structural concentration — edges cluster in side/top grid cells vs center
+// Tuned toward sensitivity (catches full-screen game HUD; some false positives ok).
+const UI_THRESHOLD = 0.35;
+function detectUI(img) {
+  const N = 160;
+  const ar = img.naturalWidth / img.naturalHeight;
+  const w = ar >= 1 ? N : Math.round(N * ar);
+  const h = ar >= 1 ? Math.round(N / ar) : N;
+  // Deterministic downscale: halve repeatedly with high-quality smoothing so the
+  // analysis input doesn't depend on the browser's single-step resize heuristic.
+  let src = img, curW = img.naturalWidth, curH = img.naturalHeight;
+  while (curW > w * 2 && curH > h * 2) {
+    const nw = Math.max(w, curW >> 1), nh = Math.max(h, curH >> 1);
+    const t = document.createElement('canvas'); t.width = nw; t.height = nh;
+    const tc = t.getContext('2d'); tc.imageSmoothingQuality = 'high';
+    tc.drawImage(src, 0, 0, curW, curH, 0, 0, nw, nh);
+    src = t; curW = nw; curH = nh;
+  }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(src, 0, 0, curW, curH, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+
+  const gray = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    gray[i] = 0.299*px[i*4] + 0.587*px[i*4+1] + 0.114*px[i*4+2];
+  }
+
+  // Absolute horizontal / vertical gradients
+  const gx = new Float32Array(w * h), gy = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 1; x < w-1; x++) gx[y*w+x] = Math.abs(gray[y*w+x+1] - gray[y*w+x-1]);
+  }
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 0; x < w; x++) gy[y*w+x] = Math.abs(gray[(y+1)*w+x] - gray[(y-1)*w+x]);
+  }
+  const STRONG = 60;
+
+  // S1 (primary): long CONTINUOUS straight lines. UI panel/bar borders are
+  // pixel-aligned runs spanning much of the frame; scene geometry (tiled floors,
+  // architecture in perspective) makes diagonal/curved lines that don't form long
+  // horizontal or vertical runs. This is stable across resampling and independent
+  // of where the UI sits (perimeter or a centered modal).
+  const MINRUN_H = w * 0.30, MINRUN_V = h * 0.30;
+  let hLongRows = 0;
+  for (let y = 0; y < h; y++) {
+    let run = 0, mx = 0;
+    for (let x = 0; x < w; x++) { run = gy[y*w+x] > STRONG ? run+1 : 0; if (run > mx) mx = run; }
+    if (mx > MINRUN_H) hLongRows++;
+  }
+  let vLongCols = 0;
+  for (let x = 0; x < w; x++) {
+    let run = 0, mx = 0;
+    for (let y = 0; y < h; y++) { run = gx[y*w+x] > STRONG ? run+1 : 0; if (run > mx) mx = run; }
+    if (mx > MINRUN_V) vLongCols++;
+  }
+  const longMax = Math.max(hLongRows / h, vLongCols / w);
+  const s1 = clamp((longMax - 0.008) / 0.05, 0, 1);
+
+  // S2 (reinforcement): structural concentration across a 3x3 grid of edge density.
+  const cells = [];
+  for (let ry = 0; ry < 3; ry++) for (let rx = 0; rx < 3; rx++) {
+    const ys = (ry*h/3)|0, ye = ((ry+1)*h/3)|0, xs = (rx*w/3)|0, xe = ((rx+1)*w/3)|0;
+    let e = 0, n = 0;
+    for (let y = ys; y < ye; y++) for (let x = xs; x < xe; x++) {
+      if (gx[y*w+x] > STRONG || gy[y*w+x] > STRONG) e++;
+      n++;
+    }
+    cells[ry*3+rx] = e / Math.max(1, n);
+  }
+  const center = cells[4];
+  const sideMax = Math.max(cells[0],cells[3],cells[6],cells[1],cells[2],cells[5],cells[8]);
+  const concentration = sideMax / Math.max(0.02, center);
+  const s2 = clamp((concentration - 1.6) / 2.5, 0, 1) * clamp(sideMax / 0.12, 0, 1);
+
+  return clamp(0.8 * s1 + 0.3 * s2, 0, 1);
+}
+
+function updateUIAlert() {
+  const flagged = state.shots.filter(s => s.uiFlag);
+  const el = $('#ui-alert');
+  if (!flagged.length) { el.classList.remove('show'); return; }
+  const names = flagged.map(s => s.name).join(', ');
+  $('#ui-alert-title').textContent = flagged.length === 1
+    ? `Possible game UI detected in “${flagged[0].name}”`
+    : `Possible game UI detected in ${flagged.length} screenshots`;
+  el.classList.add('show');
+  el.title = names;
+}
+$('#ui-alert-close').addEventListener('click', () => $('#ui-alert').classList.remove('show'));
+
+function onShotsChanged() {
+  const has = state.shots.length > 0;
+  $('#stage').classList.toggle('hidden', !has);
+  $('#pv-label').style.display = has ? 'flex' : 'none';
+  $('#save-frame').classList.toggle('show', has);
+  $('#save-frame').disabled = !has;
+  $('#thumbs').classList.toggle('show', has);
+  if (state.active < 0 && has) state.active = 0;
+  if (state.active >= state.shots.length) state.active = state.shots.length - 1;
+  $('#slot-title').textContent = has ? `${state.shots.length} screenshot${state.shots.length>1?'s':''} loaded` : 'Drop one or more screenshots';
+  $('#slot-sub').textContent = has ? 'Click a thumbnail to edit · drag previews to reframe' : '3000×2400 recommended · multiple files ok';
+  buildThumbs();
+  loadActive();
+}
+
+function buildThumbs() {
+  const box = $('#thumbs');
+  box.innerHTML = '';
+  state.shots.forEach((s, i) => {
+    const t = document.createElement('div');
+    t.className = 'thumb-item' + (i === state.active ? ' active' : '') + (s.uiFlag ? ' ui-flag' : '');
+    t.title = s.uiFlag ? 'Possible game UI — output may crop poorly' : '';
+    t.innerHTML = `<img src="${s.img.src}"><span class="idx">${i+1}</span><span class="rm" data-rm="${i}">×</span>`;
+    t.addEventListener('click', e => {
+      if (e.target.dataset.rm !== undefined) { removeShot(i); return; }
+      state.active = i; buildThumbs(); loadActive();
+    });
+    box.appendChild(t);
+  });
+  const add = document.createElement('div');
+  add.className = 'thumb-add'; add.textContent = '+';
+  add.onclick = () => fileInput.click();
+  box.appendChild(add);
+  const count = document.createElement('span');
+  count.className = 'thumb-count';
+  count.textContent = `${state.shots.length} total`;
+  box.appendChild(count);
+}
+
+function removeShot(i) {
+  state.shots.splice(i, 1);
+  if (state.active >= state.shots.length) state.active = state.shots.length - 1;
+  onShotsChanged();
+  updateUIAlert();
+}
+
+function loadActive() {
+  if (state.active < 0 || !state.shots[state.active]) return;
+  const shot = state.shots[state.active];
+  const img = shot.img;
+  $('#preview').src = img.src;
+  $('#stage-meta').textContent = `${shot.name} · ${img.naturalWidth}×${img.naturalHeight}`;
+
+  // vertical slider only for exact 3000×2400 (landscape) source
+  const posEnabled = (img.naturalWidth === 3000 && img.naturalHeight === 2400);
+  $('#pos-block').style.display = posEnabled ? 'block' : 'none';
+  $('#pos-locked').classList.toggle('show', !posEnabled);
+  $('#pos').value = 50; $('#pos-val').textContent = 'Center';
+
+  checkSource(img);
+  requestAnimationFrame(() => requestAnimationFrame(draw));
+}
+
+$('#pos').addEventListener('input', e => {
+  const v = +e.target.value;
+  const off = (v - 50) / 50;
+  const shot = state.shots[state.active]; if (!shot) return;
+  FORMATS.forEach(f => shot.offsets[f.id].y = off);
+  $('#pos-val').textContent = v === 50 ? 'Center' : (v < 50 ? `Up ${50-v}%` : `Down ${v-50}%`);
+  draw();
+});
+
+function checkSource(img) {
+  const r = img.naturalWidth / img.naturalHeight, w = $('#warn'), m = [];
+  // Warn if source orientation disagrees with chosen output orientation
+  const srcLandscape = img.naturalWidth >= img.naturalHeight;
+  const wantLandscape = state.orientation === 'landscape';
+  if (srcLandscape !== wantLandscape) {
+    m.push(`This source is ${srcLandscape?'landscape':'portrait'} but outputs are ${state.orientation} — the crop will be aggressive.`);
+  }
+  if (m.length) { w.textContent = m.join(' '); w.classList.add('show'); } else w.classList.remove('show');
+}
+
+// crop rect in source px for a format, using this shot's offsets + zoom
+function cropFor(f, shot) {
+  const img = shot.img, sw = img.naturalWidth, sh = img.naturalHeight, r = ratioOf(f);
+  const off = shot.offsets[f.id];
+  const zoom = off.zoom || 1;
+  // Base (zoom=1) window is the largest crop of this ratio that fits the source.
+  let baseW, baseH;
+  if (sw / sh > r) { baseH = sh; baseW = Math.round(sh * r); }
+  else { baseW = sw; baseH = Math.round(sw / r); }
+  // Zooming in shrinks the window (takes fewer source px, upscaled later).
+  const cw = Math.round(baseW / zoom);
+  const ch = Math.round(baseH / zoom);
+  const slackX = sw - cw, slackY = sh - ch;
+  const x = clamp(Math.round(slackX * (0.5 + off.x / 2)), 0, slackX);
+  const y = clamp(Math.round(slackY * (0.5 + off.y / 2)), 0, slackY);
+  return { x, y, w: cw, h: ch, slackX, slackY, zoom };
+}
+
+// Upscale factor for a format on a shot: <1 means downscaling (crisp),
+// >1 means the crop has fewer source px than the store needs (soft).
+function upscaleFactor(f, shot) {
+  const d = dims(f), c = cropFor(f, shot);
+  return Math.max(d.w / c.w, d.h / c.h);
+}
+
+function paintOverlayOnly() {
+  const shot = state.shots[state.active]; if (!shot) return;
+  const img = shot.img, prev = $('#preview'), cv = $('#overlay');
+  const W = prev.clientWidth, H = prev.clientHeight;
+  if (!W || !H) return;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const sx = W / img.naturalWidth, sy = H / img.naturalHeight;
+  FORMATS.filter(f => state.formatsOn[f.id]).forEach(f => {
+    const c = cropFor(f, shot);
+    const x = c.x*sx, y = c.y*sy, w = c.w*sx, h = c.h*sy;
+    ctx.strokeStyle = f.tint; ctx.lineWidth = 2;
+    ctx.strokeRect(x+1, y+1, w-2, h-2);
+    ctx.fillStyle = f.tint;
+    ctx.font = "600 11px 'JetBrains Mono', monospace";
+    const d = dims(f), label = `${d.w}×${d.h}`;
+    const tw = ctx.measureText(label).width + 10;
+    ctx.fillRect(x+1, y+1, tw, 16);
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillText(label, x+6, y+13);
+  });
+}
+
+function draw() { paintOverlayOnly(); buildPreviews(); }
+window.addEventListener('resize', draw);
+
+function repaintCanvas(f, cnv) {
+  const shot = state.shots[state.active]; if (!shot) return;
+  const c = cropFor(f, shot);
+  const cx = cnv.getContext('2d');
+  cx.imageSmoothingQuality = 'high';
+  cx.clearRect(0,0,cnv.width,cnv.height);
+  cx.drawImage(shot.img, c.x, c.y, c.w, c.h, 0, 0, cnv.width, cnv.height);
+}
+
+function buildPreviews() {
+  const shot = state.shots[state.active], box = $('#previews');
+  box.innerHTML = '';
+  if (!shot) return;
+  FORMATS.filter(f => state.formatsOn[f.id]).forEach(f => {
+    const d = dims(f), r = d.w / d.h;
+    let pw, ph;
+    if (r >= 1) { pw = 460; ph = Math.round(pw / r); }
+    else { ph = 320; pw = Math.round(ph * r); }
+    const cnv = document.createElement('canvas');
+    cnv.width = pw; cnv.height = ph; cnv.className = 'pv-img';
+
+    const card = document.createElement('div');
+    card.className = 'pv';
+    card.innerHTML = `
+      <div class="pv-head">
+        <span class="pv-icon" style="color:${f.tint}">${f.short}</span>
+        <span class="pv-meta"><div class="pv-name">${f.name}</div><div class="pv-dim">${d.w}×${d.h}</div></span>
+        <span class="pv-zoom" data-role="zoom">100%</span>
+        <span class="pv-recenter">reset</span>
+      </div>
+      <div class="pv-warn" data-role="warn"></div>`;
+    const cbox = document.createElement('div');
+    cbox.className = 'pv-canvas-box';
+    cbox.appendChild(cnv);
+    card.appendChild(cbox);
+
+    // Zoom slider row (100%–400%)
+    const zoomRow = document.createElement('div');
+    zoomRow.className = 'pv-zoom-row';
+    zoomRow.innerHTML = `
+      <span class="pv-zoom-ico">−</span>
+      <input type="range" class="pv-zoom-slider" min="100" max="400" step="1" value="100">
+      <span class="pv-zoom-ico">+</span>`;
+    const zoomSlider = zoomRow.querySelector('.pv-zoom-slider');
+    card.appendChild(zoomRow);
+
+    // Live refresh of this card's canvas + soft-warning state
+    const refresh = () => {
+      repaintCanvas(f, cnv);
+      const zoom = shot.offsets[f.id].zoom || 1;
+      const uf = upscaleFactor(f, shot);
+      card.querySelector('[data-role="zoom"]').textContent = Math.round(zoom*100) + '%';
+      if (Math.abs(+zoomSlider.value - zoom*100) > 0.5) zoomSlider.value = Math.round(zoom*100);
+      const warnEl = card.querySelector('[data-role="warn"]');
+      const soft = uf > 1.001;
+      card.classList.toggle('soft', soft);
+      warnEl.textContent = soft ? `⚠ ${uf.toFixed(2)}× upscale — may look soft on device` : '';
+      paintOverlayOnly();
+    };
+    card._refresh = refresh;
+
+    zoomSlider.addEventListener('input', () => {
+      shot.offsets[f.id].zoom = clamp(+zoomSlider.value / 100, 1, MAX_ZOOM);
+      refresh();
+    });
+
+    attachDrag(f, cnv, refresh);
+    attachZoom(f, cnv, refresh);
+
+    card.querySelector('.pv-recenter').onclick = () => {
+      shot.offsets[f.id] = { x:0, y:0, zoom:1 }; refresh();
+    };
+
+    const foot = document.createElement('div');
+    foot.className = 'pv-foot';
+    const c = cropFor(f, shot);
+    const hint = document.createElement('span');
+    hint.className = 'pv-drag-hint';
+    hint.textContent = 'Drag to pan · slider to zoom';
+    const btn = document.createElement('button');
+    btn.className = 'pv-dl'; btn.textContent = 'Save';
+    btn.onclick = () => downloadOne(f);
+    foot.appendChild(hint); foot.appendChild(btn);
+    card.appendChild(foot);
+    box.appendChild(card);
+
+    refresh(); // set initial canvas + warning state
+  });
+}
+
+function attachDrag(f, cnv, refresh) {
+  const shot = state.shots[state.active]; if (!shot) return;
+  let dragging = false, startX = 0, startY = 0, baseX = 0, baseY = 0;
+  cnv.style.cursor = 'grab';
+
+  const onDown = ev => {
+    if (ev.touches && ev.touches.length !== 1) return; // let pinch handle multi-touch
+    dragging = true; cnv.style.cursor = 'grabbing';
+    const p = ev.touches ? ev.touches[0] : ev;
+    startX = p.clientX; startY = p.clientY;
+    baseX = shot.offsets[f.id].x; baseY = shot.offsets[f.id].y;
+    ev.preventDefault();
+  };
+  const onMove = ev => {
+    if (!dragging) return;
+    if (ev.touches && ev.touches.length !== 1) { dragging = false; return; }
+    const p = ev.touches ? ev.touches[0] : ev;
+    const rect = cnv.getBoundingClientRect();
+    const cur = cropFor(f, shot);
+    if (cur.slackX > 1) {
+      const dxImg = (p.clientX - startX) / rect.width * cur.w;
+      shot.offsets[f.id].x = clamp(baseX - (dxImg / cur.slackX) * 2, -1, 1);
+    }
+    if (cur.slackY > 1) {
+      const dyImg = (p.clientY - startY) / rect.height * cur.h;
+      shot.offsets[f.id].y = clamp(baseY - (dyImg / cur.slackY) * 2, -1, 1);
+    }
+    refresh();
+    ev.preventDefault();
+  };
+  const onUp = () => { if (dragging) { dragging = false; cnv.style.cursor = 'grab'; } };
+  cnv.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  cnv.addEventListener('touchstart', onDown, {passive:false});
+  window.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchend', onUp);
+}
+
+const MAX_ZOOM = 4;
+function attachZoom(f, cnv, refresh) {
+  const shot = state.shots[state.active]; if (!shot) return;
+
+  // Pinch (two-finger) on touch — desktop uses the slider instead
+  let pinchBase = 0, pinchZoom = 1;
+  cnv.addEventListener('touchstart', ev => {
+    if (ev.touches.length === 2) {
+      pinchBase = dist(ev.touches);
+      pinchZoom = shot.offsets[f.id].zoom || 1;
+    }
+  }, { passive:false });
+  cnv.addEventListener('touchmove', ev => {
+    if (ev.touches.length === 2) {
+      ev.preventDefault();
+      const ratio = dist(ev.touches) / pinchBase;
+      const o = shot.offsets[f.id];
+      o.zoom = clamp(pinchZoom * ratio, 1, MAX_ZOOM);
+      if (o.zoom < 1.001) o.zoom = 1;
+      refresh();
+    }
+  }, { passive:false });
+}
+function dist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
+
+// High-quality render of one format for the active shot (or a given shot)
+function renderFormat(f, shot) {
+  const d = dims(f);
+  const c = cropFor(f, shot);
+  let curW = c.w, curH = c.h;
+  let cnv = document.createElement('canvas');
+  cnv.width = curW; cnv.height = curH;
+  cnv.getContext('2d').drawImage(shot.img, c.x, c.y, c.w, c.h, 0, 0, curW, curH);
+  while (curW > d.w * 2 && curH > d.h * 2) {
+    const nw = Math.max(d.w, Math.floor(curW/2)), nh = Math.max(d.h, Math.floor(curH/2));
+    const t = document.createElement('canvas'); t.width = nw; t.height = nh;
+    const tc = t.getContext('2d'); tc.imageSmoothingQuality = 'high';
+    tc.drawImage(cnv, 0,0, curW,curH, 0,0, nw,nh);
+    cnv = t; curW = nw; curH = nh;
+  }
+  const out = document.createElement('canvas'); out.width = d.w; out.height = d.h;
+  const oc = out.getContext('2d'); oc.imageSmoothingQuality = 'high';
+  oc.drawImage(cnv, 0,0, curW,curH, 0,0, d.w, d.h);
+  return out;
+}
+
+async function saveCanvas(canvas, name) {
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+function downloadOne(f) {
+  const shot = state.shots[state.active]; if (!shot) return;
+  const d = dims(f);
+  saveCanvas(renderFormat(f, shot), `shot${state.active+1}_${f.id}_${d.w}x${d.h}.png`);
+}
+
+// "Save current frame": exports every enabled format for the active shot
+$('#save-frame').addEventListener('click', async () => {
+  const shot = state.shots[state.active]; if (!shot) return;
+  for (const f of FORMATS.filter(x => state.formatsOn[x.id])) {
+    const d = dims(f);
+    await saveCanvas(renderFormat(f, shot), `shot${state.active+1}_${f.id}_${d.w}x${d.h}.png`);
+    await new Promise(r => setTimeout(r, 150));
+  }
+});
+
+// ---- Programmatic access for the submission pipeline ----
+// Returns a nested structure of ready-to-use canvases without downloading.
+window.subsub = {
+  get state() { return state; },
+  orientation: () => state.orientation,
+  // exportAll() -> [{ shot, name, formats: [{id, w, h, canvas, dataURL}] }]
+  exportAll(asDataURL = false) {
+    return state.shots.map((shot, i) => ({
+      shot: i, name: shot.name,
+      formats: FORMATS.filter(f => state.formatsOn[f.id]).map(f => {
+        const d = dims(f), canvas = renderFormat(f, shot);
+        return { id: f.id, w: d.w, h: d.h, canvas, dataURL: asDataURL ? canvas.toDataURL('image/png') : null };
+      })
+    }));
+  }
+};
+
+buildFmtRows();
+setOrientation('landscape', false);
+
+// ── Accept screenshots imported from parent store page view ──
+window.addEventListener('message', evt => {
+  if (!evt.data || evt.data.type !== 'importScreenshots') return;
+  const items = evt.data.screenshots || [];
+  if (!items.length) return;
+  let loaded = 0;
+  const wasEmpty = state.shots.length === 0;
+  items.forEach(item => {
+    const img = new Image();
+    img.onload = () => {
+      const offsets = {};
+      FORMATS.forEach(f => offsets[f.id] = { x:0, y:0, zoom:1 });
+      const uiScore = detectUI(img);
+      state.shots.push({ img, name: item.name || 'screenshot.jpg', offsets, uiScore, uiFlag: uiScore >= UI_THRESHOLD });
+      loaded++;
+      if (loaded === items.length) {
+        if (wasEmpty) {
+          const first = state.shots[0].img;
+          setOrientation(first.naturalWidth >= first.naturalHeight ? 'landscape' : 'portrait', true);
+          state.active = 0;
+        }
+        onShotsChanged();
+        updateUIAlert();
+      }
+    };
+    img.src = item.dataUrl;
+  });
+});
+</script>
+</body>
+</html>

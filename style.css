@@ -112,6 +112,16 @@ body {
   margin-bottom: 14px;
 }
 
+.ob-logo-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
 .ob-headline {
   font-family: 'Inter', sans-serif;
   font-size: 20px;
@@ -2175,11 +2185,16 @@ body {
 }
 
 /* ── Build Upload Pill ───────────────────────────────── */
+.active-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .build-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 5px;
   padding: 3px 8px;
   border-radius: 5px;
   font-size: 11px;
@@ -2187,6 +2202,7 @@ body {
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   user-select: none;
+  flex-shrink: 0;
   max-width: 160px;
 }
 .build-pill .build-pill-label {
@@ -2196,11 +2212,12 @@ body {
 }
 .build-pill.no-build {
   border: 1.5px solid var(--danger, #FF3D61);
-  color: var(--danger, #FF3D61);
-  background: rgba(255, 61, 97, 0.08);
+  color: var(--text-dim);
+  background: transparent;
 }
 .build-pill.no-build:hover {
-  background: rgba(255, 61, 97, 0.15);
+  background: rgba(255, 61, 97, 0.1);
+  color: var(--text);
 }
 .build-pill.has-build {
   border: 1.5px solid rgba(47, 220, 128, 0.5);
