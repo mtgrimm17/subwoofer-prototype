@@ -2211,12 +2211,12 @@ body {
   white-space: nowrap;
 }
 .build-pill.no-build {
-  border: 1.5px solid var(--danger, #FF3D61);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   color: var(--text-dim);
   background: transparent;
 }
 .build-pill.no-build:hover {
-  background: rgba(255, 61, 97, 0.1);
+  border-color: rgba(255, 255, 255, 0.55);
   color: var(--text);
 }
 .build-pill.has-build {
@@ -2556,8 +2556,12 @@ body {
 /* Locked: reduced opacity but dropdown is still interactive */
 .submit-step-card.submit-step-locked { opacity: 0.45; }
 .submit-step-card.submit-step-locked:hover { background: transparent; }
-/* Ready: card is clickable */
-.submit-step-card.submit-step-ready { cursor: pointer; }
+/* Ready: card is clickable + green border signals all steps done */
+.submit-step-card.submit-step-ready {
+  cursor: pointer;
+  border: 1.5px solid rgba(47, 220, 128, 0.55);
+  border-radius: 8px;
+}
 .submit-step-card.submit-step-ready:hover { background: rgba(255,255,255,0.03); }
 /* Track dropdown inside submit step */
 .submit-track-select {
