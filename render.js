@@ -2952,8 +2952,35 @@ function buildPrivacyMatrix(a) {
     </div>`;
 }
 
-/* ── Click-to-pane tooltip row ────────────────────────── */
-// Like iosYNRow but: (?) is click-activated and opens the doc pane to a named section.
+/* ── Click-to-pane tooltip rows ───────────────────────── */
+// Maps content-rating field IDs to doc pane section IDs.
+// Questions without a dedicated section fall back to the general 'contentRating' section.
+const QUESTIONNAIRE_DOC_SECTIONS = {
+  parentalControls:    'parentalControls',
+  ageAssurance:        'ageAssurance',
+  unrestrictedInternet:'contentRating',
+  userGenContent:      'contentRating',
+  messagingChat:       'contentRating',
+  advertising:         'contentRating',
+  profanity:           'contentRating',
+  horrorFear:          'contentRating',
+  substancesAlcohol:   'contentRating',
+  medicalTreatment:    'contentRating',
+  healthWellness:      'contentRating',
+  matureSuggestive:    'contentRating',
+  sexualContent:       'contentRating',
+  graphicSexual:       'contentRating',
+  cartoonViolence:     'contentRating',
+  realisticViolence:   'contentRating',
+  extendedViolence:    'contentRating',
+  gunsWeapons:         'contentRating',
+  simulatedGambling:   'contentRating',
+  contests:            'contentRating',
+  realMoneyGambling:   'contentRating',
+  lootBoxes:           'contentRating',
+};
+
+// Y/N row with click-to-open-pane tooltip and data-doc-section for row-hover highlighting.
 function iosYNRowDocPane(label, fieldId, tooltip, docSection) {
   const val    = state.iosSubmitAnswers[fieldId];
   const ttHTML = tooltip
@@ -2962,7 +2989,7 @@ function iosYNRowDocPane(label, fieldId, tooltip, docSection) {
   const yesClass = `yn-btn yn-yes${val === 'yes' ? ' is-selected' : ''}${_platformAIClass('ios', fieldId, 'yes').trim() ? ' ' + _platformAIClass('ios', fieldId, 'yes').trim() : ''}`;
   const noClass  = `yn-btn yn-no${val === 'no'   ? ' is-selected' : ''}${_platformAIClass('ios', fieldId, 'no').trim()  ? ' ' + _platformAIClass('ios', fieldId, 'no').trim()  : ''}`;
   return `
-    <div class="ios-q-row" data-answered="${val !== null && val !== undefined ? '1' : '0'}">
+    <div class="ios-q-row" data-answered="${val !== null && val !== undefined ? '1' : '0'}" data-doc-section="${docSection}">
       <div class="ios-q-left">
         <div class="ios-q-label">${label}${ttHTML}</div>
       </div>
@@ -2970,6 +2997,31 @@ function iosYNRowDocPane(label, fieldId, tooltip, docSection) {
         <button class="${yesClass}" onclick="answerIOSField('${fieldId}','yes')">YES${_platformAIBadge('ios', fieldId, 'yes')}</button>
         <button class="${noClass}"  onclick="answerIOSField('${fieldId}','no')">NO${_platformAIBadge('ios', fieldId, 'no')}</button>
       </div>
+    </div>`;
+}
+
+// Intensity row (Frequent/Infrequent/None) with same click-to-open-pane tooltip.
+function iosIntensityRowDocPane(label, fieldId, tooltip, docSection) {
+  const val     = state.iosSubmitAnswers[fieldId];
+  const ttHTML  = tooltip
+    ? `<span class="tooltip-anchor tooltip-click" data-tip="${tooltip}" onclick="openDocPaneSection('${docSection}',event)"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>`
+    : '';
+  const answered = val !== null && val !== undefined;
+  const opts = [
+    { value: 'frequent',   cls: 'is-sel-frequent',   label: 'Frequent'   },
+    { value: 'infrequent', cls: 'is-sel-infrequent', label: 'Infrequent' },
+    { value: 'none',       cls: 'is-sel-none',        label: 'None'       },
+  ];
+  const btns = opts.map(o => {
+    const sel      = val === o.value;
+    const aiClass  = _platformAIClass('ios', fieldId, o.value).trim();
+    const cls      = `intensity-btn${sel && o.cls ? ' ' + o.cls : ''}${sel && aiClass ? ' ' + aiClass : ''}`;
+    return `<button class="${cls}" onclick="answerIOSField('${fieldId}','${o.value}')">${o.label}${_platformAIBadge('ios', fieldId, o.value)}</button>`;
+  }).join('');
+  return `
+    <div class="ios-q-row ios-q-row-intensity" data-answered="${answered ? '1' : '0'}" data-doc-section="${docSection}">
+      <div class="ios-q-label ios-q-label-sm">${label}${ttHTML}</div>
+      <div class="intensity-group">${btns}</div>
     </div>`;
 }
 
@@ -3030,21 +3082,20 @@ function buildContentRatingSection() {
   const iq = id => { const q = IOS_INTENSITY_QUESTIONS.find(q => q.id === id); return { ...q, label: t(`iosint.${q.id}.label`) || q.label, tooltip: t(`iosint.${q.id}.tooltip`) || q.tooltip }; };
   const yq = id => { const q = IOS_CONTENT_YN_QUESTIONS.find(q => q.id === id); return { ...q, label: t(`iosyn.${q.id}.label`) || q.label, tooltip: t(`iosyn.${q.id}.tooltip`) || q.tooltip }; };
 
-  // Render one question row (intensity or Y/N)
+  // Render one question row — all content-rating questions use click-to-pane tooltips
   const renderQ = q => {
+    const docSection = QUESTIONNAIRE_DOC_SECTIONS[q.id];
     let html;
-    if (q.id === 'parentalControls') {
-      // Click-activated (?) that also opens doc pane to the Parental Controls section
-      const d = yq(q.id);
-      html = iosYNRowDocPane(d.label, q.id, d.tooltip, 'parentalControls');
-    } else if (q.id === 'ageAssurance') {
-      // No tooltip icon — all context lives in the doc pane
-      const d = yq(q.id);
-      html = iosYNRow(d.label, q.id, '', '');
+    if (q.type === 'intensity') {
+      const d = iq(q.id);
+      html = docSection
+        ? iosIntensityRowDocPane(d.label, q.id, d.tooltip, docSection)
+        : iosIntensityRow(d.label, d.id, d.tooltip);
     } else {
-      html = q.type === 'intensity'
-        ? (() => { const d = iq(q.id); return iosIntensityRow(d.label, d.id, d.tooltip); })()
-        : (() => { const d = yq(q.id); return iosYNRow(d.label, q.id, '', d.tooltip); })();
+      const d = yq(q.id);
+      html = docSection
+        ? iosYNRowDocPane(d.label, q.id, d.tooltip, docSection)
+        : iosYNRow(d.label, q.id, '', d.tooltip);
     }
     return html + (IOS_CR_RISK_NOTES[q.id] ? IOS_CR_RISK_NOTES[q.id](a) : '');
   };

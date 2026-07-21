@@ -425,22 +425,39 @@ function toggleDocPane() {
   if (group) group.classList.toggle('pane-open', willOpen);
 }
 
-// Called by click-activated (?) icons — opens the pane, shows the tooltip, scrolls
-// to the named section. `section` matches the id suffix on doc-section-* elements.
+// Called by click-activated (?) icons — toggles the pane for the same section,
+// or opens/navigates when a different section is clicked.
 function openDocPaneSection(section, event) {
   event.stopPropagation();
 
-  // 1. Open the pane if not already open
   const pane  = document.getElementById('doc-pane');
   const tab   = document.getElementById('doc-pane-tab');
   const group = document.getElementById('step-modal-group');
-  if (pane && !pane.classList.contains('is-open')) {
+  if (!pane) return;
+
+  const isOpen        = pane.classList.contains('is-open');
+  const activeSection = pane.dataset.activeSection;
+
+  // Toggle: collapse if clicking the same section's (?) while pane is open
+  if (isOpen && activeSection === section) {
+    pane.classList.remove('is-open');
+    if (tab)   tab.classList.remove('is-open');
+    if (group) group.classList.remove('pane-open');
+    delete pane.dataset.activeSection;
+    const tip = document.getElementById('g-tip');
+    if (tip) tip.classList.remove('is-visible');
+    return;
+  }
+
+  // Open / switch section
+  pane.dataset.activeSection = section;
+  if (!isOpen) {
     pane.classList.add('is-open');
     if (tab)   tab.classList.add('is-open');
     if (group) group.classList.add('pane-open');
   }
 
-  // 2. Show the global tooltip next to the clicked (?) anchor
+  // Show the global tooltip next to the clicked (?) anchor
   const anchor = event.currentTarget;
   const tip    = document.getElementById('g-tip');
   if (tip && anchor) {
@@ -460,27 +477,63 @@ function openDocPaneSection(section, event) {
       if (top < MARGIN) top = r.bottom + 8;
       tip.style.left = left + 'px';
       tip.style.top  = top  + 'px';
-      // Dismiss on next click anywhere
+      // Dismiss on the next click anywhere
       setTimeout(() => {
         document.addEventListener('click', () => tip.classList.remove('is-visible'), { once: true });
       }, 0);
     }
   }
 
-  // 3. Scroll to and briefly highlight the relevant doc section
+  // Scroll to and flash-highlight the relevant doc section
   requestAnimationFrame(() => {
     const sectionEl = document.getElementById('doc-section-' + section);
-    if (sectionEl) {
-      const paneBody = document.querySelector('.doc-pane-body');
-      if (paneBody) {
-        const offsetTop = sectionEl.offsetTop - (paneBody.offsetTop || 0);
-        paneBody.scrollTo({ top: offsetTop - 12, behavior: 'smooth' });
-      }
-      sectionEl.classList.add('doc-section-highlight');
-      setTimeout(() => sectionEl.classList.remove('doc-section-highlight'), 2200);
+    if (!sectionEl) return;
+    const paneBody = document.querySelector('.doc-pane-body');
+    if (paneBody) {
+      const bodyRect    = paneBody.getBoundingClientRect();
+      const sectionRect = sectionEl.getBoundingClientRect();
+      const scrollDelta = sectionRect.top - bodyRect.top - 12;
+      paneBody.scrollBy({ top: scrollDelta, behavior: 'smooth' });
     }
+    // Remove any existing highlight, then re-add
+    document.querySelectorAll('.doc-section-highlight').forEach(el => {
+      el.classList.remove('doc-section-highlight');
+      void el.offsetWidth; // force reflow so animation restarts
+    });
+    sectionEl.classList.add('doc-section-highlight');
+    setTimeout(() => sectionEl.classList.remove('doc-section-highlight'), 2200);
   });
 }
+
+// Row hover → softly highlight the corresponding doc section while pane is open
+;(function initDocPaneRowHover() {
+  let _lastHovered = null;
+  document.addEventListener('mouseover', e => {
+    const row = e.target.closest('.ios-q-row[data-doc-section]');
+    if (!row) return;
+    const pane = document.getElementById('doc-pane');
+    if (!pane?.classList.contains('is-open')) return;
+    const section = row.dataset.docSection;
+    if (section === _lastHovered) return;
+    // Remove old hover
+    if (_lastHovered) {
+      const prev = document.getElementById('doc-section-' + _lastHovered);
+      if (prev) prev.classList.remove('doc-section-hover');
+    }
+    _lastHovered = section;
+    const sectionEl = document.getElementById('doc-section-' + section);
+    if (sectionEl) sectionEl.classList.add('doc-section-hover');
+  });
+  document.addEventListener('mouseout', e => {
+    const row = e.target.closest('.ios-q-row[data-doc-section]');
+    if (!row || row.contains(e.relatedTarget)) return;
+    if (_lastHovered) {
+      const el = document.getElementById('doc-section-' + _lastHovered);
+      if (el) el.classList.remove('doc-section-hover');
+      _lastHovered = null;
+    }
+  });
+})();
 
 function submitOverlayClick(e) {
   if (e.target === document.getElementById('submit-overlay')) closeStepModal();

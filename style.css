@@ -4497,6 +4497,7 @@ select.form-input {
   flex-direction: row;
   align-items: stretch;
   position: relative; /* anchor for absolutely-positioned tab */
+  height: clamp(560px, 88vh, 860px); /* must match .submit-modal height */
 }
 
 /* Modal right corners square off seamlessly when pane is open */
@@ -4504,16 +4505,21 @@ select.form-input {
   border-radius: 14px 0 0 14px;
 }
 
-/* Tab floats at the seam between modal and pane — no gap in flex layout */
+/* Tab sits fully to the RIGHT of the modal border — never overlapping it.
+   right: -20px when closed → tab's left edge = modal's right border.
+   right:  280px when open  → same left edge position (math: group grows by 300px, right grows by 300px).
+   Both the tab's right transition and the pane's width transition share the same curve so the tab
+   stays glued to the modal's right border throughout the animation. */
 .doc-pane-tab {
   position: absolute;
-  right: 0;          /* starts at right edge of group (= modal right when pane closed) */
+  right: -20px;      /* fully off to the right of the modal when pane closed */
   top: 50%;
-  transform: translateY(-50%) translateX(50%); /* straddle the seam */
+  transform: translateY(-50%);
   width: 20px;
   height: 60px;
   background: var(--panel);
   border: 1px solid var(--border);
+  border-left: none; /* left edge provided by the modal's right border */
   border-radius: 0 10px 10px 0;
   cursor: pointer;
   display: flex;
@@ -4526,9 +4532,9 @@ select.form-input {
   box-shadow: 4px 0 14px rgba(0, 0, 0, 0.35);
 }
 
-/* When pane is open: tab moves to stay at the modal's right edge */
+/* Pane open: tab moves left in sync with pane expanding, stays at modal's right border */
 .step-modal-group.pane-open .doc-pane-tab {
-  right: 300px; /* == pane width */
+  right: 280px; /* 300px pane width − 20px tab width = 280px */
 }
 
 .doc-pane-tab:hover {
@@ -4574,7 +4580,7 @@ select.form-input {
 }
 
 .doc-pane-header {
-  padding: 20px 20px 14px;
+  padding: 20px 20px 14px 26px; /* 26px = 20px tab + 6px gap */
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -4593,7 +4599,7 @@ select.form-input {
 }
 
 .doc-pane-body {
-  padding: 16px 18px;
+  padding: 16px 18px 16px 26px; /* 26px = 20px tab + 6px gap */
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -4619,6 +4625,11 @@ select.form-input {
   0%   { background: rgba(91, 156, 246, 0.18); }
   40%  { background: rgba(91, 156, 246, 0.18); }
   100% { background: transparent; }
+}
+
+/* Subtle hover state when the user hovers the corresponding question row */
+.doc-section-hover {
+  background: rgba(91, 156, 246, 0.07);
 }
 
 .doc-section-label {
