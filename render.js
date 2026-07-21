@@ -1814,6 +1814,80 @@ function renderStepModal() {
 
   // Init distribution map after render if this is the distribution step
   if (stepId === 'distribution') requestAnimationFrame(() => initDistributionMap());
+
+  // Doc pane — questionnaire only, desktop only
+  _syncDocPane(stepId);
+}
+
+/* ── Documentation Pane helpers ─────────────────────────── */
+
+function _syncDocPane(stepId) {
+  const overlay       = document.getElementById('submit-overlay');
+  const modal         = document.getElementById('submit-modal');
+  const existingGroup = document.getElementById('step-modal-group');
+
+  if (stepId === 'questionnaire') {
+    if (!existingGroup) {
+      const group = document.createElement('div');
+      group.id        = 'step-modal-group';
+      group.className = 'step-modal-group';
+      overlay.insertBefore(group, modal);
+      group.appendChild(modal);
+      group.insertAdjacentHTML('beforeend', `
+        <button class="doc-pane-tab" id="doc-pane-tab" onclick="toggleDocPane()" aria-label="Toggle documentation pane">
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1.5 1.5L6.5 7L1.5 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="doc-pane" id="doc-pane">
+          <div class="doc-pane-inner">${buildDocPaneContent()}</div>
+        </div>`);
+    }
+  } else if (existingGroup) {
+    // Leaving questionnaire — restore modal to overlay directly
+    overlay.insertBefore(modal, existingGroup);
+    existingGroup.remove();
+  }
+}
+
+function buildDocPaneContent() {
+  return `
+    <div class="doc-pane-header">
+      <div class="doc-pane-title">Documentation</div>
+      <div class="doc-pane-subtitle">Platform guidelines &amp; requirements</div>
+    </div>
+    <div class="doc-pane-body">
+
+      <div class="doc-section">
+        <div class="doc-section-label">Content Rating</div>
+        <p class="doc-section-text">Apple uses the IARC system to assign age ratings. Your answers determine ratings applied globally across the App Store — they cannot be customized per region.</p>
+        <a class="doc-link" href="https://developer.apple.com/help/app-store-connect/reference/age-ratings" target="_blank" rel="noopener">App Store age rating guidelines ↗</a>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-label">Data Privacy</div>
+        <p class="doc-section-text">Apple requires all apps to disclose data collection practices via a privacy nutrition label before each release. Labels cannot be edited while a review is in progress.</p>
+        <a class="doc-link" href="https://developer.apple.com/app-store/app-privacy-details/" target="_blank" rel="noopener">App Privacy Details ↗</a>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-label">Export Compliance</div>
+        <p class="doc-section-text">Apps using encryption must comply with US export regulations (EAR). Most apps using standard HTTPS or OS-level encryption qualify for an exemption under Section 740.17(b)(1).</p>
+        <a class="doc-link" href="https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations" target="_blank" rel="noopener">Encryption export regulations ↗</a>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-label">In-App Purchases</div>
+        <p class="doc-section-text">Any content, features, or subscriptions unlocked via payment must use Apple's In-App Purchase APIs. Third-party payment processing for digital goods is not permitted on the App Store.</p>
+        <a class="doc-link" href="https://developer.apple.com/in-app-purchase/" target="_blank" rel="noopener">In-App Purchase overview ↗</a>
+      </div>
+
+      <div class="doc-pane-coming-soon">
+        <span class="doc-pane-cs-icon">✦</span>
+        More documentation coming soon
+      </div>
+
+    </div>`;
 }
 
 /* ── Store Page AI Insights panel ───────────────────── */

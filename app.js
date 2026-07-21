@@ -399,11 +399,30 @@ async function openStepModal(pid, stepId) {
 }
 
 function closeStepModal() {
-  document.getElementById('submit-overlay').classList.add('hidden');
+  // Tear down doc pane group wrapper if present
+  const overlay = document.getElementById('submit-overlay');
+  const group   = document.getElementById('step-modal-group');
+  const modal   = document.getElementById('submit-modal');
+  if (group && modal) {
+    overlay.insertBefore(modal, group);
+    group.remove();
+  }
+  overlay.classList.add('hidden');
   document.body.style.overflow = '';
   updateIOSCard();
   updateAndroidCard();
   updateSteamCard();
+}
+
+function toggleDocPane() {
+  const pane  = document.getElementById('doc-pane');
+  const tab   = document.getElementById('doc-pane-tab');
+  const group = document.getElementById('step-modal-group');
+  if (!pane) return;
+  const willOpen = !pane.classList.contains('is-open');
+  pane.classList.toggle('is-open', willOpen);
+  if (tab)   tab.classList.toggle('is-open', willOpen);
+  if (group) group.classList.toggle('pane-open', willOpen);
 }
 
 function submitOverlayClick(e) {
