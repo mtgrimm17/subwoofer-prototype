@@ -4496,34 +4496,39 @@ select.form-input {
   display: flex;
   flex-direction: row;
   align-items: stretch;
+  position: relative; /* anchor for absolutely-positioned tab */
 }
 
-/* Smooth the right corners away when pane is open */
+/* Modal right corners square off seamlessly when pane is open */
 .step-modal-group.pane-open .submit-modal {
   border-radius: 14px 0 0 14px;
-  border-right-color: transparent;
-  transition: border-radius 0.25s ease, border-right-color 0.25s ease, max-width 0.2s ease;
 }
 
+/* Tab floats at the seam between modal and pane — no gap in flex layout */
 .doc-pane-tab {
-  align-self: center;
+  position: absolute;
+  right: 0;          /* starts at right edge of group (= modal right when pane closed) */
+  top: 50%;
+  transform: translateY(-50%) translateX(50%); /* straddle the seam */
   width: 20px;
   height: 60px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-left: none;
   border-radius: 0 10px 10px 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-dim);
-  margin-left: -1px;
   padding: 0;
-  transition: background 0.15s, color 0.15s;
-  box-shadow: 5px 0 16px rgba(0, 0, 0, 0.3);
-  z-index: 1;
+  color: var(--text-dim);
+  z-index: 5;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s, color 0.15s;
+  box-shadow: 4px 0 14px rgba(0, 0, 0, 0.35);
+}
+
+/* When pane is open: tab moves to stay at the modal's right edge */
+.step-modal-group.pane-open .doc-pane-tab {
+  right: 300px; /* == pane width */
 }
 
 .doc-pane-tab:hover {
@@ -4540,13 +4545,14 @@ select.form-input {
   transform: rotate(180deg);
 }
 
+/* Pane slides out from right; border hidden until open (avoids 1px vertical line) */
 .doc-pane {
   width: 0;
   overflow: hidden;
   flex-shrink: 0;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid transparent; /* invisible when collapsed */
   border-left: none;
   border-radius: 0 14px 14px 0;
   display: flex;
@@ -4556,6 +4562,7 @@ select.form-input {
 
 .doc-pane.is-open {
   width: 300px;
+  border-color: var(--border); /* reveal border only when open */
 }
 
 .doc-pane-inner {
@@ -4598,6 +4605,20 @@ select.form-input {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  padding: 8px;
+  margin: -8px;
+  border-radius: 8px;
+  transition: background 0.4s ease;
+}
+
+.doc-section-highlight {
+  animation: doc-section-flash 2.2s ease forwards;
+}
+
+@keyframes doc-section-flash {
+  0%   { background: rgba(91, 156, 246, 0.18); }
+  40%  { background: rgba(91, 156, 246, 0.18); }
+  100% { background: transparent; }
 }
 
 .doc-section-label {
@@ -4641,6 +4662,11 @@ select.form-input {
 
 .doc-pane-cs-icon {
   font-size: 9px;
+}
+
+/* Click-activated tooltip (?) — cursor:pointer, no hover show */
+.tooltip-click .tooltip-icon {
+  cursor: pointer;
 }
 
 /* Desktop only — hide on narrow viewports */

@@ -425,6 +425,63 @@ function toggleDocPane() {
   if (group) group.classList.toggle('pane-open', willOpen);
 }
 
+// Called by click-activated (?) icons — opens the pane, shows the tooltip, scrolls
+// to the named section. `section` matches the id suffix on doc-section-* elements.
+function openDocPaneSection(section, event) {
+  event.stopPropagation();
+
+  // 1. Open the pane if not already open
+  const pane  = document.getElementById('doc-pane');
+  const tab   = document.getElementById('doc-pane-tab');
+  const group = document.getElementById('step-modal-group');
+  if (pane && !pane.classList.contains('is-open')) {
+    pane.classList.add('is-open');
+    if (tab)   tab.classList.add('is-open');
+    if (group) group.classList.add('pane-open');
+  }
+
+  // 2. Show the global tooltip next to the clicked (?) anchor
+  const anchor = event.currentTarget;
+  const tip    = document.getElementById('g-tip');
+  if (tip && anchor) {
+    const text = anchor.dataset.tip
+      || (anchor.querySelector('.tooltip-body')?.textContent?.trim() || '');
+    if (text) {
+      const TIP_W  = 230;
+      const MARGIN = 10;
+      tip.textContent = text;
+      tip.classList.add('is-visible');
+      const r  = anchor.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const th = tip.offsetHeight;
+      let left = r.left + r.width / 2 - TIP_W / 2;
+      left = Math.max(MARGIN, Math.min(left, vw - TIP_W - MARGIN));
+      let top = r.top - th - 8;
+      if (top < MARGIN) top = r.bottom + 8;
+      tip.style.left = left + 'px';
+      tip.style.top  = top  + 'px';
+      // Dismiss on next click anywhere
+      setTimeout(() => {
+        document.addEventListener('click', () => tip.classList.remove('is-visible'), { once: true });
+      }, 0);
+    }
+  }
+
+  // 3. Scroll to and briefly highlight the relevant doc section
+  requestAnimationFrame(() => {
+    const sectionEl = document.getElementById('doc-section-' + section);
+    if (sectionEl) {
+      const paneBody = document.querySelector('.doc-pane-body');
+      if (paneBody) {
+        const offsetTop = sectionEl.offsetTop - (paneBody.offsetTop || 0);
+        paneBody.scrollTo({ top: offsetTop - 12, behavior: 'smooth' });
+      }
+      sectionEl.classList.add('doc-section-highlight');
+      setTimeout(() => sectionEl.classList.remove('doc-section-highlight'), 2200);
+    }
+  });
+}
+
 function submitOverlayClick(e) {
   if (e.target === document.getElementById('submit-overlay')) closeStepModal();
 }

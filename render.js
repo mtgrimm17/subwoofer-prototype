@@ -1834,14 +1834,14 @@ function _syncDocPane(stepId) {
       overlay.insertBefore(group, modal);
       group.appendChild(modal);
       group.insertAdjacentHTML('beforeend', `
+        <div class="doc-pane" id="doc-pane">
+          <div class="doc-pane-inner">${buildDocPaneContent()}</div>
+        </div>
         <button class="doc-pane-tab" id="doc-pane-tab" onclick="toggleDocPane()" aria-label="Toggle documentation pane">
           <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1.5 1.5L6.5 7L1.5 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-        </button>
-        <div class="doc-pane" id="doc-pane">
-          <div class="doc-pane-inner">${buildDocPaneContent()}</div>
-        </div>`);
+        </button>`);
     }
   } else if (existingGroup) {
     // Leaving questionnaire — restore modal to overlay directly
@@ -1858,25 +1858,39 @@ function buildDocPaneContent() {
     </div>
     <div class="doc-pane-body">
 
-      <div class="doc-section">
+      <div class="doc-section" id="doc-section-parentalControls">
+        <div class="doc-section-label">Parental Controls</div>
+        <p class="doc-section-text">Tools allowing parents to monitor or restrict a child's in-app access — including content filtering, usage limits, or purchase restrictions.</p>
+        <p class="doc-section-text">If your app includes any of these controls, select <strong>Yes</strong>. This may affect your content rating but does not automatically restrict your app to specific age groups.</p>
+        <a class="doc-link" href="https://developer.apple.com/documentation/family_controls" target="_blank" rel="noopener">Apple Family Controls API ↗</a>
+      </div>
+
+      <div class="doc-section" id="doc-section-ageAssurance">
+        <div class="doc-section-label">Age Assurance</div>
+        <p class="doc-section-text">Confirms a user's age meets requirements for specific content — including API checks, age estimation, or government ID verification.</p>
+        <p class="doc-section-text">The EU Digital Services Act (DSA) now requires platforms serving minors to implement robust age verification. If your app targets DSA-regulated markets, select <strong>Yes</strong> if you perform any form of age verification.</p>
+        <a class="doc-link" href="https://developer.apple.com/documentation/devicecheck" target="_blank" rel="noopener">Apple DeviceCheck API ↗</a>
+      </div>
+
+      <div class="doc-section" id="doc-section-contentRating">
         <div class="doc-section-label">Content Rating</div>
         <p class="doc-section-text">Apple uses the IARC system to assign age ratings. Your answers determine ratings applied globally across the App Store — they cannot be customized per region.</p>
         <a class="doc-link" href="https://developer.apple.com/help/app-store-connect/reference/age-ratings" target="_blank" rel="noopener">App Store age rating guidelines ↗</a>
       </div>
 
-      <div class="doc-section">
+      <div class="doc-section" id="doc-section-dataPrivacy">
         <div class="doc-section-label">Data Privacy</div>
         <p class="doc-section-text">Apple requires all apps to disclose data collection practices via a privacy nutrition label before each release. Labels cannot be edited while a review is in progress.</p>
         <a class="doc-link" href="https://developer.apple.com/app-store/app-privacy-details/" target="_blank" rel="noopener">App Privacy Details ↗</a>
       </div>
 
-      <div class="doc-section">
+      <div class="doc-section" id="doc-section-exportCompliance">
         <div class="doc-section-label">Export Compliance</div>
         <p class="doc-section-text">Apps using encryption must comply with US export regulations (EAR). Most apps using standard HTTPS or OS-level encryption qualify for an exemption under Section 740.17(b)(1).</p>
         <a class="doc-link" href="https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations" target="_blank" rel="noopener">Encryption export regulations ↗</a>
       </div>
 
-      <div class="doc-section">
+      <div class="doc-section" id="doc-section-iap">
         <div class="doc-section-label">In-App Purchases</div>
         <p class="doc-section-text">Any content, features, or subscriptions unlocked via payment must use Apple's In-App Purchase APIs. Third-party payment processing for digital goods is not permitted on the App Store.</p>
         <a class="doc-link" href="https://developer.apple.com/in-app-purchase/" target="_blank" rel="noopener">In-App Purchase overview ↗</a>
@@ -1884,7 +1898,7 @@ function buildDocPaneContent() {
 
       <div class="doc-pane-coming-soon">
         <span class="doc-pane-cs-icon">✦</span>
-        More documentation coming soon
+        More documentation sections coming soon
       </div>
 
     </div>`;
@@ -2938,6 +2952,27 @@ function buildPrivacyMatrix(a) {
     </div>`;
 }
 
+/* ── Click-to-pane tooltip row ────────────────────────── */
+// Like iosYNRow but: (?) is click-activated and opens the doc pane to a named section.
+function iosYNRowDocPane(label, fieldId, tooltip, docSection) {
+  const val    = state.iosSubmitAnswers[fieldId];
+  const ttHTML = tooltip
+    ? `<span class="tooltip-anchor tooltip-click" data-tip="${tooltip}" onclick="openDocPaneSection('${docSection}',event)"><span class="tooltip-icon">?</span><span class="tooltip-body">${tooltip}</span></span>`
+    : '';
+  const yesClass = `yn-btn yn-yes${val === 'yes' ? ' is-selected' : ''}${_platformAIClass('ios', fieldId, 'yes').trim() ? ' ' + _platformAIClass('ios', fieldId, 'yes').trim() : ''}`;
+  const noClass  = `yn-btn yn-no${val === 'no'   ? ' is-selected' : ''}${_platformAIClass('ios', fieldId, 'no').trim()  ? ' ' + _platformAIClass('ios', fieldId, 'no').trim()  : ''}`;
+  return `
+    <div class="ios-q-row" data-answered="${val !== null && val !== undefined ? '1' : '0'}">
+      <div class="ios-q-left">
+        <div class="ios-q-label">${label}${ttHTML}</div>
+      </div>
+      <div class="question-yn">
+        <button class="${yesClass}" onclick="answerIOSField('${fieldId}','yes')">YES${_platformAIBadge('ios', fieldId, 'yes')}</button>
+        <button class="${noClass}"  onclick="answerIOSField('${fieldId}','no')">NO${_platformAIBadge('ios', fieldId, 'no')}</button>
+      </div>
+    </div>`;
+}
+
 /* ── Content Rating ──────────────────────────────────── */
 // Category structure for iOS Content Rating — used by buildContentRatingSection to
 // render questions and to separate answered vs unanswered after AI inference.
@@ -2997,9 +3032,20 @@ function buildContentRatingSection() {
 
   // Render one question row (intensity or Y/N)
   const renderQ = q => {
-    const html = q.type === 'intensity'
-      ? (() => { const d = iq(q.id); return iosIntensityRow(d.label, d.id, d.tooltip); })()
-      : (() => { const d = yq(q.id); return iosYNRow(d.label, q.id, '', d.tooltip); })();
+    let html;
+    if (q.id === 'parentalControls') {
+      // Click-activated (?) that also opens doc pane to the Parental Controls section
+      const d = yq(q.id);
+      html = iosYNRowDocPane(d.label, q.id, d.tooltip, 'parentalControls');
+    } else if (q.id === 'ageAssurance') {
+      // No tooltip icon — all context lives in the doc pane
+      const d = yq(q.id);
+      html = iosYNRow(d.label, q.id, '', '');
+    } else {
+      html = q.type === 'intensity'
+        ? (() => { const d = iq(q.id); return iosIntensityRow(d.label, d.id, d.tooltip); })()
+        : (() => { const d = yq(q.id); return iosYNRow(d.label, q.id, '', d.tooltip); })();
+    }
     return html + (IOS_CR_RISK_NOTES[q.id] ? IOS_CR_RISK_NOTES[q.id](a) : '');
   };
 
